@@ -1,0 +1,728 @@
+ Real CBLAS Test Program Results
+
+
+ Test of subprogram number  1         CBLAS_SDOT     
+                                    ----- PASS -----
+
+ Test of subprogram number  2         CBLAS_SAXPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  3         CBLAS_SROTG    
+                                    ----- PASS -----
+
+ Test of subprogram number  4         CBLAS_SROT     
+                                    ----- PASS -----
+
+ Test of subprogram number  5         CBLAS_SCOPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  6         CBLAS_SSWAP    
+                                    ----- PASS -----
+
+ Test of subprogram number  7         CBLAS_SNRM2    
+                                    ----- PASS -----
+
+ Test of subprogram number  8         CBLAS_SASUM    
+                                    ----- PASS -----
+
+ Test of subprogram number  9         CBLAS_SSCAL    
+                                    ----- PASS -----
+
+ Test of subprogram number 10         CBLAS_ISAMAX   
+                                    ----- PASS -----
+ cblas_sgemv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_sgbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ssymv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ssbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_sspmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_strmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_stbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_stpmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_strsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_stbsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_stpsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_sger   PASSED THE TESTS OF ERROR-EXITS
+ cblas_ssyr   PASSED THE TESTS OF ERROR-EXITS
+ cblas_sspr   PASSED THE TESTS OF ERROR-EXITS
+ cblas_ssyr2  PASSED THE TESTS OF ERROR-EXITS
+ cblas_sspr2  PASSED THE TESTS OF ERROR-EXITS
+ TESTS OF THE REAL             LEVEL 2 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   0     1     2     3     5     9
+   FOR K                   0     1     2     4
+   FOR INCX AND INCY       1     2    -1    -2
+   FOR ALPHA             0.0   1.0   0.7
+   FOR BETA              0.0   1.0   0.9
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  6.0E-08
+
+
+ cblas_sgemv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  3460 CALLS)
+ cblas_sgemv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  3460 CALLS)
+
+
+ cblas_sgbmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS ( 13828 CALLS)
+ cblas_sgbmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS ( 13828 CALLS)
+
+
+ cblas_ssymv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_ssymv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_ssbmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  5761 CALLS)
+ cblas_ssbmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  5761 CALLS)
+
+
+ cblas_sspmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_sspmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_strmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_strmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_stbmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_stbmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_stpmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_stpmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_strsv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_strsv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_stbsv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_stbsv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_stpsv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_stpsv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_sger   PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   388 CALLS)
+ cblas_sger   PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   388 CALLS)
+
+
+ cblas_ssyr   PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_ssyr   PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_sspr   PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_sspr   PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_ssyr2  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_ssyr2  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   481 CALLS)
+
+
+ cblas_sspr2  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_sspr2  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   481 CALLS)
+
+ END OF TESTS
+ cblas_sgemm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ssymm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_strmm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_strsm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ssyrk  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ssyr2k PASSED THE TESTS OF ERROR-EXITS
+ TESTS OF THE REAL             LEVEL 3 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   0     1     2     3     5     9
+   FOR ALPHA             0.0   1.0   0.7
+   FOR BETA              0.0   1.0   1.3
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  6.0E-08
+
+
+ cblas_sgemm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS ( 17496 CALLS)
+ cblas_sgemm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS ( 17496 CALLS)
+
+
+ cblas_ssymm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_ssymm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_strmm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_strmm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_strsm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_strsm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_ssyrk  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1944 CALLS)
+ cblas_ssyrk  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1944 CALLS)
+
+
+ cblas_ssyr2k PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1944 CALLS)
+ cblas_ssyr2k PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1944 CALLS)
+
+ END OF TESTS
+ Real CBLAS Test Program Results
+
+
+ Test of subprogram number  1         CBLAS_DDOT     
+                                    ----- PASS -----
+
+ Test of subprogram number  2         CBLAS_DAXPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  3         CBLAS_DROTG    
+                                    ----- PASS -----
+
+ Test of subprogram number  4         CBLAS_DROT     
+                                    ----- PASS -----
+
+ Test of subprogram number  5         CBLAS_DCOPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  6         CBLAS_DSWAP    
+                                    ----- PASS -----
+
+ Test of subprogram number  7         CBLAS_DNRM2    
+                                    ----- PASS -----
+
+ Test of subprogram number  8         CBLAS_DASUM    
+                                    ----- PASS -----
+
+ Test of subprogram number  9         CBLAS_DSCAL    
+                                    ----- PASS -----
+
+ Test of subprogram number 10         CBLAS_IDAMAX   
+                                    ----- PASS -----
+ cblas_dgemv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dgbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dsymv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dsbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dspmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtrmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtpmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtrsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtbsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtpsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dger   PASSED THE TESTS OF ERROR-EXITS
+ cblas_dsyr   PASSED THE TESTS OF ERROR-EXITS
+ cblas_dspr   PASSED THE TESTS OF ERROR-EXITS
+ cblas_dsyr2  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dspr2  PASSED THE TESTS OF ERROR-EXITS
+ TESTS OF THE DOUBLE PRECISION LEVEL 2 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   0     1     2     3     5     9
+   FOR K                   0     1     2     4
+   FOR INCX AND INCY       1     2    -1    -2
+   FOR ALPHA             0.0   1.0   0.7
+   FOR BETA              0.0   1.0   0.9
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  1.1D-16
+
+
+ cblas_dgemv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  3460 CALLS)
+ cblas_dgemv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  3460 CALLS)
+
+
+ cblas_dgbmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS ( 13828 CALLS)
+ cblas_dgbmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS ( 13828 CALLS)
+
+
+ cblas_dsymv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_dsymv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_dsbmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  5761 CALLS)
+ cblas_dsbmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  5761 CALLS)
+
+
+ cblas_dspmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_dspmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_dtrmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_dtrmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_dtbmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_dtbmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_dtpmv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_dtpmv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_dtrsv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_dtrsv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_dtbsv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_dtbsv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_dtpsv  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_dtpsv  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_dger   PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   388 CALLS)
+ cblas_dger   PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   388 CALLS)
+
+
+ cblas_dsyr   PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_dsyr   PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_dspr   PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_dspr   PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_dsyr2  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_dsyr2  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   481 CALLS)
+
+
+ cblas_dspr2  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_dspr2  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (   481 CALLS)
+
+ END OF TESTS
+ cblas_dgemm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dsymm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtrmm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dtrsm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dsyrk  PASSED THE TESTS OF ERROR-EXITS
+ cblas_dsyr2k PASSED THE TESTS OF ERROR-EXITS
+ TESTS OF THE DOUBLE PRECISION LEVEL 3 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   0     1     2     3     5     9
+   FOR ALPHA             0.0   1.0   0.7
+   FOR BETA              0.0   1.0   1.3
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  2.2D-16
+
+
+ cblas_dgemm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS ( 17496 CALLS)
+ cblas_dgemm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS ( 17496 CALLS)
+
+
+ cblas_dsymm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_dsymm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_dtrmm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_dtrmm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_dtrsm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_dtrsm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_dsyrk  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1944 CALLS)
+ cblas_dsyrk  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1944 CALLS)
+
+
+ cblas_dsyr2k PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1944 CALLS)
+ cblas_dsyr2k PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1944 CALLS)
+
+ END OF TESTS
+ Complex CBLAS Test Program Results
+
+
+ Test of subprogram number  1         CBLAS_CDOTC    
+                                    ----- PASS -----
+
+ Test of subprogram number  2         CBLAS_CDOTU    
+                                    ----- PASS -----
+
+ Test of subprogram number  3         CBLAS_CAXPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  4         CBLAS_CCOPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  5         CBLAS_CSWAP    
+                                    ----- PASS -----
+
+ Test of subprogram number  6         CBLAS_SCNRM2   
+                                    ----- PASS -----
+
+ Test of subprogram number  7         CBLAS_SCASUM   
+                                    ----- PASS -----
+
+ Test of subprogram number  8         CBLAS_CSCAL    
+                                    ----- PASS -----
+
+ Test of subprogram number  9         CBLAS_CSSCAL   
+                                    ----- PASS -----
+
+ Test of subprogram number 10         CBLAS_ICAMAX   
+                                    ----- PASS -----
+ cblas_cgemv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_cgbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_chemv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_chbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_chpmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctrmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctpmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctrsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctbsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctpsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_cgeru  PASSED THE TESTS OF ERROR-EXITS
+ cblas_cgeru  PASSED THE TESTS OF ERROR-EXITS
+ cblas_cher   PASSED THE TESTS OF ERROR-EXITS
+ cblas_chpr   PASSED THE TESTS OF ERROR-EXITS
+ cblas_cher2  PASSED THE TESTS OF ERROR-EXITS
+ cblas_chpr2  PASSED THE TESTS OF ERROR-EXITS
+ TESTS OF THE COMPLEX          LEVEL 2 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   0     1     2     3     5     9
+   FOR K                   0     1     2     4
+   FOR INCX AND INCY       1     2    -1    -2
+   FOR ALPHA          ( 0.0, 0.0)  ( 1.0, 0.0)  ( 0.7,-0.9)  
+   FOR BETA           ( 0.0, 0.0)  ( 1.0, 0.0)  ( 1.3,-1.1)  
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  6.0E-08
+
+
+ cblas_cgemv  PASSED THE COMPUTATIONAL TESTS (  3460 CALLS)
+ cblas_cgemv  PASSED THE COMPUTATIONAL TESTS (  3460 CALLS)
+
+
+ cblas_cgbmv  PASSED THE COMPUTATIONAL TESTS ( 13828 CALLS)
+ cblas_cgbmv  PASSED THE COMPUTATIONAL TESTS ( 13828 CALLS)
+
+
+ cblas_chemv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_chemv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_chbmv  PASSED THE COMPUTATIONAL TESTS (  5761 CALLS)
+ cblas_chbmv  PASSED THE COMPUTATIONAL TESTS (  5761 CALLS)
+
+
+ cblas_chpmv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_chpmv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_ctrmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ctrmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_ctbmv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_ctbmv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_ctpmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ctpmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_ctrsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ctrsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_ctbsv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_ctbsv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_ctpsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ctpsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_cgerc  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+ cblas_cgerc  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+
+
+ cblas_cgeru  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+ cblas_cgeru  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+
+
+ cblas_cher   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_cher   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_chpr   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_chpr   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_cher2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_cher2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+
+
+ cblas_chpr2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_chpr2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+
+ END OF TESTS
+ cblas_cgemm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_chemm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_csymm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctrmm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ctrsm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_cherk  PASSED THE TESTS OF ERROR-EXITS
+ cblas_csyrk  PASSED THE TESTS OF ERROR-EXITS
+ cblas_cher2k PASSED THE TESTS OF ERROR-EXITS
+ cblas_csyr2k PASSED THE TESTS OF ERROR-EXITS
+ TESTS OF THE COMPLEX          LEVEL 3 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   1     5     0     1     2     3
+   FOR ALPHA          ( 0.0, 0.0)  ( 1.0, 0.0)  ( 0.7,-0.9)  
+   FOR BETA           ( 0.0, 0.0)  ( 1.0, 0.0)  ( 1.3,-1.1)  
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  6.0E-08
+
+
+ cblas_cgemm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS ( 17496 CALLS)
+ cblas_cgemm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS ( 17496 CALLS)
+
+
+ cblas_chemm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_chemm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_csymm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_csymm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_ctrmm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_ctrmm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_ctrsm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_ctrsm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_cherk  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_cherk  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_csyrk  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_csyrk  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_cher2k PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_cher2k PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_csyr2k PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_csyr2k PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+ END OF TESTS
+ Complex CBLAS Test Program Results
+
+
+ Test of subprogram number  1         CBLAS_ZDOTC    
+                                    ----- PASS -----
+
+ Test of subprogram number  2         CBLAS_ZDOTU    
+                                    ----- PASS -----
+
+ Test of subprogram number  3         CBLAS_ZAXPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  4         CBLAS_ZCOPY    
+                                    ----- PASS -----
+
+ Test of subprogram number  5         CBLAS_ZSWAP    
+                                    ----- PASS -----
+
+ Test of subprogram number  6         CBLAS_DZNRM2   
+                                    ----- PASS -----
+
+ Test of subprogram number  7         CBLAS_DZASUM   
+                                    ----- PASS -----
+
+ Test of subprogram number  8         CBLAS_ZSCAL    
+                                    ----- PASS -----
+
+ Test of subprogram number  9         CBLAS_ZDSCAL   
+                                    ----- PASS -----
+
+ Test of subprogram number 10         CBLAS_IZAMAX   
+                                    ----- PASS -----
+ cblas_zgemv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zgbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zhemv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zhbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zhpmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztrmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztbmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztpmv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztrsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztbsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztpsv  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zgeru  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zgeru  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zher   PASSED THE TESTS OF ERROR-EXITS
+ cblas_zhpr   PASSED THE TESTS OF ERROR-EXITS
+ cblas_zher2  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zhpr2  PASSED THE TESTS OF ERROR-EXITS
+ TESTS OF THE COMPLEX*16      LEVEL 2 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   0     1     2     3     5     9
+   FOR K                   0     1     2     4
+   FOR INCX AND INCY       1     2    -1    -2
+   FOR ALPHA          ( 0.0, 0.0)  ( 1.0, 0.0)  ( 0.7,-0.9)  
+   FOR BETA           ( 0.0, 0.0)  ( 1.0, 0.0)  ( 1.3,-1.1)  
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  1.1E-16
+
+
+ cblas_zgemv  PASSED THE COMPUTATIONAL TESTS (  3460 CALLS)
+ cblas_zgemv  PASSED THE COMPUTATIONAL TESTS (  3460 CALLS)
+
+
+ cblas_zgbmv  PASSED THE COMPUTATIONAL TESTS ( 13828 CALLS)
+ cblas_zgbmv  PASSED THE COMPUTATIONAL TESTS ( 13828 CALLS)
+
+
+ cblas_zhemv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_zhemv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_zhbmv  PASSED THE COMPUTATIONAL TESTS (  5761 CALLS)
+ cblas_zhbmv  PASSED THE COMPUTATIONAL TESTS (  5761 CALLS)
+
+
+ cblas_zhpmv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+ cblas_zhpmv  PASSED THE COMPUTATIONAL TESTS (  1441 CALLS)
+
+
+ cblas_ztrmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ztrmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_ztbmv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_ztbmv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_ztpmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ztpmv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_ztrsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ztrsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_ztbsv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+ cblas_ztbsv  PASSED THE COMPUTATIONAL TESTS (   961 CALLS)
+
+
+ cblas_ztpsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+ cblas_ztpsv  PASSED THE COMPUTATIONAL TESTS (   241 CALLS)
+
+
+ cblas_zgerc  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+ cblas_zgerc  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+
+
+ cblas_zgeru  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+ cblas_zgeru  PASSED THE COMPUTATIONAL TESTS (   388 CALLS)
+
+
+ cblas_zher   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_zher   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_zhpr   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+ cblas_zhpr   PASSED THE COMPUTATIONAL TESTS (   121 CALLS)
+
+
+ cblas_zher2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_zher2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+
+
+ cblas_zhpr2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+ cblas_zhpr2  PASSED THE COMPUTATIONAL TESTS (   481 CALLS)
+
+ END OF TESTS
+ cblas_zgemm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zhemm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zsymm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztrmm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_ztrsm  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zherk  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zsyrk  PASSED THE TESTS OF ERROR-EXITS
+ cblas_zher2k PASSED THE TESTS OF ERROR-EXITS
+ cblas_zsyr2k PASSED THE TESTS OF ERROR-EXITS
+TESTS OF THE COMPLEX*16        LEVEL 3 BLAS
+
+ THE FOLLOWING PARAMETER VALUES WILL BE USED:
+   FOR N                   1     5     0     1     2     3
+   FOR ALPHA          ( 0.0, 0.0)  ( 1.0, 0.0)  ( 0.7,-0.9)  
+   FOR BETA           ( 0.0, 0.0)  ( 1.0, 0.0)  ( 1.3,-1.1)  
+
+ ROUTINES PASS COMPUTATIONAL TESTS IF TEST RATIO IS LESS THAN   16.00
+
+ COLUMN-MAJOR AND ROW-MAJOR DATA LAYOUTS ARE TESTED
+
+ RELATIVE MACHINE PRECISION IS TAKEN TO BE  1.1E-16
+
+
+ cblas_zgemm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS ( 17496 CALLS)
+ cblas_zgemm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS ( 17496 CALLS)
+
+
+ cblas_zhemm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_zhemm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_zsymm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_zsymm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_ztrmm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_ztrmm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_ztrsm  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  2592 CALLS)
+ cblas_ztrsm  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  2592 CALLS)
+
+
+ cblas_zherk  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_zherk  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_zsyrk  PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_zsyrk  PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_zher2k PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_zher2k PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+
+ cblas_zsyr2k PASSED THE COLUMN-MAJOR COMPUTATIONAL TESTS (  1296 CALLS)
+ cblas_zsyr2k PASSED THE ROW-MAJOR    COMPUTATIONAL TESTS (  1296 CALLS)
+
+ END OF TESTS

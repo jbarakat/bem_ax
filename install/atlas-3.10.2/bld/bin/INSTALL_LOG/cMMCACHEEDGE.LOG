@@ -1,4 +1,0 @@
-make[2]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin'
-cp /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm/res/atlas_csNKB.h /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/include/.
-cp /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm/res/atlas_csNKB.h INSTALL_LOG/.
-make[2]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin'

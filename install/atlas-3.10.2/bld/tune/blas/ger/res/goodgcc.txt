@@ -1,1 +1,0 @@
-'gcc -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64 -m64'

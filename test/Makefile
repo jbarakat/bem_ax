@@ -1,10 +1,10 @@
-include ../install/lapack-3.5.0/make.inc
+include /home/jmb/Documents/install/lapack-3.5.0/make.inc
 
 all: main
 
 # directories
-LAPACKDIR = ../install/lapack-3.5.0
-ATLASDIR = ../install/atlas-3.10.2/lib/lib
+LAPACKDIR = /home/jmb/Documents/install/lapack-3.5.0
+ATLASDIR = /home/jmb/Documents/install/atlas-3.10.2/lib/lib
 
 # libraries (archives)
 LAPACKLIB = $(LAPACKDIR)/liblapack.a

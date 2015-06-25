@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x2 unrolled mvt_sse with these params:
+ * This file does a 2x2 unrolled mvt_sse with these params:
  *    CL=16, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -114,8 +114,8 @@ ATL_asmdecor(ATL_UGEMV):
  */
    mov  %rcx, lda       /* move lda to assigned register, rax */
    mov  M, Mr           /* Mr = M */
-   shr $4, M            /* M = M / MU */
-   shl $4, M            /* M = (M/MU)*MU */
+   shr $5, M            /* M = M / MU */
+   shl $5, M            /* M = (M/MU)*MU */
    sub M, Mr            /* Mr = M - (M/MU)*MU */
 /*
  * Setup constants
@@ -128,9 +128,9 @@ ATL_asmdecor(ATL_UGEMV):
    sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
    sub $-128, pX        /* code compaction by using signed 1-byte offsets */
    mov pX, pX0          /* save for restore after M loops */
-   mov $-64, incAXm     /* code comp: use reg rather than constant */
+   mov $-128, incAXm     /* code comp: use reg rather than constant */
    add lda, incAn               /* incAn = (2*lda-M)*sizeof */
-   mov $16*1, incII      /* code comp: use reg rather than constant */
+   mov $16*2, incII      /* code comp: use reg rather than constant */
    mov M, II
    ALIGN32
    LOOPN:
@@ -147,10 +147,23 @@ ATL_asmdecor(ATL_UGEMV):
          MOVA   0-128(pA0), rA0
          mulpd rX0, rA0
          addpd rA0, rY0
+         prefA(PFADIST+0(pA0))
 
          MOVA   0-128(pA0,lda), rA0
          mulpd rX0, rA0
          addpd rA0, rY1
+         prefA(PFADIST+0(pA0,lda))
+
+         movapd 64-128(pX), rX0
+         MOVA   64-128(pA0), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY0
+         prefA(PFADIST+64(pA0))
+
+         MOVA   64-128(pA0,lda), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY1
+         prefA(PFADIST+64(pA0,lda))
 
          movapd 16-128(pX), rX0
          MOVA   16-128(pA0), rA0
@@ -179,9 +192,34 @@ ATL_asmdecor(ATL_UGEMV):
          mulpd rX0, rA0
          addpd rA0, rY1
 
-         prefA(PFADIST+0(pA0))
+         movapd 80-128(pX), rX0
+         MOVA   80-128(pA0), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY0
+
+         MOVA   80-128(pA0,lda), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY1
+
+         movapd 96-128(pX), rX0
+         MOVA   96-128(pA0), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY0
+
+         MOVA   96-128(pA0,lda), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY1
+
+         movapd 112-128(pX), rX0
+         MOVA   112-128(pA0), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY0
+
+         MOVA   112-128(pA0,lda), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY1
+
          sub incAXm, pX
-         prefA(PFADIST+0(pA0,lda))
          sub incAXm, pA0
       sub incII, II
       jnz LOOPM

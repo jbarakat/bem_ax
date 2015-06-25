@@ -7,46 +7,46 @@
 #define DCPLX
 
 #define MB 0
-#define NB 44
-#define KB 44
+#define NB 56
+#define KB 56
 
 #define MBMB 0
-#define NBNB 1936
-#define KBKB 1936
+#define NBNB 3136
+#define KBKB 3136
 
 #define MB2 0
-#define NB2 88
-#define KB2 88
+#define NB2 112
+#define KB2 112
 
 
 #define MB3 0
-#define NB3 132
-#define KB3 132
+#define NB3 168
+#define KB3 168
 
 
 #define MB4 0
-#define NB4 176
-#define KB4 176
+#define NB4 224
+#define KB4 224
 
 
 #define MB5 0
-#define NB5 220
-#define KB5 220
+#define NB5 280
+#define KB5 280
 
 
 #define MB6 0
-#define NB6 264
-#define KB6 264
+#define NB6 336
+#define KB6 336
 
 
 #define MB7 0
-#define NB7 308
-#define KB7 308
+#define NB7 392
+#define KB7 392
 
 
 #define MB8 0
-#define NB8 352
-#define KB8 352
+#define NB8 448
+#define KB8 448
 
 /*
  *             Automatically Tuned Linear Algebra Software v3.10.2

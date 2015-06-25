@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x4 unrolled mvt_sse with these params:
+ * This file does a 1x8 unrolled mvt_sse with these params:
  *    CL=16, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -22,6 +22,8 @@
 #define incII   %r15
 #define incAn   %r14
 #define lda3    %r12
+#define lda5    %r13
+#define lda7    %rbp
 /*
  * SSE register assignment
  */
@@ -31,6 +33,10 @@
 #define rY1     %xmm3
 #define rY2     %xmm4
 #define rY3     %xmm5
+#define rY4     %xmm6
+#define rY5     %xmm7
+#define rY6     %xmm8
+#define rY7     %xmm9
 
 /*
  * macros
@@ -133,7 +139,9 @@ ATL_asmdecor(ATL_UGEMV):
    mov pX, pX0          /* save for restore after M loops */
    mov $-64, incAXm     /* code comp: use reg rather than constant */
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
-   lea (incAn, lda3), incAn     /* incAn = (4*lda-M)*sizeof */
+   lea (lda, lda,4), lda5       /* lda5 = 5*lda */
+   lea (lda3,lda,4), lda7       /* lda7 = 7*lda */
+   add lda7, incAn              /* incAn = (8*lda-M)*sizeof */
    mov $16*1, incII      /* code comp: use reg rather than constant */
    mov M, II
    ALIGN32
@@ -143,11 +151,19 @@ ATL_asmdecor(ATL_UGEMV):
          xorpd rY1, rY1
          xorpd rY2, rY2
          xorpd rY3, rY3
+         xorpd rY4, rY4
+         xorpd rY5, rY5
+         xorpd rY6, rY6
+         xorpd rY7, rY7
       #else
          movsd 0(pY), rY0
          movsd 4(pY), rY1
          movsd 8(pY), rY2
          movsd 12(pY), rY3
+         movsd 16(pY), rY4
+         movsd 20(pY), rY5
+         movsd 24(pY), rY6
+         movsd 28(pY), rY7
       #endif
 
       LOOPM:
@@ -169,6 +185,22 @@ ATL_asmdecor(ATL_UGEMV):
          mulpd rX0, rA0
          addpd rA0, rY3
          prefA(PFADIST+0(pA0,lda3))
+         MOVA   0-128(pA0,lda,4), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY4
+         prefA(PFADIST+0(pA0,lda,4))
+         MOVA   0-128(pA0,lda5), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY5
+         prefA(PFADIST+0(pA0,lda5))
+         MOVA   0-128(pA0,lda3,2), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY6
+         prefA(PFADIST+0(pA0,lda3,2))
+         MOVA   0-128(pA0,lda7), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY7
+         prefA(PFADIST+0(pA0,lda7))
 
          movapd 16-128(pX), rX0
          MOVA   16-128(pA0), rA0
@@ -184,6 +216,18 @@ ATL_asmdecor(ATL_UGEMV):
          MOVA   16-128(pA0,lda3), rA0
          mulpd rX0, rA0
          addpd rA0, rY3
+         MOVA   16-128(pA0,lda,4), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY4
+         MOVA   16-128(pA0,lda5), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY5
+         MOVA   16-128(pA0,lda3,2), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY6
+         MOVA   16-128(pA0,lda7), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY7
 
          movapd 32-128(pX), rX0
          MOVA   32-128(pA0), rA0
@@ -199,6 +243,18 @@ ATL_asmdecor(ATL_UGEMV):
          MOVA   32-128(pA0,lda3), rA0
          mulpd rX0, rA0
          addpd rA0, rY3
+         MOVA   32-128(pA0,lda,4), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY4
+         MOVA   32-128(pA0,lda5), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY5
+         MOVA   32-128(pA0,lda3,2), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY6
+         MOVA   32-128(pA0,lda7), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY7
 
          movapd 48-128(pX), rX0
          MOVA   48-128(pA0), rA0
@@ -214,18 +270,26 @@ ATL_asmdecor(ATL_UGEMV):
          MOVA   48-128(pA0,lda3), rA0
          mulpd rX0, rA0
          addpd rA0, rY3
+         MOVA   48-128(pA0,lda,4), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY4
+         MOVA   48-128(pA0,lda5), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY5
+         MOVA   48-128(pA0,lda3,2), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY6
+         MOVA   48-128(pA0,lda7), rA0
+         mulpd rX0, rA0
+         addpd rA0, rY7
 
          sub incAXm, pX
          sub incAXm, pA0
       sub incII, II
       jnz LOOPM
 
-      #ifdef ATL_OS_OSX     /* workaround retarded OS X assembly */
-         cmp $0, Mr
-         jz  MCLEANED
-      #else
-         jecxz MCLEANED        /* skip cleanup loop if Mr == 0 */
-      #endif
+      cmp $0, Mr
+      jz  MCLEANED
 
       mov Mr, II
       LOOPMCU:
@@ -242,6 +306,18 @@ ATL_asmdecor(ATL_UGEMV):
          movsd -128(pA0,lda3), rA0
          mulsd rX0, rA0
          addsd rA0, rY3
+         movsd -128(pA0,lda,4), rA0
+         mulsd rX0, rA0
+         addsd rA0, rY4
+         movsd -128(pA0,lda5), rA0
+         mulsd rX0, rA0
+         addsd rA0, rY5
+         movsd -128(pA0,lda3,2), rA0
+         mulsd rX0, rA0
+         addsd rA0, rY6
+         movsd -128(pA0,lda7), rA0
+         mulsd rX0, rA0
+         addsd rA0, rY7
          add $4, pX
          add $4, pA0
       dec II
@@ -252,12 +328,16 @@ MCLEANED:
       haddps rY3, rY2
       haddps rY2, rY0
       movaps rY0, 0(pY)
-      prefY(4*4+PFYDIST(pY))
-      add $4*4, pY
+      haddps rY5, rY4
+      haddps rY7, rY6
+      haddps rY6, rY4
+      movaps rY4, 16(pY)
+      prefY(8*4+PFYDIST(pY))
+      add $8*4, pY
       add incAn, pA0
       mov pX0, pX
       mov M, II
-   sub $4, N
+   sub $8, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

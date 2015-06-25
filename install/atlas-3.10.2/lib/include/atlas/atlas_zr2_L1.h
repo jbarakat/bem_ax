@@ -12,7 +12,7 @@ void ATL_zger2k__4
 void ATL_zger2k__3
    (ATL_CINT, ATL_CINT, const double*, const double*, const double*,
     const double*, double*, ATL_CINT);
-void ATL_zger2k__900004
+void ATL_zger2k__900002
    (ATL_CINT, ATL_CINT, const double*, const double*, const double*,
     const double*, double*, ATL_CINT);
 
@@ -30,7 +30,7 @@ static ATL_r2kern_t ATL_GetR2Kern
          *alignX = 32;  *alignY = 32;
          *ALIGNX2A = 0;
          *FNU = 1;
-         *CacheElts = 2007;
+         *CacheElts = 7372;
          return(ATL_zger2k__4);
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
@@ -43,19 +43,19 @@ static ATL_r2kern_t ATL_GetR2Kern
          *alignX = 16;  *alignY = 16;
          *ALIGNX2A = 0;
          *FNU = 1;
-         *CacheElts = 2007;
+         *CacheElts = 7372;
          return(ATL_zger2k__3);
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
-   *minM = 8;   *minN = 2;
-   *mu = 8;     *nu = 2;
+   *minM = 4;   *minN = 2;
+   *mu = 4;     *nu = 2;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 2007;
-   return(ATL_zger2k__900004);
+   *CacheElts = 7372;
+   return(ATL_zger2k__900002);
 }
 
-#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 328; (nb_) = 2; }
+#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 1224; (nb_) = 2; }
 
 #endif  /* end protection around header file contents */

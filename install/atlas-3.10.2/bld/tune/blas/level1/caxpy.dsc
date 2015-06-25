@@ -6,7 +6,7 @@
 5 0 1 1 caxpy1_a0x0y0.c     "R. Clint Whaley"
 6 2 1 1 caxpy2p32_x1y1.c    "R. Clint Whaley"
 7 2 1 1 caxpy_sse3.c        "R. Clint Whaley" \
-gcc -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64 -m64
+gcc -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64 -m64
 -x assembler-with-cpp
 
 <ID> <alpha> <incX> <incY> <rout> <author> [\

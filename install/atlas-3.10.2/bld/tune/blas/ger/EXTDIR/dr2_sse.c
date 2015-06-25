@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 3x4 unrolled r2_sse with these params:
+ * This file does a 2x5 unrolled r2_sse with these params:
  *    CL=8, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -20,7 +20,7 @@
 #define II      %rbx
 #define M0      %r11
 #define Mr      %rcx
-#define incM    $-192
+#define incM    $-128
 #define incII   %r15
 #define incAn   %r14
 #define lda3    %r12
@@ -39,6 +39,8 @@
 #define rZ2     %xmm9
 #define rY3     %xmm10
 #define rZ3     %xmm11
+#define rY4     %xmm12
+#define rZ4     %xmm13
 /*
  * macros
  */
@@ -118,16 +120,10 @@ ATL_asmdecor(ATL_UGER2K):
    mov %rcx, pY         /* move pY to assigned register, rbp */
    mov M, M0            /* save full M for W/X restoration */
    shl $3, M0           /* M0 *= sizeof */
-   movl   $3*8, -56(%rsp)       /* mem = MU */
-   fildl  -56(%rsp)                     /* ST = MU */
-   movl   %edi, -56(%rsp)               /* mem = M */
-   fidivrl -56(%rsp)                    /* ST = M/MU */
-   fisttpl -60(%rsp)                    /* mem = TRUNC(M/MU) */
-   movl    -60(%rsp), %ebx              /* rbx = TRUNC(M/MU) */
-   imul    $3*8, %ebx, %ebx     /* rbx = MU*TRUNC(M/MU) */
-   mov     M, Mr                        /* Mr = M */
-   sub     %rbx, Mr                     /* Mr = M - MU*TRUNC(M/MU) */
-   mov     %rbx, M                      /* M  = MU*TRUNC(M/MU) */
+   mov  M, Mr           /* Mr = M */
+   shr $4, M            /* M = M / MU */
+   shl $4, M            /* M = (M/MU)*MU */
+   sub M, Mr            /* Mr = M - (M/MU)*MU */
 /*
  * Setup constants
  */
@@ -140,8 +136,8 @@ ATL_asmdecor(ATL_UGER2K):
    sub $-128, pX        /* code compaction by using signed 1-byte offsets */
    sub $-128, pW
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
-   lea (incAn, lda3), incAn     /* incAn = (4*lda-M)*sizeof */
-   mov $8*3, incII      /* code comp: use reg rather than constant */
+   lea (incAn, lda,4), incAn    /* incAn = (5*lda-M)*sizeof */
+   mov $8*2, incII      /* code comp: use reg rather than constant */
    mov M, II
 
    ALIGN32
@@ -154,6 +150,8 @@ ATL_asmdecor(ATL_UGER2K):
       movddup 16(pZ), rZ2
       movddup 24(pY), rY3
       movddup 24(pZ), rZ3
+      movddup 32(pY), rY4
+      movddup 32(pZ), rZ4
 
       LOOPM:
          movapd 0-128(pX), rX0
@@ -194,6 +192,15 @@ ATL_asmdecor(ATL_UGER2K):
          addpd ryt, rA0
          MOVA   rA0, 0-128(pA0,lda3)
          prefA(PFADIST+0(pA0,lda3))
+         movapd rY4, ryt
+         MOVA   0-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 0-128(pA0,lda,4)
+         prefA(PFADIST+0(pA0,lda,4))
 
          movapd 64-128(pX), rX0
          movapd rY0, ryt
@@ -233,45 +240,15 @@ ATL_asmdecor(ATL_UGER2K):
          addpd ryt, rA0
          MOVA   rA0, 64-128(pA0,lda3)
          prefA(PFADIST+64(pA0,lda3))
-
-         movapd 128-128(pX), rX0
-         movapd rY0, ryt
-         MOVA   128-128(pA0), rA0
+         movapd rY4, ryt
+         MOVA   64-128(pA0,lda,4), rA0
          mulpd rX0, ryt
          addpd ryt, rA0
-         movapd 128-128(pW), rW0
-         movapd rZ0, ryt
-         mulpd  rW0, ryt
-         addpd  ryt, rA0
-         MOVA   rA0, 128-128(pA0)
-         prefA(PFADIST+128(pA0))
-         movapd rY1, ryt
-         MOVA   128-128(pA0,lda), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ1, ryt
+         movapd rZ4, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
-         MOVA   rA0, 128-128(pA0,lda)
-         prefA(PFADIST+128(pA0,lda))
-         movapd rY2, ryt
-         MOVA   128-128(pA0,lda,2), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ2, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 128-128(pA0,lda,2)
-         prefA(PFADIST+128(pA0,lda,2))
-         movapd rY3, ryt
-         MOVA   128-128(pA0,lda3), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ3, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 128-128(pA0,lda3)
-         prefA(PFADIST+128(pA0,lda3))
+         MOVA   rA0, 64-128(pA0,lda,4)
+         prefA(PFADIST+64(pA0,lda,4))
 
          movapd 16-128(pX), rX0
          movapd rY0, ryt
@@ -307,6 +284,14 @@ ATL_asmdecor(ATL_UGER2K):
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 16-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   16-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 16-128(pA0,lda,4)
 
          movapd 32-128(pX), rX0
          movapd rY0, ryt
@@ -342,6 +327,14 @@ ATL_asmdecor(ATL_UGER2K):
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 32-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   32-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 32-128(pA0,lda,4)
 
          movapd 48-128(pX), rX0
          movapd rY0, ryt
@@ -377,6 +370,14 @@ ATL_asmdecor(ATL_UGER2K):
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 48-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   48-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 48-128(pA0,lda,4)
 
          movapd 80-128(pX), rX0
          movapd rY0, ryt
@@ -412,6 +413,14 @@ ATL_asmdecor(ATL_UGER2K):
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 80-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   80-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 80-128(pA0,lda,4)
 
          movapd 96-128(pX), rX0
          movapd rY0, ryt
@@ -447,6 +456,14 @@ ATL_asmdecor(ATL_UGER2K):
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 96-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   96-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 96-128(pA0,lda,4)
 
          movapd 112-128(pX), rX0
          movapd rY0, ryt
@@ -482,111 +499,14 @@ ATL_asmdecor(ATL_UGER2K):
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 112-128(pA0,lda3)
-
-         movapd 144-128(pX), rX0
-         movapd rY0, ryt
-         MOVA   144-128(pA0), rA0
+         movapd rY4, ryt
+         MOVA   112-128(pA0,lda,4), rA0
          mulpd rX0, ryt
          addpd ryt, rA0
-         movapd 144-128(pW), rW0
-         movapd rZ0, ryt
-         mulpd  rW0, ryt
-         addpd  ryt, rA0
-         MOVA   rA0, 144-128(pA0)
-         movapd rY1, ryt
-         MOVA   144-128(pA0,lda), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ1, ryt
+         movapd rZ4, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
-         MOVA   rA0, 144-128(pA0,lda)
-         movapd rY2, ryt
-         MOVA   144-128(pA0,lda,2), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ2, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 144-128(pA0,lda,2)
-         movapd rY3, ryt
-         MOVA   144-128(pA0,lda3), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ3, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 144-128(pA0,lda3)
-
-         movapd 160-128(pX), rX0
-         movapd rY0, ryt
-         MOVA   160-128(pA0), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd 160-128(pW), rW0
-         movapd rZ0, ryt
-         mulpd  rW0, ryt
-         addpd  ryt, rA0
-         MOVA   rA0, 160-128(pA0)
-         movapd rY1, ryt
-         MOVA   160-128(pA0,lda), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ1, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 160-128(pA0,lda)
-         movapd rY2, ryt
-         MOVA   160-128(pA0,lda,2), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ2, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 160-128(pA0,lda,2)
-         movapd rY3, ryt
-         MOVA   160-128(pA0,lda3), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ3, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 160-128(pA0,lda3)
-
-         movapd 176-128(pX), rX0
-         movapd rY0, ryt
-         MOVA   176-128(pA0), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd 176-128(pW), rW0
-         movapd rZ0, ryt
-         mulpd  rW0, ryt
-         addpd  ryt, rA0
-         MOVA   rA0, 176-128(pA0)
-         movapd rY1, ryt
-         MOVA   176-128(pA0,lda), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ1, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 176-128(pA0,lda)
-         movapd rY2, ryt
-         MOVA   176-128(pA0,lda,2), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ2, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 176-128(pA0,lda,2)
-         movapd rY3, ryt
-         MOVA   176-128(pA0,lda3), rA0
-         mulpd rX0, ryt
-         addpd ryt, rA0
-         movapd rZ3, ryt
-         mulpd rW0, ryt
-         addpd ryt, rA0
-         MOVA   rA0, 176-128(pA0,lda3)
+         MOVA   rA0, 112-128(pA0,lda,4)
 
          sub incM, pX
          sub incM, pW
@@ -629,6 +549,13 @@ ATL_asmdecor(ATL_UGER2K):
          mulsd rW0, ryt
          addsd ryt, rA0
          movsd rA0, -128(pA0,lda3)
+         movsd rX0, rA0
+         mulsd rY4, rA0
+         addsd -128(pA0,lda,4), rA0
+         movsd rZ4, ryt
+         mulsd rW0, ryt
+         addsd ryt, rA0
+         movsd rA0, -128(pA0,lda,4)
          add $8, pX
          add $8, pW
          add $8, pA0
@@ -636,15 +563,15 @@ ATL_asmdecor(ATL_UGER2K):
       jnz LOOPMCU
 
 MCLEANED:
-      prefY(4*8+PFYDIST(pY))
-      add $4*8, pY
+      prefY(5*8+PFYDIST(pY))
+      add $5*8, pY
       sub M0, pX
-      prefY(4*8+PFYDIST(pZ))
-      add $4*8, pZ
+      prefY(5*8+PFYDIST(pZ))
+      add $5*8, pZ
       add incAn, pA0
       sub M0, pW
       mov M, II
-   sub $4, N
+   sub $5, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

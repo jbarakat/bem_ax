@@ -6,46 +6,46 @@
 #define BETA0
 #define DCPLX
 
-#define MB 44
-#define NB 44
+#define MB 56
+#define NB 56
 #define KB 4
 
-#define MBMB 1936
-#define NBNB 1936
+#define MBMB 3136
+#define NBNB 3136
 #define KBKB 16
 
-#define MB2 88
-#define NB2 88
+#define MB2 112
+#define NB2 112
 #define KB2 8
 
 
-#define MB3 132
-#define NB3 132
+#define MB3 168
+#define NB3 168
 #define KB3 12
 
 
-#define MB4 176
-#define NB4 176
+#define MB4 224
+#define NB4 224
 #define KB4 16
 
 
-#define MB5 220
-#define NB5 220
+#define MB5 280
+#define NB5 280
 #define KB5 20
 
 
-#define MB6 264
-#define NB6 264
+#define MB6 336
+#define NB6 336
 #define KB6 24
 
 
-#define MB7 308
-#define NB7 308
+#define MB7 392
+#define NB7 392
 #define KB7 28
 
 
-#define MB8 352
-#define NB8 352
+#define MB8 448
+#define NB8 448
 #define KB8 32
 
 /*

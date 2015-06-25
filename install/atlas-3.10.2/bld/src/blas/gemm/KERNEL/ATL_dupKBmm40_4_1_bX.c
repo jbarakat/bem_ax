@@ -6,46 +6,46 @@
 #define BETAX
 #define DREAL
 
-#define MB 52
-#define NB 52
+#define MB 56
+#define NB 56
 #define KB 40
 
-#define MBMB 2704
-#define NBNB 2704
+#define MBMB 3136
+#define NBNB 3136
 #define KBKB 1600
 
-#define MB2 104
-#define NB2 104
+#define MB2 112
+#define NB2 112
 #define KB2 80
 
 
-#define MB3 156
-#define NB3 156
+#define MB3 168
+#define NB3 168
 #define KB3 120
 
 
-#define MB4 208
-#define NB4 208
+#define MB4 224
+#define NB4 224
 #define KB4 160
 
 
-#define MB5 260
-#define NB5 260
+#define MB5 280
+#define NB5 280
 #define KB5 200
 
 
-#define MB6 312
-#define NB6 312
+#define MB6 336
+#define NB6 336
 #define KB6 240
 
 
-#define MB7 364
-#define NB7 364
+#define MB7 392
+#define NB7 392
 #define KB7 280
 
 
-#define MB8 416
-#define NB8 416
+#define MB8 448
+#define NB8 448
 #define KB8 320
 
 /*

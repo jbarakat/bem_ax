@@ -6,46 +6,46 @@
 #define BETA0
 #define SCPLX
 
-#define MB 72
-#define NB 72
+#define MB 80
+#define NB 80
 #define KB 64
 
-#define MBMB 5184
-#define NBNB 5184
+#define MBMB 6400
+#define NBNB 6400
 #define KBKB 4096
 
-#define MB2 144
-#define NB2 144
+#define MB2 160
+#define NB2 160
 #define KB2 128
 
 
-#define MB3 216
-#define NB3 216
+#define MB3 240
+#define NB3 240
 #define KB3 192
 
 
-#define MB4 288
-#define NB4 288
+#define MB4 320
+#define NB4 320
 #define KB4 256
 
 
-#define MB5 360
-#define NB5 360
+#define MB5 400
+#define NB5 400
 #define KB5 320
 
 
-#define MB6 432
-#define NB6 432
+#define MB6 480
+#define NB6 480
 #define KB6 384
 
 
-#define MB7 504
-#define NB7 504
+#define MB7 560
+#define NB7 560
 #define KB7 448
 
 
-#define MB8 576
-#define NB8 576
+#define MB8 640
+#define NB8 640
 #define KB8 512
 
 /*

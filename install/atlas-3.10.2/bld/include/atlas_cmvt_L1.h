@@ -11,10 +11,10 @@
 #endif
 void ATL_cmvtk__3(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 void ATL_cmvtk__3_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvtk__900008(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvtk__900008_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvtk__900005(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvtk__900005_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvtk__900003(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvtk__900003_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvtk__900002(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvtk__900002_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 
 static ATL_mvkern_t ATL_GetMVTKern
    (ATL_CINT M, ATL_CINT N, const void *A, ATL_CINT lda,
@@ -31,7 +31,7 @@ static ATL_mvkern_t ATL_GetMVTKern
          *alignX = 4;  *alignY = 32;
          *ALIGNX2A = 1;
          *FNU = 0;
-         *CacheElts = 4096;
+         *CacheElts = 12124;
          *mvk_b0 = ATL_cmvtk__3_b0;
          return(ATL_cmvtk__3);
       } /* end if on lda multiple restriction */
@@ -49,23 +49,23 @@ static ATL_mvkern_t ATL_GetMVTKern
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 4096;
-               *mvk_b0 = ATL_cmvtk__900008_b0;
-               return(ATL_cmvtk__900008);
+               *CacheElts = 12124;
+               *mvk_b0 = ATL_cmvtk__900003_b0;
+               return(ATL_cmvtk__900003);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
-   *minM = 32;   *minN = 6;
-   *mu = 32;     *nu = 6;
+   *minM = 8;   *minN = 4;
+   *mu = 8;     *nu = 4;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 4096;
-   *mvk_b0 = ATL_cmvtk__900005_b0;
-   return(ATL_cmvtk__900005);
+   *CacheElts = 12124;
+   *mvk_b0 = ATL_cmvtk__900002_b0;
+   return(ATL_cmvtk__900002);
 }
 
-#define ATL_GetPartMVT(A_, lda_, mb_, nb_) { *(mb_) = 288; *(nb_) = 6; }
+#define ATL_GetPartMVT(A_, lda_, mb_, nb_) { *(mb_) = 1208; *(nb_) = 4; }
 
 #endif  /* end protection around header file contents */

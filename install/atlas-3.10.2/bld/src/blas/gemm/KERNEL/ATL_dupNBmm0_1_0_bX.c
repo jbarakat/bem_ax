@@ -6,47 +6,47 @@
 #define BETAX
 #define DREAL
 
-#define MB 52
+#define MB 56
 #define NB 0
-#define KB 52
+#define KB 56
 
-#define MBMB 2704
+#define MBMB 3136
 #define NBNB 0
-#define KBKB 2704
+#define KBKB 3136
 
-#define MB2 104
+#define MB2 112
 #define NB2 0
-#define KB2 104
+#define KB2 112
 
 
-#define MB3 156
+#define MB3 168
 #define NB3 0
-#define KB3 156
+#define KB3 168
 
 
-#define MB4 208
+#define MB4 224
 #define NB4 0
-#define KB4 208
+#define KB4 224
 
 
-#define MB5 260
+#define MB5 280
 #define NB5 0
-#define KB5 260
+#define KB5 280
 
 
-#define MB6 312
+#define MB6 336
 #define NB6 0
-#define KB6 312
+#define KB6 336
 
 
-#define MB7 364
+#define MB7 392
 #define NB7 0
-#define KB7 364
+#define KB7 392
 
 
-#define MB8 416
+#define MB8 448
 #define NB8 0
-#define KB8 416
+#define KB8 448
 
 /*
  *             Automatically Tuned Linear Algebra Software v3.10.2
@@ -80,15 +80,81 @@
 #include "atlas_asm.h"
 
 
-#if !defined(ATL_GAS_x8664) && !defined(ATL_GAS_x8632)
-   #error "This kernel requires x86 assembly!"
+#ifndef ATL_SSE3
+   #error "This routine requires SSE3!"
 #endif
 
-#if !defined(KB) || (KB == 0)
-   #error "KB must be a compile-time constant!"
+/*
+ * This routine designed for Core2, which seems to have relatively few
+ * reservation stations on both the VPUs and ld/st, so we make it so
+ * we do at most 8 computations per block, and reduce outstanding ld/st
+ * over similar x86-64 code for AMD archs
+ */
+#if !defined(MB)
+   #define MB 0
 #endif
-#if KB > 90
-   #error "KB can at most be 90!"
+#if !defined(NB)
+   #define NB 0
+#endif
+#if !defined(KB)
+   #define KB 0
+#endif
+#if KB == 0
+   #error "KB must be compile time constant!"
+#endif
+/*
+ *Register usage
+ */
+#define pA0     %rcx
+#define lda     %rbx
+#define lda3    %rbp
+#define lda5    %rdx
+#define lda7    %rdi
+#define pB0     %rax
+#define pC0     %rsi
+#define ldb     %r8
+#define ldc     %r9
+#define pfA     %r10
+#define MM      %r11
+#define NN      %r12
+#define incAn   %r13
+#define incCn   %r14
+#define MM0     %r15
+
+#define rA0     %xmm0
+#define rB0     %xmm1
+#define rC00    %xmm2
+#define rC01    %xmm3
+#define rC02    %xmm4
+#define rC03    %xmm5
+#define rC04    %xmm6
+#define rC05    %xmm7
+#define rC06    %xmm8
+#define rC07    %xmm9
+#define rC0     %xmm10
+#define rC2     %xmm11
+#define rC4     %xmm12
+#define rC6     %xmm13
+#define rb0     %xmm14
+#define BETA    %xmm15
+
+/*
+ * Prefetch defines
+ */
+#if 1
+   #define pref2(mem) prefetcht1        mem
+   #define prefB(mem) prefetcht1        mem
+   #define prefC(mem) prefetcht0        mem
+#else
+   #define pref2(mem)
+   #define prefB(mem)
+   #define prefC(mem)
+#endif
+
+#if MB == 0 || defined(ATL_OS_SunOS)  /* retarded gcc on SunOS has no divis */
+   #define PFAINC 64
+#else
+   #define PFAINC ((MB*8+MB/8-1)/(MB/8))
 #endif
 
 #ifdef DCPLX
@@ -96,75 +162,7 @@
 #else
    #define CMUL(arg_) arg_
 #endif
-/*
- * Prefetch defines
- */
-#if defined(ATL_SSE1) || defined(ATL_SSE2)
-   #define pref2(mem) prefetcht1   mem
-   #define prefB(mem) prefetcht0   mem
-   #ifdef ATL_3DNow
-      #define prefC(mem) prefetchw  mem
-   #else
-      #define prefC(mem) prefetchnta  mem
-   #endif
-#elif defined(ATL_3DNow)
-   #define pref2(mem) prefetch   mem
-   #define prefB(mem) prefetch   mem
-   #define prefC(mem) prefetchw  mem
-#else
-   #define pref2(mem)
-   #define prefB(mem)
-   #define prefC(mem)
-#endif
-#ifdef ATL_GAS_x8632
-   #define movq movl
-   #define addq addl
-   #define subq subl
-   #define shrq shrl
-   #define rsp  esp
-   #define STKSIZE 36
-   #define IOFF    STKSIZE-4
-   #define MOFF    IOFF-4
-   #define JOFF    MOFF-4
-   #define iAOFF    JOFF-4
-   #define iCOFF    iAOFF-4
-   #define BETAOFF  STKSIZE+40
-#endif
-/*
- *Integer register usage shown by these defines
- */
-#ifdef ATL_GAS_x8632
-   #define pA0     %ecx
-   #define lda     %ebx
-   #define lda3    %ebp
-   #define pAE     pA0
-   #define pB0     %eax
-   #define pC0     %esi
-   #define pBE     pB0
-   #define ldb     %edi
-   #define pfA     %edx
 
-   #define incAn   iAOFF(%esp)
-   #define incCn   iCOFF(%esp)
-   #define MM      IOFF(%esp)
-   #define NN      JOFF(%esp)
-   #define MM0     MOFF(%esp)
-#else
-   #define pA0     %rcx
-   #define lda     %rbx
-   #define lda3    %rbp
-   #define pAE     %rdi
-   #define pB0     %rax
-   #define pC0     %rsi
-   #define pBE     %rdx
-   #define incAn   %r8
-   #define incCn   %r9
-   #define ldb     %r10
-   #define MM      %r11
-   #define NN      %r12
-   #define pfA     %r13
-   #define MM0     %r14
-#endif
 /*
                       %rdi/4       %rsi/8       %rdx/12          %xmm0/16
  void ATL_USERMM(const int M, const int N, const int K, const TYPE alpha,
@@ -180,1514 +178,14075 @@ ATL_asmdecor(ATL_USERMM):
 /*
  *      Save callee-saved iregs
  */
-#ifdef ATL_GAS_x8632
-        sub     $STKSIZE, %esp
-        movl    %ebp, (%esp)
-        movl    %ebx, 4(%esp)
-        movl    %esi, 8(%esp)
-        movl    %edi, 12(%esp)
-#else
         movq    %rbp, -8(%rsp)
         movq    %rbx, -16(%rsp)
         movq    %r12, -24(%rsp)
         movq    %r13, -32(%rsp)
         movq    %r14, -40(%rsp)
-                                        pref2((pA0))
-/*        movq    %r15, -48(%rsp) */
+        movq    %r15, -48(%rsp)
+#ifdef BETAX
+        pshufd  $0x44, %xmm1, BETA
+/*        pshufd  $0b01000100, %xmm1, BETA */
 #endif
-
 /*
  *      Setup input parameters
  */
-#ifdef ATL_GAS_x8632
-        movl    STKSIZE+4(%esp), lda3
-        movl    lda3, MM0
-        movl    STKSIZE+8(%esp), lda3
-        movl    lda3, NN
-        movl    STKSIZE+24(%esp), pA0
-                                pref2((pA0))
-        movl    STKSIZE+28(%esp), lda
-                                pref2((pA0,lda))
-        movl    STKSIZE+32(%esp), pB0
-                                pref2((pB0))
-        movl    STKSIZE+36(%esp), ldb
-                                pref2((pA0,lda,2))
-        movl    STKSIZE+48(%esp), pC0
-                                pref2(KB*8(pA0,lda,2))
+        movq    %rdi, MM0
+        movq    %rsi, NN
+        movq    %r9, pB0
+        movq    %r8, lda
+        movslq  8(%rsp), ldb
+        movq    16(%rsp), pC0
+        movslq  24(%rsp), incCn
 /*
- *      incCn = (ldc - M)*sizeof
+ *      ldx *= sizeof; lda3 = 3*lda, lda5=5*lda, lda7=7*lda
  */
-        movl    STKSIZE+52(%esp), lda3
-        subl    MM0, lda3
-   #ifdef DCPLX
-        shl     $4, lda3
-   #else
-        shl     $3, lda3
-   #endif
-        movl    lda3, incCn
+#ifndef DCPLX
+        movq    incCn, ldc
+#endif
+        shl     $3, lda
+        shl     $3, ldb
+        lea     (lda,lda,2), lda3
+        lea     (lda,lda,4), lda5
+        lea     (lda3,lda,4), lda7
 /*
- *      pA0 += 128; pB0 += 128
+ *      pA3 += 128, pB0 += 128
  */
         sub     $-128, pA0
         sub     $-128, pB0
-                                prefB(-64(pB0))
 /*
- *      lda *= sizeof; ldb *= sizeof; lda3 = lda*3
+ *      incAn = lda*M*sizeof
  */
-        shl     $3, lda
-                                prefB((pB0))
-        shl     $3, ldb
-                                prefB(64(pB0))
-        lea     (lda,lda,2), lda3
+        movq    lda, incAn
+        imulq   MM0, incAn
+        lea     -128(pA0,incAn), pfA
 /*
- *      pfA = A + lda*M; incAn = lda*M
- */
-        movl    MM0, pfA
-                                prefB(128(pB0))
-        imull   lda, pfA
-                                prefB(192(pB0))
-                                prefB(256(pB0))
-        movl    pfA, incAn
-        lea     -128(pA0, pfA), pfA
-                                prefB(320(pB0))
-        shrl    $2, MM0            /* MM0 = MM0 / mu */
-#else
-   #ifdef BETAX
-      #define BETAOFF -48
-        movlpd  %xmm1, BETAOFF(%rsp)
-   #endif
-        movq    %rdi, MM0
-        movq    %rsi, NN
-        movq    %r8, lda
-                                        pref2((pA0,lda))
-        movq    %r9, pB0
-                                        prefB((pB0))
-        movslq  8(%rsp), ldb
-                                        pref2((pA0,lda,2))
-        movq    16(%rsp), pC0
-        movslq  24(%rsp), incCn
-                                        pref2(KB*8(pA0,lda,2))
-/*
- *      incCn = (ldc-M)*sizeof
+ *      incCn = (ldc - M)*sizeof
  */
         sub     MM0, incCn
 #ifdef DCPLX
         shl     $4, incCn
 #else
         shl     $3, incCn
-#endif
-/*
- *      pA0 += 128; pB0 += 128
- */
-        sub     $-128, pA0
-        sub     $-128, pB0
-                                        prefB(-64(pB0))
-/*
- *      lda = lda*sizeof;  lda3 = lda*3
- */
-        shl     $3, lda
-                                                prefB((pB0))
-        lea     (lda,lda,2), lda3
-/*
- *      ldb = ldb*sizeof
- */
-        shl     $3, ldb
-                                                prefB(64(pB0))
-/*
- *      pfA = A + lda*M ; incAn = lda*M, pfB = B + ldb*N
- */
-        movq    lda, pfA
-                                                prefB(128(pB0))
-        imulq   MM0, pfA
-/*                                                prefB(192(pB0)) */
-/*                                                prefB(256(pB0)) */
-        movq    pfA, incAn
-/*        movq    ldb, pfB */
-/*        imulq   NN, pfB */
-        lea     -128(pA0, pfA), pfA
-/*                                                prefB(320(pB0)) */
-/*       lea     -128-(MB-8)*KB*8(pA0, pfA), pfA */
-/*
- *      pAE (pointer to end of column of A) = pA + lda
- */
-   #if KB > 32
-/*        lea     -128(pA0,lda), pAE */
-/*        lea     -128(pB0,ldb), pBE */
-        lea     KB*8-128(pA0), pAE
-        lea     KB*8-128(pB0), pBE
-   #endif
-/*
- *      MM0 = MM0/mu
- */
-        shr     $2, MM0
-#endif
-ALIGN16
+        test    $1, ldc
+        jnz     UNLOOP
+        test    $15, pC0
+        jnz     UNLOOP
 NLOOP:
-#ifdef ATL_GAS_x8632
-        movl    MM0, lda3
-        movl    lda3, MM
-        lea     (lda,lda,2), lda3
-#else
         movq    MM0, MM
-#endif
-        prefB(-128(pB0,ldb,2))
-        prefB(-64(pB0,ldb,2))
-        prefB((pB0,ldb,2))
-MLOOP:
-        prefC((pC0))
-        fldl    0-128(pB0)       /* st = rB0 */
-        fldl    0-128(pA0)       /* st = rA0, rB0 */
-        fmul    %st(1), %st      /* st = rA0*rB0, rB0 */
-        fldl    0-128(pA0,lda)   /* st = rA1, rC0, rB0 */
-        fmul    %st(2), %st      /* st = rA1*rB0, rC0, rB0 */
-        fldl    0-128(pA0,lda,2) /*       st = rA2, rC1, rC0, rB0 */
-        fmul    %st(3), %st      /* st = rA2*rB0, rC1, rC0, rB0 */
-        fxch    %st(3)           /* st = rB0, rC1, rC0, rC2 */
-        fmull   0-128(pA0,lda3)  /* st = rA3*rB0, rC1, rC0, rC2 */
-/*KLOOP: */                      /* st = rC3, rC1, rC0, rC2 */
-#if KB > 1
-	fldl	8-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 2
-	fldl	16-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	16-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	16-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	16-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	16-128(pA0,lda3) /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 3
-	fldl	24-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	24-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	24-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	24-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	24-128(pA0,lda3) /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 4
-	fldl	32-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	32-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	32-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	32-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	32-128(pA0,lda3) /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 5
-	fldl	40-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	40-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	40-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	40-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	40-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 6
-	fldl	48-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	48-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	48-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	48-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	48-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 7
-	fldl	56-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	56-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	56-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	56-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	56-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 8
-	fldl	64-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	64-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	64-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	64-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	64-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 9
-	fldl	72-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	72-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	72-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	72-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	72-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 10
-	fldl	80-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	80-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	80-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	80-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	80-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 11
-	fldl	88-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	88-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	88-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	88-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	88-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 12
-	fldl	96-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	96-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	96-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	96-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	96-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 13
-	fldl	104-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	104-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	104-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	104-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	104-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 14
-	fldl	112-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	112-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	112-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	112-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	112-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 15
-	fldl	120-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	120-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	120-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	120-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	120-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
+        prefB(-128(pB0,ldb))
 #if KB > 16
-	fldl	128-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	128-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	128-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	128-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	128-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
+        prefB((pB0,ldb))
 #endif
-#if KB > 17
-	fldl	136-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	136-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	136-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	136-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	136-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 18
-	fldl	144-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	144-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	144-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	144-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	144-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 19
-	fldl	152-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	152-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	152-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	152-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	152-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 20
-	fldl	160-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	160-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	160-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	160-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	160-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 21
-	fldl	168-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	168-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	168-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	168-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	168-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 22
-	fldl	176-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	176-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	176-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	176-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	176-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 23
-	fldl	184-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	184-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	184-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	184-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	184-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 24
-	fldl	192-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	192-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	192-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	192-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	192-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 25
-	fldl	200-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	200-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	200-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	200-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	200-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 26
-	fldl	208-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	208-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	208-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	208-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	208-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 27
-	fldl	216-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	216-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	216-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	216-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	216-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 28
-	fldl	224-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	224-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	224-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	224-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	224-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 29
-	fldl	232-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	232-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	232-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	232-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	232-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 30
-	fldl	240-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	240-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	240-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	240-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	240-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 31
-	fldl	248-128(pB0)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-#if KB > 32 && defined(ATL_GAS_x8632)
-        addl    $KB*8-128, pB0
-#endif
-	fldl	248-128(pA0)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	248-128(pA0,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	248-128(pA0,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	248-128(pA0,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-#if KB > 32 && defined(ATL_GAS_x8632)
-        addl    $KB*8-128, pA0
-#endif
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if (KB > 32)
-   #ifdef ATL_GAS_x8632
-ALIGN8
-   #endif
-	fldl	8*(32-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(32-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(32-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(32-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(32-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 33
-	fldl	8*(33-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(33-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(33-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(33-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(33-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 34
-	fldl	8*(34-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(34-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(34-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(34-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(34-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 35
-	fldl	8*(35-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(35-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(35-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(35-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(35-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 36
-	fldl	8*(36-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(36-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(36-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(36-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(36-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 37
-	fldl	8*(37-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(37-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(37-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(37-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(37-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 38
-	fldl	8*(38-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(38-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(38-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(38-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(38-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 39
-	fldl	8*(39-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(39-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(39-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(39-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(39-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 40
-	fldl	8*(40-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(40-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(40-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(40-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(40-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 41
-	fldl	8*(41-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(41-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(41-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(41-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(41-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 42
-	fldl	8*(42-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(42-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(42-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(42-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(42-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 43
-	fldl	8*(43-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(43-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(43-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(43-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(43-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 44
-	fldl	8*(44-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(44-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(44-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(44-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(44-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 45
-	fldl	8*(45-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(45-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(45-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(45-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(45-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 46
-	fldl	8*(46-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(46-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(46-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(46-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(46-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 47
-	fldl	8*(47-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(47-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(47-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(47-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(47-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
+#if KB > 32
+        prefB(128(pB0,ldb))
 #endif
 #if KB > 48
-	fldl	8*(48-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(48-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(48-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(48-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(48-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 49
-	fldl	8*(49-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(49-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(49-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(49-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(49-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 50
-	fldl	8*(50-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(50-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(50-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(50-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(50-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 51
-	fldl	8*(51-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(51-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(51-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(51-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(51-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 52
-	fldl	8*(52-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(52-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(52-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(52-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(52-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 53
-	fldl	8*(53-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(53-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(53-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(53-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(53-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 54
-	fldl	8*(54-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(54-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(54-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(54-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(54-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 55
-	fldl	8*(55-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(55-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(55-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(55-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(55-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 56
-	fldl	8*(56-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(56-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(56-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(56-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(56-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 57
-	fldl	8*(57-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(57-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(57-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(57-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(57-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 58
-	fldl	8*(58-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(58-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(58-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(58-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(58-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 59
-	fldl	8*(59-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(59-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(59-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(59-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(59-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 60
-	fldl	8*(60-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(60-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(60-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(60-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(60-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 61
-	fldl	8*(61-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(61-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(61-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(61-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(61-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 62
-	fldl	8*(62-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(62-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(62-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(62-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(62-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 63
-	fldl	8*(63-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(63-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(63-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(63-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(63-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
+        prefB(256(pB0,ldb))
 #endif
 #if KB > 64
-	fldl	8*(64-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(64-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(64-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(64-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(64-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
+        prefB(384(pB0,ldb))
 #endif
-#if KB > 65
-	fldl	8*(65-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(65-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(65-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(65-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(65-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
+MLOOP:
+                prefC((pC0))
+/*KLOOP: */
+	movapd	-128(pB0), rB0
+                                        pref2((pfA))
+                                        add     $PFAINC, pfA
+	movapd	-128(pA0), rC00
+	mulpd	rB0,rC00
+	movapd	-128(pA0,lda), rC01
+	mulpd	rB0,rC01
+	movapd	-128(pA0,lda,2), rC02
+	mulpd	rB0,rC02
+	movapd	-128(pA0,lda3), rC03
+	mulpd	rB0,rC03
+	movapd	-128(pA0,lda,4), rC04
+	mulpd	rB0,rC04
+	movapd	-128(pA0,lda5), rC05
+	mulpd	rB0,rC05
+	movapd	-128(pA0,lda3,2), rC06
+	mulpd	rB0,rC06
+	movapd	-128(pA0,lda7), rC07
+	mulpd	rB0,rC07
+#if KB > 2
+	movapd	16-128(pB0), rB0
+	movapd	16-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	16-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	16-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	16-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	16-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	16-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	16-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	16-128(pA0,lda7), rB0
+	addpd	rB0,rC07
 #endif
-#if KB > 66
-	fldl	8*(66-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(66-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(66-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(66-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(66-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 67
-	fldl	8*(67-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(67-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(67-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(67-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(67-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 68
-	fldl	8*(68-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(68-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(68-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(68-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(68-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 69
-	fldl	8*(69-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(69-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(69-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(69-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(69-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 70
-	fldl	8*(70-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(70-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(70-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(70-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(70-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 71
-	fldl	8*(71-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(71-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(71-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(71-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(71-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 72
-	fldl	8*(72-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(72-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(72-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(72-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(72-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 73
-	fldl	8*(73-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(73-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(73-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(73-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(73-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 74
-	fldl	8*(74-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(74-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(74-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(74-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(74-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 75
-	fldl	8*(75-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(75-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(75-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(75-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(75-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 76
-	fldl	8*(76-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(76-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(76-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(76-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(76-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 77
-	fldl	8*(77-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(77-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(77-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(77-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(77-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 78
-	fldl	8*(78-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(78-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(78-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(78-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(78-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 79
-	fldl	8*(79-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(79-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(79-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(79-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(79-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 80
-	fldl	8*(80-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(80-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(80-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(80-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(80-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 81
-	fldl	8*(81-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(81-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(81-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(81-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(81-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 82
-	fldl	8*(82-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(82-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(82-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(82-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(82-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 83
-	fldl	8*(83-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(83-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(83-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(83-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(83-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 84
-	fldl	8*(84-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(84-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(84-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(84-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(84-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 85
-	fldl	8*(85-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(85-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(85-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(85-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(85-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 86
-	fldl	8*(86-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(86-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(86-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(86-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(86-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 87
-	fldl	8*(87-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(87-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(87-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(87-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(87-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 88
-	fldl	8*(88-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(88-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(88-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(88-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(88-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-#if KB > 89
-	fldl	8*(89-KB)(pBE)	 /* st = rB0, rC3, rC1, rC0, rC2 */
-	fldl	8*(89-KB)(pAE)	 /* st = rA0, rB0, rC3, rC1, rC0, rC2 */
-	fmul	%st(1), %st	 /* st = rA0*rB0, rB0, rC3, rC1, rC0, rC2 */
-	faddp	%st, %st(4)	 /* st = rB0, rC3, rC1, rC0+, rC2 */
-	fldl	8*(89-KB)(pAE,lda)	 /* st = rA1, rB0, rC3, rC1, rC0+, rC2 */
-	fmul	%st(1),%st	 /* st = rA1*rB0, rB0, rC3, rC1, rC0+, rC2 */
-	faddp	%st, %st(3)	 /* st = rA1*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	fldl	8*(89-KB)(pAE,lda,2) /* st = rA2, rB0, rC3, rC1+, rC0+,rC2 */
-	fmul	%st(1), %st	 /* st = rA2*rB0, rB0, rC3, rC1+, rC0+, rC2 */
-	faddp	%st, %st(5)	 /* st = rB0, rC3, rC1+, rC0+, rC2+ */
-	fmull	8*(89-KB)(pAE,lda3)	 /* st = rA3*rB0, rC3, rC1+, rC0+, rC2+ */
-	faddp	%st, %st(1)	 /* st = rC3+, rC1+, rC0+, rC2+ */
-#endif
-/*        jnz     KLOOP */
-#DONEK:
-#ifdef BETA0
-        fstpl   CMUL(24)(pC0)
-        fstpl   CMUL(8)(pC0)
-        fstpl   (pC0)
-        fstpl   CMUL(16)(pC0)
-#elif defined(BETA1) || defined(BETAN1)
-   #ifdef BETAN1
-      #define faddl fsubl
-   #endif
-                                 /* st = rC3, rC1, rC0, rC2  */
-        fxch    %st(2)           /* st = rC0, rC1, rC3, rC2 */
-        faddl   (pC0)            /* st = rC0+,rC1, rC3, rC2 */
-        fstpl   (pC0)            /* st = rC1, rC3, rC2 */
-        faddl   CMUL(8)(pC0)     /* st = rC1+,rC3, rC2 */
-        fstpl   CMUL(8)(pC0)     /* st = rC3, rC2 */
-        fxch    %st(1)           /* st = rC2, rC3 */
-        faddl   CMUL(16)(pC0)    /* st = rC2+,rC3 */
-        fstpl   CMUL(16)(pC0)    /* st = rC3 */
-        faddl   CMUL(24)(pC0)    /* st = rC3+ */
-        fstpl   CMUL(24)(pC0)    /* st = null */
-   #ifdef BETAN1
-      #undef  faddl
-   #endif
-#else
-                                 /* st = rC3, rC1, rC0, rC2  */
-        fldl    BETAOFF(%rsp)    /* st = bet, rC3, rC1, rC0, rC2 */
-        fldl    (pC0)            /* st = c0, bet, rC3, rC1, rC0, rC2 */
-        fmul    %st(1),%st       /* st = c0*bet, bet, rC3, rC1, rC0, rC2 */
-        faddp   %st, %st(4)      /* st = bet, rC3, rC1, rC0+, rC2 */
-        fldl    CMUL(8)(pC0)     /* st = c1, bet, rC3, rC1, rC0+, rC2 */
-        fmul    %st(1),%st       /* st = c1*bet, bet, rC3, rC1, rC0+, rC2 */
-        faddp   %st,%st(3)       /* st = bet, rC3, rC1+, rC0+, rC2 */
-        fldl    CMUL(16)(pC0)    /* st = c2, bet, rC3, rC1+, rC0+, rC2 */
-        fmul    %st(1),%st       /* st = bet*c2, bet, rC3, rC1+, rC0+, rC2 */
-        faddp   %st,%st(5)       /* st = bet, rC3, rC1+, rC0+, rC2+ */
-        fmull   CMUL(24)(pC0)    /* st = bet*c3, rC3, rC1+, rC0+, rC2+ */
-        faddp   %st,%st(1)       /* st = rC3+, rC1+, rC0+, rC2+ */
-        fstpl   CMUL(24)(pC0)
-        fstpl   CMUL(8)(pC0)
-        fstpl   (pC0)
-        fstpl   CMUL(16)(pC0)
-#endif
-        add     $4*CMUL(8), pC0
-          pref2((pfA))
-          add     $32, pfA
 
-#if KB > 32 && defined(ATL_GAS_x8632)
-        lea     128-KB*8(pA0,lda,4), pA0
-        subl    $KB*8-128, pB0
-#else
-        lea     0(pA0,lda,4), pA0
-   #if KB > 32
-        lea     0(pAE,lda,4), pAE
-   #endif
+#if KB > 4
+	movapd	32-128(pB0), rB0
+	movapd	32-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	32-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	32-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	32-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	32-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	32-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	32-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	32-128(pA0,lda7), rB0
+	addpd	rB0,rC07
 #endif
-        sub     $1, MM
+
+#if KB > 6
+	movapd	48-128(pB0), rB0
+	movapd	48-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	48-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	48-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	48-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	48-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	48-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	48-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	48-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 8
+	movapd	64-128(pB0), rB0
+	movapd	64-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	64-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	64-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	64-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	64-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	64-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	64-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	64-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 10
+	movapd	80-128(pB0), rB0
+	movapd	80-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	80-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	80-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	80-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	80-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	80-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	80-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	80-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 12
+	movapd	96-128(pB0), rB0
+	movapd	96-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	96-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	96-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	96-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	96-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	96-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	96-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	96-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 14
+	movapd	112-128(pB0), rB0
+	movapd	112-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	112-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	112-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	112-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	112-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	112-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	112-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	112-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 16
+	movapd	128-128(pB0), rB0
+	movapd	128-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	128-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	128-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	128-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	128-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	128-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	128-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	128-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 18
+	movapd	144-128(pB0), rB0
+	movapd	144-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	144-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	144-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	144-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	144-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	144-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	144-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	144-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 20
+	movapd	160-128(pB0), rB0
+	movapd	160-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	160-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	160-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	160-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	160-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	160-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	160-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	160-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 22
+	movapd	176-128(pB0), rB0
+	movapd	176-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	176-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	176-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	176-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	176-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	176-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	176-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	176-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 24
+	movapd	192-128(pB0), rB0
+	movapd	192-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	192-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	192-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	192-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	192-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	192-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	192-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	192-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 26
+	movapd	208-128(pB0), rB0
+	movapd	208-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	208-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	208-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	208-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	208-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	208-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	208-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	208-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 28
+	movapd	224-128(pB0), rB0
+	movapd	224-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	224-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	224-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	224-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	224-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	224-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	224-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	224-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 30
+	movapd	240-128(pB0), rB0
+	movapd	240-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	240-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	240-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	240-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	240-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	240-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	240-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	240-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 32
+	movapd	256-128(pB0), rB0
+	movapd	256-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	256-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	256-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	256-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	256-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	256-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	256-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	256-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 34
+	movapd	272-128(pB0), rB0
+	movapd	272-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	272-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	272-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	272-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	272-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	272-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	272-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	272-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 36
+	movapd	288-128(pB0), rB0
+	movapd	288-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	288-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	288-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	288-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	288-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	288-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	288-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	288-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 38
+	movapd	304-128(pB0), rB0
+	movapd	304-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	304-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	304-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	304-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	304-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	304-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	304-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	304-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 40
+	movapd	320-128(pB0), rB0
+	movapd	320-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	320-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	320-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	320-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	320-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	320-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	320-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	320-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 42
+	movapd	336-128(pB0), rB0
+	movapd	336-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	336-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	336-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	336-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	336-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	336-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	336-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	336-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 44
+	movapd	352-128(pB0), rB0
+	movapd	352-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	352-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	352-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	352-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	352-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	352-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	352-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	352-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 46
+	movapd	368-128(pB0), rB0
+	movapd	368-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	368-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	368-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	368-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	368-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	368-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	368-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	368-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 48
+	movapd	384-128(pB0), rB0
+	movapd	384-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	384-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	384-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	384-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	384-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	384-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	384-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	384-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 50
+	movapd	400-128(pB0), rB0
+	movapd	400-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	400-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	400-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	400-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	400-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	400-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	400-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	400-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 52
+	movapd	416-128(pB0), rB0
+	movapd	416-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	416-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	416-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	416-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	416-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	416-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	416-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	416-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 54
+	movapd	432-128(pB0), rB0
+	movapd	432-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	432-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	432-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	432-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	432-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	432-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	432-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	432-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 56
+	movapd	448-128(pB0), rB0
+	movapd	448-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	448-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	448-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	448-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	448-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	448-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	448-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	448-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 58
+	movapd	464-128(pB0), rB0
+	movapd	464-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	464-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	464-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	464-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	464-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	464-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	464-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	464-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 60
+	movapd	480-128(pB0), rB0
+	movapd	480-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	480-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	480-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	480-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	480-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	480-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	480-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	480-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 62
+	movapd	496-128(pB0), rB0
+	movapd	496-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	496-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	496-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	496-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	496-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	496-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	496-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	496-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 64
+	movapd	512-128(pB0), rB0
+	movapd	512-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	512-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	512-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	512-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	512-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	512-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	512-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	512-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 66
+	movapd	528-128(pB0), rB0
+	movapd	528-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	528-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	528-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	528-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	528-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	528-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	528-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	528-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 68
+	movapd	544-128(pB0), rB0
+	movapd	544-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	544-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	544-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	544-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	544-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	544-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	544-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	544-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 70
+	movapd	560-128(pB0), rB0
+	movapd	560-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	560-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	560-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	560-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	560-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	560-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	560-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	560-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 72
+	movapd	576-128(pB0), rB0
+	movapd	576-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	576-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	576-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	576-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	576-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	576-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	576-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	576-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 74
+	movapd	592-128(pB0), rB0
+	movapd	592-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	592-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	592-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	592-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	592-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	592-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	592-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	592-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 76
+	movapd	608-128(pB0), rB0
+	movapd	608-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	608-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	608-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	608-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	608-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	608-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	608-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	608-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 78
+	movapd	624-128(pB0), rB0
+	movapd	624-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	624-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	624-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	624-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	624-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	624-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	624-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	624-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 80
+	movapd	640-128(pB0), rB0
+	movapd	640-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	640-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	640-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	640-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	640-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	640-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	640-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	640-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 82
+	movapd	656-128(pB0), rB0
+	movapd	656-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	656-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	656-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	656-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	656-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	656-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	656-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	656-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 84
+	movapd	672-128(pB0), rB0
+	movapd	672-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	672-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	672-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	672-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	672-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	672-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	672-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	672-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 86
+	movapd	688-128(pB0), rB0
+	movapd	688-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	688-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	688-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	688-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	688-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	688-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	688-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	688-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 88
+	movapd	704-128(pB0), rB0
+	movapd	704-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	704-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	704-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	704-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	704-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	704-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	704-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	704-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 90
+	movapd	720-128(pB0), rB0
+	movapd	720-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	720-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	720-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	720-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	720-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	720-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	720-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	720-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 92
+	movapd	736-128(pB0), rB0
+	movapd	736-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	736-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	736-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	736-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	736-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	736-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	736-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	736-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 94
+	movapd	752-128(pB0), rB0
+	movapd	752-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	752-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	752-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	752-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	752-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	752-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	752-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	752-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 96
+	movapd	768-128(pB0), rB0
+	movapd	768-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	768-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	768-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	768-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	768-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	768-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	768-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	768-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 98
+	movapd	784-128(pB0), rB0
+	movapd	784-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	784-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	784-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	784-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	784-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	784-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	784-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	784-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 100
+	movapd	800-128(pB0), rB0
+	movapd	800-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	800-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	800-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	800-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	800-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	800-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	800-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	800-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 102
+	movapd	816-128(pB0), rB0
+	movapd	816-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	816-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	816-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	816-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	816-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	816-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	816-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	816-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 104
+	movapd	832-128(pB0), rB0
+	movapd	832-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	832-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	832-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	832-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	832-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	832-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	832-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	832-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 106
+	movapd	848-128(pB0), rB0
+	movapd	848-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	848-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	848-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	848-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	848-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	848-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	848-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	848-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 108
+	movapd	864-128(pB0), rB0
+	movapd	864-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	864-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	864-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	864-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	864-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	864-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	864-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	864-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 110
+	movapd	880-128(pB0), rB0
+	movapd	880-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	880-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	880-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	880-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	880-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	880-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	880-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	880-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 112
+	movapd	896-128(pB0), rB0
+	movapd	896-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	896-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	896-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	896-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	896-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	896-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	896-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	896-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 114
+	movapd	912-128(pB0), rB0
+	movapd	912-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	912-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	912-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	912-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	912-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	912-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	912-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	912-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 116
+	movapd	928-128(pB0), rB0
+	movapd	928-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	928-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	928-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	928-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	928-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	928-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	928-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	928-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 118
+	movapd	944-128(pB0), rB0
+	movapd	944-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	944-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	944-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	944-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	944-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	944-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	944-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	944-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 120
+	movapd	960-128(pB0), rB0
+	movapd	960-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	960-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	960-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	960-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	960-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	960-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	960-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	960-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 122
+	movapd	976-128(pB0), rB0
+	movapd	976-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	976-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	976-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	976-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	976-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	976-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	976-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	976-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 124
+	movapd	992-128(pB0), rB0
+	movapd	992-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	992-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	992-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	992-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	992-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	992-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	992-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	992-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 126
+	movapd	1008-128(pB0), rB0
+	movapd	1008-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1008-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1008-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1008-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1008-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1008-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1008-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1008-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 128
+	movapd	1024-128(pB0), rB0
+	movapd	1024-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1024-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1024-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1024-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1024-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1024-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1024-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1024-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 130
+	movapd	1040-128(pB0), rB0
+	movapd	1040-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1040-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1040-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1040-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1040-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1040-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1040-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1040-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 132
+	movapd	1056-128(pB0), rB0
+	movapd	1056-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1056-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1056-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1056-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1056-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1056-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1056-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1056-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 134
+	movapd	1072-128(pB0), rB0
+	movapd	1072-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1072-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1072-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1072-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1072-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1072-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1072-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1072-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 136
+	movapd	1088-128(pB0), rB0
+	movapd	1088-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1088-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1088-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1088-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1088-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1088-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1088-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1088-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 138
+	movapd	1104-128(pB0), rB0
+	movapd	1104-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1104-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1104-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1104-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1104-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1104-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1104-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1104-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 140
+	movapd	1120-128(pB0), rB0
+	movapd	1120-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1120-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1120-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1120-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1120-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1120-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1120-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1120-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 142
+	movapd	1136-128(pB0), rB0
+	movapd	1136-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1136-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1136-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1136-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1136-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1136-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1136-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1136-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 144
+	movapd	1152-128(pB0), rB0
+	movapd	1152-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1152-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1152-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1152-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1152-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1152-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1152-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1152-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 146
+	movapd	1168-128(pB0), rB0
+	movapd	1168-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1168-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1168-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1168-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1168-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1168-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1168-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1168-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 148
+	movapd	1184-128(pB0), rB0
+	movapd	1184-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1184-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1184-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1184-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1184-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1184-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1184-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1184-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 150
+	movapd	1200-128(pB0), rB0
+	movapd	1200-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1200-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1200-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1200-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1200-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1200-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1200-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1200-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 152
+	movapd	1216-128(pB0), rB0
+	movapd	1216-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1216-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1216-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1216-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1216-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1216-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1216-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1216-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 154
+	movapd	1232-128(pB0), rB0
+	movapd	1232-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1232-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1232-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1232-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1232-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1232-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1232-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1232-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 156
+	movapd	1248-128(pB0), rB0
+	movapd	1248-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1248-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1248-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1248-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1248-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1248-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1248-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1248-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 158
+	movapd	1264-128(pB0), rB0
+	movapd	1264-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1264-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1264-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1264-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1264-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1264-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1264-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1264-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 160
+	movapd	1280-128(pB0), rB0
+	movapd	1280-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1280-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1280-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1280-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1280-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1280-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1280-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1280-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 162
+	movapd	1296-128(pB0), rB0
+	movapd	1296-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1296-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1296-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1296-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1296-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1296-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1296-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1296-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 164
+	movapd	1312-128(pB0), rB0
+	movapd	1312-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1312-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1312-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1312-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1312-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1312-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1312-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1312-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 166
+	movapd	1328-128(pB0), rB0
+	movapd	1328-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1328-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1328-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1328-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1328-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1328-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1328-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1328-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 168
+	movapd	1344-128(pB0), rB0
+	movapd	1344-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1344-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1344-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1344-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1344-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1344-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1344-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1344-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 170
+	movapd	1360-128(pB0), rB0
+	movapd	1360-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1360-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1360-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1360-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1360-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1360-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1360-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1360-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 172
+	movapd	1376-128(pB0), rB0
+	movapd	1376-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1376-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1376-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1376-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1376-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1376-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1376-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1376-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 174
+	movapd	1392-128(pB0), rB0
+	movapd	1392-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1392-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1392-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1392-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1392-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1392-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1392-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1392-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 176
+	movapd	1408-128(pB0), rB0
+	movapd	1408-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1408-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1408-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1408-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1408-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1408-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1408-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1408-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 178
+	movapd	1424-128(pB0), rB0
+	movapd	1424-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1424-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1424-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1424-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1424-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1424-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1424-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1424-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 180
+	movapd	1440-128(pB0), rB0
+	movapd	1440-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1440-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1440-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1440-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1440-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1440-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1440-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1440-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 182
+	movapd	1456-128(pB0), rB0
+	movapd	1456-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1456-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1456-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1456-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1456-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1456-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1456-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1456-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 184
+	movapd	1472-128(pB0), rB0
+	movapd	1472-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1472-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1472-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1472-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1472-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1472-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1472-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1472-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 186
+	movapd	1488-128(pB0), rB0
+	movapd	1488-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1488-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1488-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1488-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1488-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1488-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1488-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1488-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 188
+	movapd	1504-128(pB0), rB0
+	movapd	1504-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1504-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1504-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1504-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1504-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1504-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1504-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1504-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 190
+	movapd	1520-128(pB0), rB0
+	movapd	1520-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1520-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1520-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1520-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1520-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1520-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1520-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1520-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 192
+	movapd	1536-128(pB0), rB0
+	movapd	1536-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1536-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1536-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1536-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1536-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1536-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1536-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1536-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 194
+	movapd	1552-128(pB0), rB0
+	movapd	1552-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1552-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1552-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1552-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1552-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1552-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1552-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1552-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 196
+	movapd	1568-128(pB0), rB0
+	movapd	1568-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1568-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1568-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1568-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1568-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1568-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1568-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1568-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 198
+	movapd	1584-128(pB0), rB0
+	movapd	1584-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1584-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1584-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1584-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1584-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1584-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1584-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1584-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 200
+	movapd	1600-128(pB0), rB0
+	movapd	1600-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1600-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1600-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1600-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1600-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1600-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1600-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1600-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 202
+	movapd	1616-128(pB0), rB0
+	movapd	1616-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1616-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1616-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1616-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1616-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1616-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1616-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1616-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 204
+	movapd	1632-128(pB0), rB0
+	movapd	1632-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1632-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1632-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1632-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1632-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1632-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1632-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1632-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 206
+	movapd	1648-128(pB0), rB0
+	movapd	1648-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1648-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1648-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1648-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1648-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1648-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1648-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1648-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 208
+	movapd	1664-128(pB0), rB0
+	movapd	1664-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1664-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1664-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1664-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1664-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1664-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1664-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1664-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 210
+	movapd	1680-128(pB0), rB0
+	movapd	1680-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1680-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1680-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1680-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1680-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1680-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1680-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1680-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 212
+	movapd	1696-128(pB0), rB0
+	movapd	1696-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1696-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1696-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1696-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1696-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1696-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1696-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1696-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 214
+	movapd	1712-128(pB0), rB0
+	movapd	1712-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1712-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1712-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1712-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1712-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1712-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1712-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1712-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 216
+	movapd	1728-128(pB0), rB0
+	movapd	1728-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1728-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1728-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1728-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1728-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1728-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1728-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1728-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 218
+	movapd	1744-128(pB0), rB0
+	movapd	1744-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1744-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1744-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1744-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1744-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1744-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1744-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1744-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 220
+	movapd	1760-128(pB0), rB0
+	movapd	1760-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1760-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1760-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1760-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1760-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1760-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1760-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1760-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 222
+	movapd	1776-128(pB0), rB0
+	movapd	1776-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1776-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1776-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1776-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1776-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1776-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1776-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1776-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 224
+	movapd	1792-128(pB0), rB0
+	movapd	1792-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1792-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1792-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1792-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1792-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1792-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1792-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1792-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 226
+	movapd	1808-128(pB0), rB0
+	movapd	1808-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1808-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1808-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1808-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1808-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1808-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1808-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1808-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 228
+	movapd	1824-128(pB0), rB0
+	movapd	1824-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1824-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1824-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1824-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1824-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1824-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1824-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1824-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 230
+	movapd	1840-128(pB0), rB0
+	movapd	1840-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1840-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1840-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1840-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1840-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1840-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1840-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1840-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 232
+	movapd	1856-128(pB0), rB0
+	movapd	1856-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1856-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1856-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1856-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1856-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1856-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1856-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1856-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 234
+	movapd	1872-128(pB0), rB0
+	movapd	1872-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1872-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1872-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1872-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1872-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1872-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1872-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1872-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 236
+	movapd	1888-128(pB0), rB0
+	movapd	1888-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1888-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1888-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1888-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1888-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1888-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1888-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1888-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 238
+	movapd	1904-128(pB0), rB0
+	movapd	1904-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1904-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1904-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1904-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1904-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1904-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1904-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1904-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 240
+	movapd	1920-128(pB0), rB0
+	movapd	1920-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1920-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1920-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1920-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1920-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1920-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1920-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1920-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 242
+	movapd	1936-128(pB0), rB0
+	movapd	1936-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1936-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1936-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1936-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1936-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1936-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1936-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1936-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 244
+	movapd	1952-128(pB0), rB0
+	movapd	1952-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1952-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1952-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1952-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1952-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1952-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1952-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1952-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 246
+	movapd	1968-128(pB0), rB0
+	movapd	1968-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1968-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1968-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1968-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1968-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1968-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1968-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1968-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 248
+	movapd	1984-128(pB0), rB0
+	movapd	1984-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1984-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1984-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1984-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1984-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1984-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1984-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1984-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 250
+	movapd	2000-128(pB0), rB0
+	movapd	2000-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2000-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2000-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2000-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2000-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2000-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2000-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2000-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 252
+	movapd	2016-128(pB0), rB0
+	movapd	2016-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2016-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2016-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2016-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2016-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2016-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2016-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2016-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 254
+	movapd	2032-128(pB0), rB0
+	movapd	2032-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2032-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2032-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2032-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2032-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2032-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2032-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2032-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 256
+	movapd	2048-128(pB0), rB0
+	movapd	2048-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2048-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2048-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2048-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2048-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2048-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2048-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2048-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 258
+	movapd	2064-128(pB0), rB0
+	movapd	2064-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2064-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2064-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2064-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2064-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2064-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2064-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2064-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 260
+	movapd	2080-128(pB0), rB0
+	movapd	2080-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2080-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2080-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2080-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2080-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2080-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2080-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2080-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 262
+	movapd	2096-128(pB0), rB0
+	movapd	2096-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2096-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2096-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2096-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2096-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2096-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2096-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2096-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 264
+	movapd	2112-128(pB0), rB0
+	movapd	2112-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2112-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2112-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2112-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2112-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2112-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2112-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2112-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 266
+	movapd	2128-128(pB0), rB0
+	movapd	2128-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2128-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2128-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2128-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2128-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2128-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2128-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2128-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 268
+	movapd	2144-128(pB0), rB0
+	movapd	2144-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2144-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2144-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2144-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2144-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2144-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2144-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2144-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 270
+	movapd	2160-128(pB0), rB0
+	movapd	2160-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2160-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2160-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2160-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2160-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2160-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2160-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2160-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 272
+	movapd	2176-128(pB0), rB0
+	movapd	2176-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2176-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2176-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2176-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2176-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2176-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2176-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2176-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 274
+	movapd	2192-128(pB0), rB0
+	movapd	2192-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2192-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2192-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2192-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2192-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2192-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2192-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2192-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 276
+	movapd	2208-128(pB0), rB0
+	movapd	2208-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2208-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2208-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2208-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2208-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2208-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2208-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2208-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 278
+	movapd	2224-128(pB0), rB0
+	movapd	2224-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2224-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2224-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2224-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2224-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2224-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2224-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2224-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 280
+	movapd	2240-128(pB0), rB0
+	movapd	2240-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2240-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2240-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2240-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2240-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2240-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2240-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2240-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 282
+	movapd	2256-128(pB0), rB0
+	movapd	2256-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2256-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2256-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2256-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2256-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2256-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2256-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2256-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 284
+	movapd	2272-128(pB0), rB0
+	movapd	2272-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2272-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2272-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2272-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2272-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2272-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2272-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2272-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 286
+	movapd	2288-128(pB0), rB0
+	movapd	2288-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2288-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2288-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2288-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2288-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2288-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2288-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2288-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 288
+	movapd	2304-128(pB0), rB0
+	movapd	2304-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2304-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2304-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2304-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2304-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2304-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2304-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2304-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 290
+	movapd	2320-128(pB0), rB0
+	movapd	2320-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2320-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2320-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2320-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2320-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2320-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2320-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2320-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 292
+	movapd	2336-128(pB0), rB0
+	movapd	2336-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2336-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2336-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2336-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2336-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2336-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2336-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2336-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 294
+	movapd	2352-128(pB0), rB0
+	movapd	2352-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2352-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2352-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2352-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2352-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2352-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2352-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2352-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 296
+	movapd	2368-128(pB0), rB0
+	movapd	2368-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2368-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2368-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2368-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2368-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2368-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2368-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2368-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 298
+	movapd	2384-128(pB0), rB0
+	movapd	2384-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2384-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2384-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2384-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2384-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2384-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2384-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2384-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 300
+	movapd	2400-128(pB0), rB0
+	movapd	2400-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2400-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2400-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2400-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2400-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2400-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2400-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2400-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 302
+	movapd	2416-128(pB0), rB0
+	movapd	2416-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2416-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2416-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2416-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2416-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2416-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2416-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2416-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 304
+	movapd	2432-128(pB0), rB0
+	movapd	2432-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2432-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2432-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2432-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2432-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2432-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2432-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2432-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 306
+	movapd	2448-128(pB0), rB0
+	movapd	2448-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2448-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2448-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2448-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2448-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2448-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2448-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2448-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 308
+	movapd	2464-128(pB0), rB0
+	movapd	2464-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2464-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2464-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2464-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2464-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2464-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2464-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2464-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 310
+	movapd	2480-128(pB0), rB0
+	movapd	2480-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2480-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2480-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2480-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2480-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2480-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2480-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2480-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 312
+	movapd	2496-128(pB0), rB0
+	movapd	2496-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2496-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2496-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2496-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2496-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2496-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2496-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2496-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 314
+	movapd	2512-128(pB0), rB0
+	movapd	2512-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2512-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2512-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2512-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2512-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2512-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2512-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2512-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 316
+	movapd	2528-128(pB0), rB0
+	movapd	2528-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2528-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2528-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2528-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2528-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2528-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2528-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2528-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 318
+	movapd	2544-128(pB0), rB0
+	movapd	2544-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2544-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2544-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2544-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2544-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2544-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2544-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2544-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 320
+	movapd	2560-128(pB0), rB0
+	movapd	2560-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2560-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2560-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2560-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2560-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2560-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2560-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2560-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 322
+	movapd	2576-128(pB0), rB0
+	movapd	2576-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2576-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2576-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2576-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2576-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2576-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2576-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2576-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 324
+	movapd	2592-128(pB0), rB0
+	movapd	2592-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2592-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2592-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2592-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2592-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2592-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2592-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2592-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 326
+	movapd	2608-128(pB0), rB0
+	movapd	2608-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2608-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2608-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2608-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2608-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2608-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2608-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2608-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 328
+	movapd	2624-128(pB0), rB0
+	movapd	2624-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2624-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2624-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2624-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2624-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2624-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2624-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2624-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 330
+	movapd	2640-128(pB0), rB0
+	movapd	2640-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2640-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2640-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2640-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2640-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2640-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2640-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2640-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 332
+	movapd	2656-128(pB0), rB0
+	movapd	2656-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2656-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2656-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2656-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2656-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2656-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2656-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2656-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 334
+	movapd	2672-128(pB0), rB0
+	movapd	2672-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2672-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2672-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2672-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2672-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2672-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2672-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2672-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 336
+	movapd	2688-128(pB0), rB0
+	movapd	2688-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2688-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2688-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2688-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2688-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2688-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2688-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2688-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 338
+	movapd	2704-128(pB0), rB0
+	movapd	2704-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2704-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2704-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2704-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2704-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2704-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2704-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2704-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 340
+	movapd	2720-128(pB0), rB0
+	movapd	2720-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2720-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2720-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2720-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2720-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2720-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2720-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2720-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 342
+	movapd	2736-128(pB0), rB0
+	movapd	2736-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2736-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2736-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2736-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2736-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2736-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2736-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2736-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 344
+	movapd	2752-128(pB0), rB0
+	movapd	2752-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2752-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2752-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2752-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2752-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2752-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2752-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2752-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 346
+	movapd	2768-128(pB0), rB0
+	movapd	2768-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2768-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2768-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2768-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2768-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2768-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2768-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2768-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 348
+	movapd	2784-128(pB0), rB0
+	movapd	2784-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2784-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2784-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2784-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2784-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2784-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2784-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2784-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 350
+	movapd	2800-128(pB0), rB0
+	movapd	2800-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2800-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2800-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2800-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2800-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2800-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2800-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2800-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 352
+	movapd	2816-128(pB0), rB0
+	movapd	2816-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2816-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2816-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2816-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2816-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2816-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2816-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2816-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 354
+	movapd	2832-128(pB0), rB0
+	movapd	2832-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2832-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2832-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2832-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2832-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2832-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2832-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2832-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 356
+	movapd	2848-128(pB0), rB0
+	movapd	2848-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2848-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2848-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2848-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2848-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2848-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2848-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2848-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 358
+	movapd	2864-128(pB0), rB0
+	movapd	2864-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2864-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2864-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2864-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2864-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2864-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2864-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2864-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 360
+	movapd	2880-128(pB0), rB0
+	movapd	2880-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2880-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2880-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2880-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2880-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2880-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2880-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2880-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 362
+	movapd	2896-128(pB0), rB0
+	movapd	2896-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2896-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2896-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2896-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2896-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2896-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2896-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2896-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 364
+	movapd	2912-128(pB0), rB0
+	movapd	2912-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2912-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2912-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2912-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2912-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2912-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2912-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2912-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 366
+	movapd	2928-128(pB0), rB0
+	movapd	2928-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2928-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2928-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2928-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2928-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2928-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2928-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2928-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 368
+	movapd	2944-128(pB0), rB0
+	movapd	2944-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2944-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2944-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2944-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2944-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2944-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2944-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2944-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 370
+	movapd	2960-128(pB0), rB0
+	movapd	2960-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2960-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2960-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2960-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2960-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2960-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2960-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2960-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 372
+	movapd	2976-128(pB0), rB0
+	movapd	2976-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2976-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2976-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2976-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2976-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2976-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2976-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2976-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 374
+	movapd	2992-128(pB0), rB0
+	movapd	2992-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2992-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2992-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2992-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2992-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2992-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2992-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2992-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 376
+	movapd	3008-128(pB0), rB0
+	movapd	3008-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3008-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3008-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3008-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3008-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3008-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3008-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3008-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 378
+	movapd	3024-128(pB0), rB0
+	movapd	3024-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3024-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3024-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3024-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3024-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3024-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3024-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3024-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 380
+	movapd	3040-128(pB0), rB0
+	movapd	3040-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3040-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3040-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3040-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3040-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3040-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3040-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3040-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 382
+	movapd	3056-128(pB0), rB0
+	movapd	3056-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3056-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3056-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3056-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3056-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3056-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3056-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3056-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 384
+	movapd	3072-128(pB0), rB0
+	movapd	3072-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3072-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3072-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3072-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3072-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3072-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3072-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3072-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 386
+	movapd	3088-128(pB0), rB0
+	movapd	3088-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3088-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3088-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3088-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3088-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3088-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3088-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3088-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 388
+	movapd	3104-128(pB0), rB0
+	movapd	3104-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3104-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3104-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3104-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3104-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3104-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3104-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3104-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 390
+	movapd	3120-128(pB0), rB0
+	movapd	3120-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3120-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3120-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3120-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3120-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3120-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3120-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3120-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 392
+	movapd	3136-128(pB0), rB0
+	movapd	3136-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3136-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3136-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3136-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3136-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3136-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3136-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3136-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 394
+	movapd	3152-128(pB0), rB0
+	movapd	3152-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3152-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3152-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3152-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3152-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3152-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3152-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3152-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 396
+	movapd	3168-128(pB0), rB0
+	movapd	3168-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3168-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3168-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3168-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3168-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3168-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3168-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3168-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 398
+	movapd	3184-128(pB0), rB0
+	movapd	3184-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3184-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3184-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3184-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3184-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3184-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3184-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3184-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 400
+	movapd	3200-128(pB0), rB0
+	movapd	3200-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3200-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3200-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3200-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3200-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3200-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3200-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3200-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 402
+	movapd	3216-128(pB0), rB0
+	movapd	3216-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3216-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3216-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3216-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3216-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3216-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3216-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3216-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 404
+	movapd	3232-128(pB0), rB0
+	movapd	3232-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3232-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3232-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3232-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3232-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3232-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3232-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3232-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 406
+	movapd	3248-128(pB0), rB0
+	movapd	3248-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3248-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3248-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3248-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3248-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3248-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3248-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3248-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 408
+	movapd	3264-128(pB0), rB0
+	movapd	3264-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3264-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3264-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3264-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3264-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3264-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3264-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3264-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 410
+	movapd	3280-128(pB0), rB0
+	movapd	3280-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3280-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3280-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3280-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3280-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3280-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3280-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3280-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 412
+	movapd	3296-128(pB0), rB0
+	movapd	3296-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3296-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3296-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3296-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3296-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3296-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3296-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3296-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 414
+	movapd	3312-128(pB0), rB0
+	movapd	3312-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3312-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3312-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3312-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3312-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3312-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3312-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3312-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 416
+	movapd	3328-128(pB0), rB0
+	movapd	3328-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3328-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3328-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3328-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3328-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3328-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3328-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3328-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 418
+	movapd	3344-128(pB0), rB0
+	movapd	3344-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3344-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3344-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3344-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3344-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3344-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3344-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3344-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 420
+	movapd	3360-128(pB0), rB0
+	movapd	3360-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3360-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3360-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3360-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3360-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3360-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3360-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3360-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 422
+	movapd	3376-128(pB0), rB0
+	movapd	3376-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3376-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3376-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3376-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3376-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3376-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3376-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3376-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 424
+	movapd	3392-128(pB0), rB0
+	movapd	3392-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3392-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3392-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3392-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3392-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3392-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3392-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3392-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 426
+	movapd	3408-128(pB0), rB0
+	movapd	3408-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3408-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3408-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3408-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3408-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3408-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3408-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3408-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 428
+	movapd	3424-128(pB0), rB0
+	movapd	3424-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3424-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3424-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3424-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3424-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3424-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3424-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3424-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 430
+	movapd	3440-128(pB0), rB0
+	movapd	3440-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3440-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3440-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3440-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3440-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3440-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3440-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3440-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 432
+	movapd	3456-128(pB0), rB0
+	movapd	3456-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3456-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3456-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3456-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3456-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3456-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3456-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3456-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 434
+	movapd	3472-128(pB0), rB0
+	movapd	3472-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3472-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3472-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3472-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3472-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3472-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3472-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3472-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 436
+	movapd	3488-128(pB0), rB0
+	movapd	3488-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3488-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3488-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3488-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3488-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3488-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3488-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3488-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 438
+	movapd	3504-128(pB0), rB0
+	movapd	3504-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3504-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3504-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3504-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3504-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3504-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3504-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3504-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 440
+	movapd	3520-128(pB0), rB0
+	movapd	3520-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3520-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3520-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3520-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3520-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3520-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3520-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3520-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 442
+	movapd	3536-128(pB0), rB0
+	movapd	3536-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3536-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3536-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3536-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3536-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3536-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3536-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3536-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 444
+	movapd	3552-128(pB0), rB0
+	movapd	3552-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3552-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3552-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3552-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3552-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3552-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3552-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3552-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 446
+	movapd	3568-128(pB0), rB0
+	movapd	3568-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3568-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3568-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3568-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3568-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3568-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3568-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3568-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 448
+	movapd	3584-128(pB0), rB0
+	movapd	3584-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3584-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3584-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3584-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3584-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3584-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3584-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3584-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 450
+	movapd	3600-128(pB0), rB0
+	movapd	3600-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3600-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3600-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3600-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3600-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3600-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3600-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3600-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 452
+	movapd	3616-128(pB0), rB0
+	movapd	3616-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3616-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3616-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3616-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3616-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3616-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3616-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3616-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 454
+	movapd	3632-128(pB0), rB0
+	movapd	3632-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3632-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3632-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3632-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3632-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3632-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3632-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3632-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 456
+	movapd	3648-128(pB0), rB0
+	movapd	3648-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3648-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3648-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3648-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3648-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3648-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3648-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3648-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 458
+	movapd	3664-128(pB0), rB0
+	movapd	3664-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3664-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3664-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3664-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3664-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3664-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3664-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3664-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 460
+	movapd	3680-128(pB0), rB0
+	movapd	3680-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3680-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3680-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3680-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3680-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3680-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3680-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3680-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 462
+	movapd	3696-128(pB0), rB0
+	movapd	3696-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3696-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3696-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3696-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3696-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3696-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3696-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3696-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 464
+	movapd	3712-128(pB0), rB0
+	movapd	3712-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3712-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3712-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3712-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3712-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3712-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3712-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3712-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 466
+	movapd	3728-128(pB0), rB0
+	movapd	3728-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3728-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3728-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3728-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3728-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3728-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3728-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3728-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 468
+	movapd	3744-128(pB0), rB0
+	movapd	3744-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3744-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3744-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3744-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3744-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3744-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3744-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3744-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 470
+	movapd	3760-128(pB0), rB0
+	movapd	3760-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3760-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3760-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3760-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3760-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3760-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3760-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3760-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 472
+	movapd	3776-128(pB0), rB0
+	movapd	3776-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3776-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3776-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3776-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3776-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3776-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3776-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3776-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 474
+	movapd	3792-128(pB0), rB0
+	movapd	3792-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3792-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3792-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3792-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3792-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3792-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3792-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3792-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 476
+	movapd	3808-128(pB0), rB0
+	movapd	3808-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3808-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3808-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3808-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3808-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3808-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3808-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3808-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 478
+	movapd	3824-128(pB0), rB0
+	movapd	3824-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3824-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3824-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3824-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3824-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3824-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3824-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3824-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 480
+	movapd	3840-128(pB0), rB0
+	movapd	3840-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3840-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3840-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3840-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3840-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3840-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3840-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3840-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 482
+	movapd	3856-128(pB0), rB0
+	movapd	3856-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3856-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3856-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3856-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3856-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3856-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3856-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3856-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 484
+	movapd	3872-128(pB0), rB0
+	movapd	3872-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3872-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3872-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3872-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3872-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3872-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3872-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3872-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 486
+	movapd	3888-128(pB0), rB0
+	movapd	3888-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3888-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3888-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3888-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3888-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3888-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3888-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3888-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 488
+	movapd	3904-128(pB0), rB0
+	movapd	3904-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3904-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3904-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3904-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3904-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3904-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3904-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3904-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 490
+	movapd	3920-128(pB0), rB0
+	movapd	3920-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3920-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3920-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3920-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3920-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3920-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3920-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3920-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 492
+	movapd	3936-128(pB0), rB0
+	movapd	3936-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3936-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3936-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3936-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3936-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3936-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3936-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3936-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 494
+	movapd	3952-128(pB0), rB0
+	movapd	3952-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3952-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3952-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3952-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3952-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3952-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3952-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3952-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 496
+	movapd	3968-128(pB0), rB0
+	movapd	3968-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3968-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3968-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3968-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3968-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3968-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3968-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3968-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 498
+	movapd	3984-128(pB0), rB0
+	movapd	3984-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3984-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3984-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3984-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3984-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3984-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3984-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3984-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 500
+	movapd	4000-128(pB0), rB0
+	movapd	4000-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4000-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4000-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4000-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4000-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4000-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4000-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4000-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 502
+	movapd	4016-128(pB0), rB0
+	movapd	4016-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4016-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4016-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4016-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4016-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4016-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4016-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4016-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 504
+	movapd	4032-128(pB0), rB0
+	movapd	4032-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4032-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4032-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4032-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4032-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4032-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4032-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4032-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 506
+	movapd	4048-128(pB0), rB0
+	movapd	4048-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4048-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4048-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4048-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4048-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4048-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4048-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4048-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 508
+	movapd	4064-128(pB0), rB0
+	movapd	4064-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4064-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4064-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4064-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4064-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4064-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4064-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4064-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 510
+	movapd	4080-128(pB0), rB0
+	movapd	4080-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4080-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4080-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4080-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4080-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4080-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4080-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4080-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+/*       jne KLOOP */
+/*
+ *      pC[0-3] = rC[0-3]
+ */
+
+        #ifndef BETA0
+           movapd       (pC0), rA0
+           #ifdef BETAX
+              mulpd     BETA, rA0
+           #endif
+        #endif
+        haddpd  rC01,rC00
+                                lea     (pA0,lda,8), pA0
+        #ifdef BETAN1
+                subpd   rA0, rC00
+        #elif !defined(BETA0)
+                addpd   rA0, rC00
+        #endif
+        movapd  rC00, (pC0)
+
+        #ifndef BETA0
+           movapd       16(pC0), rA0
+           #ifdef BETAX
+              mulpd     BETA, rA0
+           #endif
+        #endif
+        haddpd  rC03,rC02
+        #ifdef BETAN1
+                subpd   rA0, rC02
+        #elif !defined(BETA0)
+                addpd   rA0, rC02
+        #endif
+        movapd  rC02, 16(pC0)
+
+        #ifndef BETA0
+           movapd       32(pC0), rA0
+           #ifdef BETAX
+              mulpd     BETA, rA0
+           #endif
+        #endif
+        haddpd  rC05,rC04
+        #ifdef BETAN1
+                subpd   rA0, rC04
+        #elif !defined(BETA0)
+                addpd   rA0, rC04
+        #endif
+        movapd  rC04, 32(pC0)
+
+        #ifndef BETA0
+           movapd       48(pC0), rA0
+           #ifdef BETAX
+              mulpd     BETA, rA0
+           #endif
+        #endif
+        haddpd  rC07,rC06
+        #ifdef BETAN1
+                subpd   rA0, rC06
+        #elif !defined(BETA0)
+                addpd   rA0, rC06
+        #endif
+        movapd  rC06, 48(pC0)
+
+        add     $8*8, pC0
+        sub     $8, MM
         jnz     MLOOP
 
         sub     incAn, pA0
-        prefB(64(pB0,ldb,2))
-   #if KB > 32 && !defined(ATL_GAS_x8632)
-        sub     incAn, pAE
-        add     ldb, pBE
-   #endif
-        prefB(128(pB0,ldb,2))
         add     incCn, pC0
-        prefB(192(pB0,ldb,2))
         add     ldb, pB0
-        prefB(256(pB0,ldb,2))
-        prefB(320(pB0,ldb,2))
         sub     $1, NN
+
         jnz     NLOOP
 
-DONE:
-#ifdef ATL_GAS_x8632
-        movl    (%esp), %ebp
-        movl    4(%esp), %ebx
-        movl    8(%esp), %esi
-        movl    12(%esp), %edi
-        add     $STKSIZE, %esp
-#else
+/* DONE: */
         movq    -8(%rsp), %rbp
         movq    -16(%rsp), %rbx
         movq    -24(%rsp), %r12
         movq    -32(%rsp), %r13
         movq    -40(%rsp), %r14
-/*        movq    -48(%rsp), %r15 */
+        movq    -48(%rsp), %r15
+        ret
 #endif
+/*
+ *This set of loops is used always for complex data, and anytime all columns
+ *of $C$ aren't on 16-byte boundary (allowing use of high performance movapd)
+ */
+UNLOOP:
+        movq    MM0, MM
+        prefB(-128(pB0,ldb))
+#if KB > 16
+        prefB((pB0,ldb))
+#endif
+#if KB > 32
+        prefB(128(pB0,ldb))
+#endif
+#if KB > 48
+        prefB(256(pB0,ldb))
+#endif
+#if KB > 64
+        prefB(384(pB0,ldb))
+#endif
+UMLOOP:
+/*
+ *      For unaligned code, load C at top so we don't exhaust reservation stat
+ *      of write buffer with all the movlpd/movhpd pairs at end of loop
+ */
+        prefC(CMUL(64)(pC0))
+        #ifndef BETA0
+           movlpd    (pC0), rC0
+           movhpd    CMUL(8)(pC0), rC0
+           #ifdef BETAX
+              mulpd     BETA, rC0
+           #endif
+           movlpd    CMUL(16)(pC0), rC2
+           movhpd    CMUL(24)(pC0), rC2
+           #ifdef BETAX
+              mulpd     BETA, rC2
+           #endif
+           movlpd    CMUL(32)(pC0), rC4
+           movhpd    CMUL(40)(pC0), rC4
+           #ifdef BETAX
+              mulpd     BETA, rC4
+           #endif
+           movlpd    CMUL(48)(pC0), rC6
+           movhpd    CMUL(56)(pC0), rC6
+           #ifdef BETAX
+              mulpd     BETA, rC6
+           #endif
+        #endif
+/*KLOOP: */
+	movapd	-128(pB0), rB0
+                                        pref2((pfA))
+                                        add     $PFAINC, pfA
+	movapd	-128(pA0), rC00
+	mulpd	rB0,rC00
+	movapd	-128(pA0,lda), rC01
+	mulpd	rB0,rC01
+	movapd	-128(pA0,lda,2), rC02
+	mulpd	rB0,rC02
+	movapd	-128(pA0,lda3), rC03
+	mulpd	rB0,rC03
+	movapd	-128(pA0,lda,4), rC04
+	mulpd	rB0,rC04
+	movapd	-128(pA0,lda5), rC05
+	mulpd	rB0,rC05
+	movapd	-128(pA0,lda3,2), rC06
+	mulpd	rB0,rC06
+	movapd	-128(pA0,lda7), rC07
+	mulpd	rB0,rC07
+#if KB > 2
+	movapd	16-128(pB0), rB0
+	movapd	16-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	16-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	16-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	16-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	16-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	16-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	16-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	16-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 4
+	movapd	32-128(pB0), rB0
+	movapd	32-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	32-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	32-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	32-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	32-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	32-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	32-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	32-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 6
+	movapd	48-128(pB0), rB0
+	movapd	48-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	48-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	48-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	48-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	48-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	48-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	48-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	48-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 8
+	movapd	64-128(pB0), rB0
+	movapd	64-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	64-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	64-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	64-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	64-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	64-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	64-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	64-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 10
+	movapd	80-128(pB0), rB0
+	movapd	80-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	80-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	80-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	80-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	80-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	80-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	80-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	80-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 12
+	movapd	96-128(pB0), rB0
+	movapd	96-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	96-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	96-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	96-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	96-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	96-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	96-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	96-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 14
+	movapd	112-128(pB0), rB0
+	movapd	112-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	112-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	112-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	112-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	112-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	112-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	112-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	112-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 16
+	movapd	128-128(pB0), rB0
+	movapd	128-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	128-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	128-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	128-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	128-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	128-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	128-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	128-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 18
+	movapd	144-128(pB0), rB0
+	movapd	144-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	144-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	144-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	144-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	144-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	144-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	144-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	144-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 20
+	movapd	160-128(pB0), rB0
+	movapd	160-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	160-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	160-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	160-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	160-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	160-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	160-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	160-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 22
+	movapd	176-128(pB0), rB0
+	movapd	176-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	176-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	176-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	176-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	176-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	176-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	176-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	176-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 24
+	movapd	192-128(pB0), rB0
+	movapd	192-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	192-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	192-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	192-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	192-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	192-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	192-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	192-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 26
+	movapd	208-128(pB0), rB0
+	movapd	208-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	208-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	208-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	208-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	208-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	208-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	208-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	208-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 28
+	movapd	224-128(pB0), rB0
+	movapd	224-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	224-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	224-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	224-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	224-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	224-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	224-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	224-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 30
+	movapd	240-128(pB0), rB0
+	movapd	240-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	240-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	240-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	240-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	240-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	240-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	240-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	240-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 32
+	movapd	256-128(pB0), rB0
+	movapd	256-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	256-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	256-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	256-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	256-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	256-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	256-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	256-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 34
+	movapd	272-128(pB0), rB0
+	movapd	272-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	272-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	272-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	272-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	272-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	272-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	272-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	272-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 36
+	movapd	288-128(pB0), rB0
+	movapd	288-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	288-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	288-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	288-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	288-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	288-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	288-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	288-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 38
+	movapd	304-128(pB0), rB0
+	movapd	304-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	304-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	304-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	304-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	304-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	304-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	304-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	304-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 40
+	movapd	320-128(pB0), rB0
+	movapd	320-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	320-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	320-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	320-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	320-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	320-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	320-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	320-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 42
+	movapd	336-128(pB0), rB0
+	movapd	336-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	336-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	336-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	336-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	336-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	336-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	336-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	336-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 44
+	movapd	352-128(pB0), rB0
+	movapd	352-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	352-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	352-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	352-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	352-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	352-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	352-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	352-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 46
+	movapd	368-128(pB0), rB0
+	movapd	368-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	368-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	368-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	368-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	368-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	368-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	368-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	368-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 48
+	movapd	384-128(pB0), rB0
+	movapd	384-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	384-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	384-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	384-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	384-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	384-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	384-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	384-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 50
+	movapd	400-128(pB0), rB0
+	movapd	400-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	400-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	400-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	400-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	400-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	400-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	400-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	400-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 52
+	movapd	416-128(pB0), rB0
+	movapd	416-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	416-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	416-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	416-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	416-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	416-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	416-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	416-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 54
+	movapd	432-128(pB0), rB0
+	movapd	432-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	432-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	432-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	432-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	432-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	432-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	432-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	432-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 56
+	movapd	448-128(pB0), rB0
+	movapd	448-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	448-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	448-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	448-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	448-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	448-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	448-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	448-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 58
+	movapd	464-128(pB0), rB0
+	movapd	464-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	464-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	464-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	464-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	464-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	464-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	464-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	464-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 60
+	movapd	480-128(pB0), rB0
+	movapd	480-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	480-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	480-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	480-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	480-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	480-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	480-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	480-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 62
+	movapd	496-128(pB0), rB0
+	movapd	496-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	496-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	496-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	496-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	496-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	496-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	496-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	496-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 64
+	movapd	512-128(pB0), rB0
+	movapd	512-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	512-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	512-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	512-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	512-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	512-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	512-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	512-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 66
+	movapd	528-128(pB0), rB0
+	movapd	528-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	528-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	528-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	528-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	528-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	528-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	528-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	528-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 68
+	movapd	544-128(pB0), rB0
+	movapd	544-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	544-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	544-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	544-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	544-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	544-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	544-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	544-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 70
+	movapd	560-128(pB0), rB0
+	movapd	560-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	560-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	560-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	560-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	560-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	560-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	560-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	560-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 72
+	movapd	576-128(pB0), rB0
+	movapd	576-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	576-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	576-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	576-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	576-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	576-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	576-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	576-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 74
+	movapd	592-128(pB0), rB0
+	movapd	592-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	592-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	592-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	592-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	592-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	592-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	592-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	592-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 76
+	movapd	608-128(pB0), rB0
+	movapd	608-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	608-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	608-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	608-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	608-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	608-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	608-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	608-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 78
+	movapd	624-128(pB0), rB0
+	movapd	624-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	624-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	624-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	624-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	624-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	624-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	624-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	624-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 80
+	movapd	640-128(pB0), rB0
+	movapd	640-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	640-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	640-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	640-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	640-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	640-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	640-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	640-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 82
+	movapd	656-128(pB0), rB0
+	movapd	656-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	656-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	656-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	656-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	656-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	656-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	656-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	656-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 84
+	movapd	672-128(pB0), rB0
+	movapd	672-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	672-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	672-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	672-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	672-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	672-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	672-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	672-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 86
+	movapd	688-128(pB0), rB0
+	movapd	688-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	688-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	688-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	688-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	688-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	688-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	688-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	688-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 88
+	movapd	704-128(pB0), rB0
+	movapd	704-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	704-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	704-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	704-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	704-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	704-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	704-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	704-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 90
+	movapd	720-128(pB0), rB0
+	movapd	720-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	720-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	720-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	720-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	720-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	720-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	720-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	720-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 92
+	movapd	736-128(pB0), rB0
+	movapd	736-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	736-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	736-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	736-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	736-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	736-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	736-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	736-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 94
+	movapd	752-128(pB0), rB0
+	movapd	752-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	752-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	752-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	752-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	752-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	752-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	752-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	752-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 96
+	movapd	768-128(pB0), rB0
+	movapd	768-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	768-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	768-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	768-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	768-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	768-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	768-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	768-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 98
+	movapd	784-128(pB0), rB0
+	movapd	784-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	784-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	784-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	784-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	784-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	784-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	784-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	784-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 100
+	movapd	800-128(pB0), rB0
+	movapd	800-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	800-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	800-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	800-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	800-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	800-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	800-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	800-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 102
+	movapd	816-128(pB0), rB0
+	movapd	816-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	816-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	816-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	816-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	816-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	816-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	816-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	816-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 104
+	movapd	832-128(pB0), rB0
+	movapd	832-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	832-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	832-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	832-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	832-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	832-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	832-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	832-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 106
+	movapd	848-128(pB0), rB0
+	movapd	848-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	848-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	848-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	848-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	848-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	848-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	848-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	848-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 108
+	movapd	864-128(pB0), rB0
+	movapd	864-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	864-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	864-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	864-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	864-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	864-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	864-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	864-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 110
+	movapd	880-128(pB0), rB0
+	movapd	880-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	880-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	880-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	880-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	880-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	880-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	880-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	880-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 112
+	movapd	896-128(pB0), rB0
+	movapd	896-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	896-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	896-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	896-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	896-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	896-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	896-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	896-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 114
+	movapd	912-128(pB0), rB0
+	movapd	912-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	912-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	912-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	912-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	912-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	912-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	912-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	912-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 116
+	movapd	928-128(pB0), rB0
+	movapd	928-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	928-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	928-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	928-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	928-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	928-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	928-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	928-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 118
+	movapd	944-128(pB0), rB0
+	movapd	944-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	944-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	944-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	944-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	944-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	944-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	944-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	944-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 120
+	movapd	960-128(pB0), rB0
+	movapd	960-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	960-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	960-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	960-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	960-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	960-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	960-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	960-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 122
+	movapd	976-128(pB0), rB0
+	movapd	976-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	976-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	976-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	976-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	976-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	976-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	976-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	976-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 124
+	movapd	992-128(pB0), rB0
+	movapd	992-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	992-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	992-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	992-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	992-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	992-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	992-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	992-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 126
+	movapd	1008-128(pB0), rB0
+	movapd	1008-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1008-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1008-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1008-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1008-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1008-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1008-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1008-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 128
+	movapd	1024-128(pB0), rB0
+	movapd	1024-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1024-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1024-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1024-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1024-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1024-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1024-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1024-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 130
+	movapd	1040-128(pB0), rB0
+	movapd	1040-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1040-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1040-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1040-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1040-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1040-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1040-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1040-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 132
+	movapd	1056-128(pB0), rB0
+	movapd	1056-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1056-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1056-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1056-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1056-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1056-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1056-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1056-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 134
+	movapd	1072-128(pB0), rB0
+	movapd	1072-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1072-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1072-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1072-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1072-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1072-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1072-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1072-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 136
+	movapd	1088-128(pB0), rB0
+	movapd	1088-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1088-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1088-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1088-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1088-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1088-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1088-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1088-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 138
+	movapd	1104-128(pB0), rB0
+	movapd	1104-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1104-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1104-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1104-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1104-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1104-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1104-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1104-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 140
+	movapd	1120-128(pB0), rB0
+	movapd	1120-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1120-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1120-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1120-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1120-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1120-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1120-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1120-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 142
+	movapd	1136-128(pB0), rB0
+	movapd	1136-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1136-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1136-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1136-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1136-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1136-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1136-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1136-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 144
+	movapd	1152-128(pB0), rB0
+	movapd	1152-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1152-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1152-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1152-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1152-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1152-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1152-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1152-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 146
+	movapd	1168-128(pB0), rB0
+	movapd	1168-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1168-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1168-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1168-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1168-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1168-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1168-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1168-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 148
+	movapd	1184-128(pB0), rB0
+	movapd	1184-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1184-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1184-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1184-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1184-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1184-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1184-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1184-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 150
+	movapd	1200-128(pB0), rB0
+	movapd	1200-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1200-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1200-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1200-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1200-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1200-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1200-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1200-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 152
+	movapd	1216-128(pB0), rB0
+	movapd	1216-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1216-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1216-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1216-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1216-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1216-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1216-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1216-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 154
+	movapd	1232-128(pB0), rB0
+	movapd	1232-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1232-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1232-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1232-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1232-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1232-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1232-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1232-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 156
+	movapd	1248-128(pB0), rB0
+	movapd	1248-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1248-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1248-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1248-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1248-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1248-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1248-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1248-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 158
+	movapd	1264-128(pB0), rB0
+	movapd	1264-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1264-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1264-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1264-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1264-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1264-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1264-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1264-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 160
+	movapd	1280-128(pB0), rB0
+	movapd	1280-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1280-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1280-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1280-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1280-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1280-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1280-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1280-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 162
+	movapd	1296-128(pB0), rB0
+	movapd	1296-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1296-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1296-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1296-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1296-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1296-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1296-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1296-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 164
+	movapd	1312-128(pB0), rB0
+	movapd	1312-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1312-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1312-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1312-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1312-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1312-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1312-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1312-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 166
+	movapd	1328-128(pB0), rB0
+	movapd	1328-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1328-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1328-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1328-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1328-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1328-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1328-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1328-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 168
+	movapd	1344-128(pB0), rB0
+	movapd	1344-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1344-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1344-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1344-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1344-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1344-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1344-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1344-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 170
+	movapd	1360-128(pB0), rB0
+	movapd	1360-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1360-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1360-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1360-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1360-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1360-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1360-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1360-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 172
+	movapd	1376-128(pB0), rB0
+	movapd	1376-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1376-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1376-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1376-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1376-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1376-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1376-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1376-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 174
+	movapd	1392-128(pB0), rB0
+	movapd	1392-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1392-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1392-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1392-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1392-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1392-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1392-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1392-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 176
+	movapd	1408-128(pB0), rB0
+	movapd	1408-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1408-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1408-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1408-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1408-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1408-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1408-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1408-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 178
+	movapd	1424-128(pB0), rB0
+	movapd	1424-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1424-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1424-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1424-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1424-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1424-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1424-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1424-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 180
+	movapd	1440-128(pB0), rB0
+	movapd	1440-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1440-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1440-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1440-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1440-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1440-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1440-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1440-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 182
+	movapd	1456-128(pB0), rB0
+	movapd	1456-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1456-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1456-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1456-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1456-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1456-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1456-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1456-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 184
+	movapd	1472-128(pB0), rB0
+	movapd	1472-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1472-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1472-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1472-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1472-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1472-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1472-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1472-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 186
+	movapd	1488-128(pB0), rB0
+	movapd	1488-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1488-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1488-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1488-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1488-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1488-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1488-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1488-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 188
+	movapd	1504-128(pB0), rB0
+	movapd	1504-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1504-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1504-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1504-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1504-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1504-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1504-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1504-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 190
+	movapd	1520-128(pB0), rB0
+	movapd	1520-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1520-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1520-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1520-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1520-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1520-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1520-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1520-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 192
+	movapd	1536-128(pB0), rB0
+	movapd	1536-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1536-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1536-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1536-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1536-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1536-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1536-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1536-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 194
+	movapd	1552-128(pB0), rB0
+	movapd	1552-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1552-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1552-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1552-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1552-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1552-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1552-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1552-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 196
+	movapd	1568-128(pB0), rB0
+	movapd	1568-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1568-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1568-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1568-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1568-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1568-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1568-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1568-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 198
+	movapd	1584-128(pB0), rB0
+	movapd	1584-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1584-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1584-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1584-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1584-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1584-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1584-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1584-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 200
+	movapd	1600-128(pB0), rB0
+	movapd	1600-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1600-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1600-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1600-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1600-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1600-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1600-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1600-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 202
+	movapd	1616-128(pB0), rB0
+	movapd	1616-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1616-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1616-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1616-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1616-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1616-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1616-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1616-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 204
+	movapd	1632-128(pB0), rB0
+	movapd	1632-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1632-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1632-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1632-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1632-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1632-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1632-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1632-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 206
+	movapd	1648-128(pB0), rB0
+	movapd	1648-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1648-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1648-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1648-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1648-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1648-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1648-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1648-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 208
+	movapd	1664-128(pB0), rB0
+	movapd	1664-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1664-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1664-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1664-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1664-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1664-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1664-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1664-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 210
+	movapd	1680-128(pB0), rB0
+	movapd	1680-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1680-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1680-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1680-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1680-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1680-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1680-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1680-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 212
+	movapd	1696-128(pB0), rB0
+	movapd	1696-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1696-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1696-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1696-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1696-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1696-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1696-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1696-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 214
+	movapd	1712-128(pB0), rB0
+	movapd	1712-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1712-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1712-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1712-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1712-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1712-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1712-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1712-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 216
+	movapd	1728-128(pB0), rB0
+	movapd	1728-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1728-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1728-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1728-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1728-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1728-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1728-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1728-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 218
+	movapd	1744-128(pB0), rB0
+	movapd	1744-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1744-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1744-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1744-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1744-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1744-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1744-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1744-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 220
+	movapd	1760-128(pB0), rB0
+	movapd	1760-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1760-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1760-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1760-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1760-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1760-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1760-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1760-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 222
+	movapd	1776-128(pB0), rB0
+	movapd	1776-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1776-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1776-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1776-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1776-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1776-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1776-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1776-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 224
+	movapd	1792-128(pB0), rB0
+	movapd	1792-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1792-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1792-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1792-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1792-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1792-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1792-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1792-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 226
+	movapd	1808-128(pB0), rB0
+	movapd	1808-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1808-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1808-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1808-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1808-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1808-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1808-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1808-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 228
+	movapd	1824-128(pB0), rB0
+	movapd	1824-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1824-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1824-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1824-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1824-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1824-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1824-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1824-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 230
+	movapd	1840-128(pB0), rB0
+	movapd	1840-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1840-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1840-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1840-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1840-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1840-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1840-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1840-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 232
+	movapd	1856-128(pB0), rB0
+	movapd	1856-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1856-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1856-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1856-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1856-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1856-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1856-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1856-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 234
+	movapd	1872-128(pB0), rB0
+	movapd	1872-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1872-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1872-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1872-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1872-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1872-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1872-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1872-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 236
+	movapd	1888-128(pB0), rB0
+	movapd	1888-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1888-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1888-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1888-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1888-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1888-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1888-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1888-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 238
+	movapd	1904-128(pB0), rB0
+	movapd	1904-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1904-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1904-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1904-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1904-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1904-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1904-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1904-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 240
+	movapd	1920-128(pB0), rB0
+	movapd	1920-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1920-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1920-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1920-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1920-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1920-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1920-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1920-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 242
+	movapd	1936-128(pB0), rB0
+	movapd	1936-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1936-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1936-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1936-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1936-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1936-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1936-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1936-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 244
+	movapd	1952-128(pB0), rB0
+	movapd	1952-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1952-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1952-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1952-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1952-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1952-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1952-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1952-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 246
+	movapd	1968-128(pB0), rB0
+	movapd	1968-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1968-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1968-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1968-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1968-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1968-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1968-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1968-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 248
+	movapd	1984-128(pB0), rB0
+	movapd	1984-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	1984-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	1984-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	1984-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	1984-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	1984-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	1984-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	1984-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 250
+	movapd	2000-128(pB0), rB0
+	movapd	2000-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2000-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2000-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2000-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2000-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2000-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2000-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2000-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 252
+	movapd	2016-128(pB0), rB0
+	movapd	2016-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2016-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2016-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2016-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2016-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2016-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2016-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2016-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 254
+	movapd	2032-128(pB0), rB0
+	movapd	2032-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2032-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2032-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2032-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2032-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2032-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2032-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2032-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 256
+	movapd	2048-128(pB0), rB0
+	movapd	2048-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2048-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2048-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2048-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2048-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2048-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2048-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2048-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 258
+	movapd	2064-128(pB0), rB0
+	movapd	2064-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2064-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2064-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2064-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2064-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2064-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2064-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2064-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 260
+	movapd	2080-128(pB0), rB0
+	movapd	2080-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2080-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2080-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2080-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2080-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2080-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2080-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2080-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 262
+	movapd	2096-128(pB0), rB0
+	movapd	2096-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2096-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2096-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2096-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2096-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2096-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2096-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2096-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 264
+	movapd	2112-128(pB0), rB0
+	movapd	2112-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2112-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2112-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2112-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2112-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2112-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2112-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2112-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 266
+	movapd	2128-128(pB0), rB0
+	movapd	2128-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2128-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2128-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2128-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2128-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2128-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2128-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2128-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 268
+	movapd	2144-128(pB0), rB0
+	movapd	2144-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2144-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2144-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2144-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2144-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2144-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2144-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2144-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 270
+	movapd	2160-128(pB0), rB0
+	movapd	2160-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2160-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2160-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2160-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2160-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2160-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2160-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2160-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 272
+	movapd	2176-128(pB0), rB0
+	movapd	2176-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2176-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2176-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2176-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2176-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2176-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2176-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2176-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 274
+	movapd	2192-128(pB0), rB0
+	movapd	2192-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2192-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2192-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2192-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2192-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2192-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2192-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2192-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 276
+	movapd	2208-128(pB0), rB0
+	movapd	2208-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2208-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2208-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2208-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2208-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2208-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2208-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2208-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 278
+	movapd	2224-128(pB0), rB0
+	movapd	2224-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2224-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2224-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2224-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2224-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2224-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2224-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2224-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 280
+	movapd	2240-128(pB0), rB0
+	movapd	2240-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2240-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2240-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2240-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2240-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2240-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2240-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2240-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 282
+	movapd	2256-128(pB0), rB0
+	movapd	2256-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2256-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2256-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2256-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2256-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2256-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2256-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2256-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 284
+	movapd	2272-128(pB0), rB0
+	movapd	2272-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2272-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2272-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2272-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2272-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2272-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2272-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2272-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 286
+	movapd	2288-128(pB0), rB0
+	movapd	2288-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2288-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2288-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2288-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2288-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2288-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2288-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2288-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 288
+	movapd	2304-128(pB0), rB0
+	movapd	2304-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2304-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2304-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2304-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2304-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2304-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2304-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2304-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 290
+	movapd	2320-128(pB0), rB0
+	movapd	2320-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2320-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2320-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2320-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2320-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2320-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2320-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2320-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 292
+	movapd	2336-128(pB0), rB0
+	movapd	2336-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2336-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2336-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2336-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2336-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2336-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2336-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2336-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 294
+	movapd	2352-128(pB0), rB0
+	movapd	2352-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2352-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2352-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2352-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2352-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2352-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2352-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2352-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 296
+	movapd	2368-128(pB0), rB0
+	movapd	2368-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2368-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2368-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2368-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2368-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2368-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2368-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2368-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 298
+	movapd	2384-128(pB0), rB0
+	movapd	2384-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2384-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2384-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2384-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2384-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2384-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2384-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2384-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 300
+	movapd	2400-128(pB0), rB0
+	movapd	2400-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2400-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2400-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2400-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2400-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2400-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2400-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2400-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 302
+	movapd	2416-128(pB0), rB0
+	movapd	2416-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2416-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2416-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2416-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2416-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2416-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2416-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2416-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 304
+	movapd	2432-128(pB0), rB0
+	movapd	2432-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2432-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2432-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2432-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2432-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2432-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2432-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2432-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 306
+	movapd	2448-128(pB0), rB0
+	movapd	2448-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2448-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2448-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2448-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2448-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2448-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2448-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2448-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 308
+	movapd	2464-128(pB0), rB0
+	movapd	2464-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2464-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2464-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2464-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2464-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2464-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2464-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2464-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 310
+	movapd	2480-128(pB0), rB0
+	movapd	2480-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2480-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2480-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2480-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2480-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2480-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2480-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2480-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 312
+	movapd	2496-128(pB0), rB0
+	movapd	2496-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2496-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2496-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2496-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2496-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2496-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2496-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2496-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 314
+	movapd	2512-128(pB0), rB0
+	movapd	2512-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2512-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2512-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2512-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2512-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2512-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2512-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2512-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 316
+	movapd	2528-128(pB0), rB0
+	movapd	2528-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2528-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2528-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2528-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2528-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2528-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2528-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2528-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 318
+	movapd	2544-128(pB0), rB0
+	movapd	2544-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2544-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2544-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2544-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2544-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2544-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2544-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2544-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 320
+	movapd	2560-128(pB0), rB0
+	movapd	2560-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2560-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2560-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2560-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2560-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2560-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2560-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2560-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 322
+	movapd	2576-128(pB0), rB0
+	movapd	2576-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2576-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2576-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2576-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2576-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2576-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2576-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2576-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 324
+	movapd	2592-128(pB0), rB0
+	movapd	2592-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2592-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2592-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2592-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2592-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2592-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2592-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2592-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 326
+	movapd	2608-128(pB0), rB0
+	movapd	2608-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2608-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2608-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2608-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2608-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2608-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2608-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2608-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 328
+	movapd	2624-128(pB0), rB0
+	movapd	2624-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2624-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2624-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2624-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2624-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2624-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2624-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2624-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 330
+	movapd	2640-128(pB0), rB0
+	movapd	2640-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2640-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2640-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2640-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2640-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2640-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2640-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2640-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 332
+	movapd	2656-128(pB0), rB0
+	movapd	2656-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2656-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2656-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2656-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2656-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2656-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2656-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2656-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 334
+	movapd	2672-128(pB0), rB0
+	movapd	2672-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2672-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2672-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2672-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2672-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2672-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2672-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2672-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 336
+	movapd	2688-128(pB0), rB0
+	movapd	2688-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2688-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2688-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2688-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2688-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2688-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2688-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2688-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 338
+	movapd	2704-128(pB0), rB0
+	movapd	2704-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2704-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2704-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2704-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2704-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2704-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2704-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2704-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 340
+	movapd	2720-128(pB0), rB0
+	movapd	2720-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2720-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2720-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2720-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2720-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2720-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2720-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2720-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 342
+	movapd	2736-128(pB0), rB0
+	movapd	2736-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2736-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2736-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2736-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2736-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2736-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2736-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2736-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 344
+	movapd	2752-128(pB0), rB0
+	movapd	2752-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2752-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2752-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2752-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2752-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2752-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2752-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2752-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 346
+	movapd	2768-128(pB0), rB0
+	movapd	2768-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2768-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2768-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2768-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2768-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2768-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2768-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2768-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 348
+	movapd	2784-128(pB0), rB0
+	movapd	2784-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2784-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2784-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2784-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2784-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2784-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2784-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2784-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 350
+	movapd	2800-128(pB0), rB0
+	movapd	2800-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2800-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2800-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2800-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2800-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2800-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2800-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2800-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 352
+	movapd	2816-128(pB0), rB0
+	movapd	2816-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2816-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2816-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2816-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2816-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2816-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2816-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2816-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 354
+	movapd	2832-128(pB0), rB0
+	movapd	2832-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2832-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2832-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2832-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2832-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2832-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2832-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2832-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 356
+	movapd	2848-128(pB0), rB0
+	movapd	2848-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2848-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2848-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2848-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2848-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2848-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2848-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2848-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 358
+	movapd	2864-128(pB0), rB0
+	movapd	2864-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2864-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2864-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2864-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2864-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2864-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2864-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2864-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 360
+	movapd	2880-128(pB0), rB0
+	movapd	2880-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2880-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2880-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2880-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2880-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2880-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2880-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2880-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 362
+	movapd	2896-128(pB0), rB0
+	movapd	2896-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2896-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2896-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2896-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2896-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2896-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2896-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2896-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 364
+	movapd	2912-128(pB0), rB0
+	movapd	2912-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2912-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2912-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2912-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2912-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2912-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2912-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2912-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 366
+	movapd	2928-128(pB0), rB0
+	movapd	2928-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2928-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2928-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2928-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2928-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2928-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2928-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2928-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 368
+	movapd	2944-128(pB0), rB0
+	movapd	2944-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2944-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2944-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2944-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2944-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2944-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2944-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2944-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 370
+	movapd	2960-128(pB0), rB0
+	movapd	2960-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2960-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2960-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2960-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2960-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2960-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2960-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2960-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 372
+	movapd	2976-128(pB0), rB0
+	movapd	2976-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2976-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2976-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2976-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2976-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2976-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2976-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2976-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 374
+	movapd	2992-128(pB0), rB0
+	movapd	2992-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	2992-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	2992-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	2992-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	2992-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	2992-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	2992-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	2992-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 376
+	movapd	3008-128(pB0), rB0
+	movapd	3008-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3008-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3008-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3008-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3008-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3008-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3008-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3008-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 378
+	movapd	3024-128(pB0), rB0
+	movapd	3024-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3024-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3024-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3024-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3024-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3024-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3024-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3024-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 380
+	movapd	3040-128(pB0), rB0
+	movapd	3040-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3040-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3040-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3040-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3040-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3040-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3040-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3040-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 382
+	movapd	3056-128(pB0), rB0
+	movapd	3056-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3056-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3056-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3056-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3056-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3056-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3056-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3056-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 384
+	movapd	3072-128(pB0), rB0
+	movapd	3072-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3072-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3072-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3072-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3072-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3072-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3072-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3072-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 386
+	movapd	3088-128(pB0), rB0
+	movapd	3088-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3088-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3088-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3088-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3088-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3088-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3088-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3088-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 388
+	movapd	3104-128(pB0), rB0
+	movapd	3104-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3104-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3104-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3104-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3104-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3104-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3104-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3104-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 390
+	movapd	3120-128(pB0), rB0
+	movapd	3120-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3120-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3120-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3120-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3120-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3120-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3120-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3120-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 392
+	movapd	3136-128(pB0), rB0
+	movapd	3136-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3136-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3136-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3136-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3136-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3136-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3136-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3136-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 394
+	movapd	3152-128(pB0), rB0
+	movapd	3152-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3152-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3152-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3152-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3152-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3152-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3152-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3152-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 396
+	movapd	3168-128(pB0), rB0
+	movapd	3168-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3168-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3168-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3168-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3168-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3168-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3168-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3168-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 398
+	movapd	3184-128(pB0), rB0
+	movapd	3184-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3184-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3184-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3184-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3184-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3184-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3184-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3184-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 400
+	movapd	3200-128(pB0), rB0
+	movapd	3200-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3200-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3200-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3200-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3200-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3200-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3200-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3200-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 402
+	movapd	3216-128(pB0), rB0
+	movapd	3216-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3216-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3216-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3216-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3216-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3216-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3216-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3216-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 404
+	movapd	3232-128(pB0), rB0
+	movapd	3232-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3232-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3232-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3232-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3232-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3232-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3232-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3232-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 406
+	movapd	3248-128(pB0), rB0
+	movapd	3248-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3248-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3248-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3248-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3248-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3248-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3248-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3248-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 408
+	movapd	3264-128(pB0), rB0
+	movapd	3264-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3264-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3264-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3264-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3264-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3264-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3264-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3264-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 410
+	movapd	3280-128(pB0), rB0
+	movapd	3280-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3280-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3280-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3280-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3280-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3280-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3280-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3280-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 412
+	movapd	3296-128(pB0), rB0
+	movapd	3296-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3296-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3296-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3296-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3296-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3296-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3296-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3296-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 414
+	movapd	3312-128(pB0), rB0
+	movapd	3312-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3312-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3312-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3312-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3312-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3312-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3312-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3312-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 416
+	movapd	3328-128(pB0), rB0
+	movapd	3328-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3328-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3328-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3328-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3328-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3328-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3328-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3328-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 418
+	movapd	3344-128(pB0), rB0
+	movapd	3344-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3344-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3344-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3344-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3344-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3344-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3344-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3344-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 420
+	movapd	3360-128(pB0), rB0
+	movapd	3360-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3360-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3360-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3360-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3360-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3360-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3360-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3360-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 422
+	movapd	3376-128(pB0), rB0
+	movapd	3376-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3376-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3376-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3376-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3376-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3376-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3376-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3376-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 424
+	movapd	3392-128(pB0), rB0
+	movapd	3392-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3392-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3392-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3392-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3392-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3392-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3392-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3392-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 426
+	movapd	3408-128(pB0), rB0
+	movapd	3408-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3408-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3408-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3408-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3408-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3408-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3408-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3408-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 428
+	movapd	3424-128(pB0), rB0
+	movapd	3424-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3424-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3424-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3424-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3424-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3424-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3424-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3424-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 430
+	movapd	3440-128(pB0), rB0
+	movapd	3440-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3440-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3440-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3440-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3440-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3440-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3440-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3440-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 432
+	movapd	3456-128(pB0), rB0
+	movapd	3456-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3456-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3456-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3456-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3456-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3456-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3456-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3456-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 434
+	movapd	3472-128(pB0), rB0
+	movapd	3472-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3472-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3472-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3472-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3472-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3472-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3472-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3472-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 436
+	movapd	3488-128(pB0), rB0
+	movapd	3488-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3488-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3488-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3488-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3488-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3488-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3488-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3488-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 438
+	movapd	3504-128(pB0), rB0
+	movapd	3504-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3504-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3504-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3504-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3504-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3504-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3504-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3504-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 440
+	movapd	3520-128(pB0), rB0
+	movapd	3520-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3520-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3520-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3520-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3520-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3520-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3520-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3520-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 442
+	movapd	3536-128(pB0), rB0
+	movapd	3536-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3536-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3536-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3536-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3536-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3536-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3536-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3536-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 444
+	movapd	3552-128(pB0), rB0
+	movapd	3552-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3552-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3552-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3552-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3552-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3552-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3552-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3552-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 446
+	movapd	3568-128(pB0), rB0
+	movapd	3568-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3568-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3568-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3568-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3568-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3568-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3568-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3568-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 448
+	movapd	3584-128(pB0), rB0
+	movapd	3584-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3584-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3584-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3584-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3584-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3584-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3584-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3584-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 450
+	movapd	3600-128(pB0), rB0
+	movapd	3600-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3600-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3600-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3600-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3600-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3600-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3600-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3600-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 452
+	movapd	3616-128(pB0), rB0
+	movapd	3616-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3616-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3616-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3616-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3616-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3616-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3616-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3616-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 454
+	movapd	3632-128(pB0), rB0
+	movapd	3632-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3632-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3632-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3632-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3632-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3632-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3632-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3632-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 456
+	movapd	3648-128(pB0), rB0
+	movapd	3648-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3648-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3648-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3648-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3648-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3648-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3648-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3648-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 458
+	movapd	3664-128(pB0), rB0
+	movapd	3664-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3664-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3664-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3664-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3664-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3664-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3664-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3664-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 460
+	movapd	3680-128(pB0), rB0
+	movapd	3680-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3680-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3680-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3680-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3680-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3680-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3680-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3680-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 462
+	movapd	3696-128(pB0), rB0
+	movapd	3696-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3696-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3696-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3696-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3696-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3696-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3696-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3696-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 464
+	movapd	3712-128(pB0), rB0
+	movapd	3712-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3712-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3712-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3712-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3712-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3712-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3712-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3712-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 466
+	movapd	3728-128(pB0), rB0
+	movapd	3728-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3728-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3728-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3728-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3728-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3728-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3728-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3728-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 468
+	movapd	3744-128(pB0), rB0
+	movapd	3744-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3744-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3744-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3744-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3744-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3744-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3744-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3744-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 470
+	movapd	3760-128(pB0), rB0
+	movapd	3760-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3760-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3760-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3760-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3760-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3760-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3760-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3760-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 472
+	movapd	3776-128(pB0), rB0
+	movapd	3776-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3776-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3776-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3776-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3776-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3776-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3776-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3776-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 474
+	movapd	3792-128(pB0), rB0
+	movapd	3792-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3792-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3792-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3792-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3792-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3792-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3792-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3792-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 476
+	movapd	3808-128(pB0), rB0
+	movapd	3808-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3808-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3808-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3808-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3808-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3808-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3808-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3808-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 478
+	movapd	3824-128(pB0), rB0
+	movapd	3824-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3824-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3824-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3824-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3824-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3824-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3824-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3824-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 480
+	movapd	3840-128(pB0), rB0
+	movapd	3840-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3840-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3840-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3840-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3840-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3840-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3840-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3840-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 482
+	movapd	3856-128(pB0), rB0
+	movapd	3856-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3856-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3856-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3856-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3856-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3856-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3856-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3856-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 484
+	movapd	3872-128(pB0), rB0
+	movapd	3872-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3872-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3872-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3872-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3872-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3872-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3872-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3872-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 486
+	movapd	3888-128(pB0), rB0
+	movapd	3888-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3888-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3888-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3888-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3888-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3888-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3888-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3888-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 488
+	movapd	3904-128(pB0), rB0
+	movapd	3904-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3904-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3904-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3904-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3904-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3904-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3904-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3904-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 490
+	movapd	3920-128(pB0), rB0
+	movapd	3920-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3920-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3920-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3920-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3920-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3920-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3920-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3920-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 492
+	movapd	3936-128(pB0), rB0
+	movapd	3936-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3936-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3936-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3936-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3936-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3936-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3936-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3936-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 494
+	movapd	3952-128(pB0), rB0
+	movapd	3952-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3952-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3952-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3952-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3952-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3952-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3952-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3952-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 496
+	movapd	3968-128(pB0), rB0
+	movapd	3968-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3968-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3968-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3968-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3968-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3968-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3968-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3968-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 498
+	movapd	3984-128(pB0), rB0
+	movapd	3984-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	3984-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	3984-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	3984-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	3984-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	3984-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	3984-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	3984-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 500
+	movapd	4000-128(pB0), rB0
+	movapd	4000-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4000-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4000-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4000-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4000-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4000-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4000-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4000-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 502
+	movapd	4016-128(pB0), rB0
+	movapd	4016-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4016-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4016-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4016-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4016-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4016-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4016-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4016-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 504
+	movapd	4032-128(pB0), rB0
+	movapd	4032-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4032-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4032-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4032-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4032-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4032-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4032-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4032-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 506
+	movapd	4048-128(pB0), rB0
+	movapd	4048-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4048-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4048-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4048-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4048-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4048-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4048-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4048-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 508
+	movapd	4064-128(pB0), rB0
+	movapd	4064-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4064-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4064-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4064-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4064-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4064-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4064-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4064-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+#if KB > 510
+	movapd	4080-128(pB0), rB0
+	movapd	4080-128(pA0), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC00
+	movapd	4080-128(pA0,lda), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC01
+	movapd	4080-128(pA0,lda,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC02
+	movapd	4080-128(pA0,lda3), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC03
+	movapd	4080-128(pA0,lda,4), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC04
+	movapd	4080-128(pA0,lda5), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC05
+	movapd	4080-128(pA0,lda3,2), rA0
+	mulpd	rB0,rA0
+	addpd	rA0,rC06
+	mulpd	4080-128(pA0,lda7), rB0
+	addpd	rB0,rC07
+#endif
+
+/*       jne KLOOP */
+/*
+ *      pC[0-8] = rC[0-8]
+ */
+
+        haddpd  rC01,rC00
+                                lea     (pA0,lda,8), pA0
+        #ifdef BETAN1
+                subpd   rC0, rC00
+        #elif !defined(BETA0)
+                addpd   rC0, rC00
+        #endif
+        movlpd  rC00, (pC0)
+        movhpd  rC00, CMUL(8)(pC0)
+
+        haddpd  rC03,rC02
+        #ifdef BETAN1
+                subpd   rC2, rC02
+        #elif !defined(BETA0)
+                addpd   rC2, rC02
+        #endif
+        movlpd  rC02, CMUL(16)(pC0)
+        movhpd  rC02, CMUL(24)(pC0)
+
+        haddpd  rC05,rC04
+        #ifdef BETAN1
+                subpd   rC4, rC04
+        #elif !defined(BETA0)
+                addpd   rC4, rC04
+        #endif
+        movlpd  rC04, CMUL(32)(pC0)
+        movhpd  rC04, CMUL(40)(pC0)
+
+        haddpd  rC07,rC06
+        #ifdef BETAN1
+                subpd   rC6, rC06
+        #elif !defined(BETA0)
+                addpd   rC6, rC06
+        #endif
+
+        movlpd  rC06, CMUL(48)(pC0)
+        movhpd  rC06, CMUL(56)(pC0)
+
+        add     $8*CMUL(8), pC0
+        sub     $8, MM
+        jnz     UMLOOP
+
+        sub     incAn, pA0
+        add     incCn, pC0
+        add     ldb, pB0
+        sub     $1, NN
+
+        jnz     UNLOOP
+
+/* UDONE: */
+        movq    -8(%rsp), %rbp
+        movq    -16(%rsp), %rbx
+        movq    -24(%rsp), %r12
+        movq    -32(%rsp), %r13
+        movq    -40(%rsp), %r14
+        movq    -48(%rsp), %r15
         ret

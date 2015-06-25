@@ -2,13 +2,13 @@
    #define ATLAS_TRSMNB_H
 
    #ifdef SREAL
-      #define TRSM_NB 72
+      #define TRSM_NB 80
    #elif defined(DREAL)
-      #define TRSM_NB 52
+      #define TRSM_NB 112
    #elif defined(SCPLX)
-      #define TRSM_NB 72
+      #define TRSM_NB 80
    #elif defined(DCPLX)
-      #define TRSM_NB 88
+      #define TRSM_NB 112
    #endif
 
 #endif

@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x2 unrolled mvn_sse with these params:
+ * This file does a 1x6 unrolled mvn_sse with these params:
  *    CL=8, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -21,6 +21,8 @@
 #define incAYm  %r10
 #define incII   %r15
 #define incAn   %r14
+#define lda3    %r12
+#define lda5    %r13
 /*
  * SSE register assignment
  */
@@ -28,6 +30,10 @@
 #define rY      %xmm1
 #define rX0     %xmm2
 #define rX1     %xmm3
+#define rX2     %xmm4
+#define rX3     %xmm5
+#define rX4     %xmm6
+#define rX5     %xmm7
 /*
  * macros
  */
@@ -122,7 +128,9 @@ ATL_asmdecor(ATL_UGEMV):
    sub $-128, pY        /* code compaction by using signed 1-byte offsets */
    mov pY, pY0          /* save for restore after M loops */
    mov $-64, incAYm     /* code comp: use reg rather than constant */
-   add lda, incAn               /* incAn = (2*lda-M)*sizeof */
+   lea (lda, lda,2), lda3       /* lda3 = 3*lda */
+   lea (lda, lda,4), lda5       /* lda5 = 5*lda */
+   add lda5, incAn              /* incAn = (6*lda-M)*sizeof */
    mov $8*1, incII      /* code comp: use reg rather than constant */
    mov M, II
 /*
@@ -150,15 +158,37 @@ DONE_ZERO_CLEAN:
    LOOPN:
       movddup 0(pX), rX0
       movddup 8(pX), rX1
+      movddup 16(pX), rX2
+      movddup 24(pX), rX3
+      movddup 32(pX), rX4
+      movddup 40(pX), rX5
 
       LOOPM:
          MOVA   0-128(pA0), rY
          mulpd rX0, rY
          addpd 0-128(pY), rY
+         prefA(PFADIST+0(pA0))
 
          MOVA   0-128(pA0,lda), rA0
          mulpd rX1, rA0
          addpd rA0, rY
+         prefA(PFADIST+0(pA0,lda))
+         MOVA   0-128(pA0,lda,2), rA0
+         mulpd rX2, rA0
+         addpd rA0, rY
+         prefA(PFADIST+0(pA0,lda,2))
+         MOVA   0-128(pA0,lda3), rA0
+         mulpd rX3, rA0
+         addpd rA0, rY
+         prefA(PFADIST+0(pA0,lda3))
+         MOVA   0-128(pA0,lda,4), rA0
+         mulpd rX4, rA0
+         addpd rA0, rY
+         prefA(PFADIST+0(pA0,lda,4))
+         MOVA   0-128(pA0,lda5), rA0
+         mulpd rX5, rA0
+         addpd rA0, rY
+         prefA(PFADIST+0(pA0,lda5))
          movapd rY, 0-128(pY)
 
          MOVA   16-128(pA0), rY
@@ -167,6 +197,18 @@ DONE_ZERO_CLEAN:
 
          MOVA   16-128(pA0,lda), rA0
          mulpd rX1, rA0
+         addpd rA0, rY
+         MOVA   16-128(pA0,lda,2), rA0
+         mulpd rX2, rA0
+         addpd rA0, rY
+         MOVA   16-128(pA0,lda3), rA0
+         mulpd rX3, rA0
+         addpd rA0, rY
+         MOVA   16-128(pA0,lda,4), rA0
+         mulpd rX4, rA0
+         addpd rA0, rY
+         MOVA   16-128(pA0,lda5), rA0
+         mulpd rX5, rA0
          addpd rA0, rY
          movapd rY, 16-128(pY)
 
@@ -177,6 +219,18 @@ DONE_ZERO_CLEAN:
          MOVA   32-128(pA0,lda), rA0
          mulpd rX1, rA0
          addpd rA0, rY
+         MOVA   32-128(pA0,lda,2), rA0
+         mulpd rX2, rA0
+         addpd rA0, rY
+         MOVA   32-128(pA0,lda3), rA0
+         mulpd rX3, rA0
+         addpd rA0, rY
+         MOVA   32-128(pA0,lda,4), rA0
+         mulpd rX4, rA0
+         addpd rA0, rY
+         MOVA   32-128(pA0,lda5), rA0
+         mulpd rX5, rA0
+         addpd rA0, rY
          movapd rY, 32-128(pY)
 
          MOVA   48-128(pA0), rY
@@ -186,11 +240,21 @@ DONE_ZERO_CLEAN:
          MOVA   48-128(pA0,lda), rA0
          mulpd rX1, rA0
          addpd rA0, rY
+         MOVA   48-128(pA0,lda,2), rA0
+         mulpd rX2, rA0
+         addpd rA0, rY
+         MOVA   48-128(pA0,lda3), rA0
+         mulpd rX3, rA0
+         addpd rA0, rY
+         MOVA   48-128(pA0,lda,4), rA0
+         mulpd rX4, rA0
+         addpd rA0, rY
+         MOVA   48-128(pA0,lda5), rA0
+         mulpd rX5, rA0
+         addpd rA0, rY
          movapd rY, 48-128(pY)
 
-         prefA(PFADIST+0(pA0))
          sub incAYm, pY
-         prefA(PFADIST+0(pA0,lda))
          sub incAYm, pA0
       sub incII, II
       jnz LOOPM
@@ -211,6 +275,18 @@ DONE_ZERO_CLEAN:
          movsd  -128(pA0,lda), rA0
          mulsd rX1, rA0
          addsd rA0, rY
+         movsd  -128(pA0,lda,2), rA0
+         mulsd rX2, rA0
+         addsd rA0, rY
+         movsd  -128(pA0,lda3), rA0
+         mulsd rX3, rA0
+         addsd rA0, rY
+         movsd  -128(pA0,lda,4), rA0
+         mulsd rX4, rA0
+         addsd rA0, rY
+         movsd  -128(pA0,lda5), rA0
+         mulsd rX5, rA0
+         addsd rA0, rY
          movsd rY, -128(pY)
          add $8, pY
          add $8, pA0
@@ -218,12 +294,12 @@ DONE_ZERO_CLEAN:
       jnz LOOPMCU
 
 MCLEANED:
-      prefX(2*8+PFXDIST(pX))
-      add $2*8, pX
+      prefX(6*8+PFXDIST(pX))
+      add $6*8, pX
       add incAn, pA0
       mov pY0, pY
       mov M, II
-   sub $2, N
+   sub $6, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

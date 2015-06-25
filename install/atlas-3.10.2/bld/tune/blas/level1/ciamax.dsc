@@ -6,7 +6,7 @@
  5  1 ciamax_noabs1_x1.c   "R. Clint Whaley"
  6  1 ciamax_abs2p32.c     "R. Clint Whaley"
  7  1 ciamax_avx.c         "R. Clint Whaley" \
-gcc -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64 -m64
+gcc -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64 -m64
 -x assembler-with-cpp
 <ID> <incX> <rout> <author> [\]
 [<CC>

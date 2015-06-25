@@ -1,6 +1,6 @@
 include Make.inc
 
-obj = ATL_daxpby.o ATL_daxpby_xp1yp1a1bX.o ATL_daxpby_xp0yp0aXbX.o
+obj = ATL_daxpby.o ATL_daxpby_xp0yp0aXbX.o
 
 all : lib
 dlib : lib
@@ -13,7 +13,5 @@ daxpby.grd : $(obj)
 
 ATL_daxpby.o : ATL_daxpby.c
 	$(ICC) $(ICCFLAGS) -DDREAL -o $@ -c ATL_daxpby.c
-ATL_daxpby_xp1yp1a1bX.o : ATL_daxpby_xp1yp1a1bX.c
-	$(DKC) $(DKCFLAGS) $(CDEFS) -DDREAL -o $@ -c ATL_daxpby_xp1yp1a1bX.c
 ATL_daxpby_xp0yp0aXbX.o : ATL_daxpby_xp0yp0aXbX.c
 	$(DKC) $(DKCFLAGS) $(CDEFS) -DDREAL -o $@ -c ATL_daxpby_xp0yp0aXbX.c

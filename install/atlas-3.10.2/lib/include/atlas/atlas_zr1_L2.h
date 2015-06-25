@@ -5,11 +5,9 @@
 
 typedef void (*ATL_r1kern_t)
    (ATL_CINT, ATL_CINT, const double*, const double*, double*, ATL_CINT);
-void ATL_zgerk__900005
-   (ATL_CINT, ATL_CINT, const double*, const double*, double*, ATL_CINT);
-void ATL_zgerk__900007
-   (ATL_CINT, ATL_CINT, const double*, const double*, double*, ATL_CINT);
 void ATL_zgerk__900006
+   (ATL_CINT, ATL_CINT, const double*, const double*, double*, ATL_CINT);
+void ATL_zgerk__900008
    (ATL_CINT, ATL_CINT, const double*, const double*, double*, ATL_CINT);
 
 static ATL_r1kern_t ATL_GetR1Kern
@@ -21,49 +19,30 @@ static ATL_r1kern_t ATL_GetR1Kern
    {
       if ((((((ATL_MulBySize(lda)) >> 4)) << 4)) == ATL_MulBySize(lda))
       {
-         if (N >= 4)
-         {
-            if (M >= 8)
-            {
-               *minM = 8;   *minN = 4;
-               *mu = 8;     *nu = 4;
-               *alignX = 16;  *alignY = 16;
-               *ALIGNX2A = 0;
-               *FNU = 1;
-               *CacheElts = 16384;
-               return(ATL_zgerk__900005);
-            } /* end if on minimal N guard */
-         } /* end if on minimal M guard */
-      } /* end if on lda multiple restriction */
-   } /* end if on align of A */
-   if ((((((((size_t)(A))) >> 4)) << 4)) == (size_t)(A))
-   {
-      if ((((((ATL_MulBySize(lda)) >> 4)) << 4)) == ATL_MulBySize(lda))
-      {
-         if (N >= 6)
+         if (N >= 5)
          {
             if (M >= 4)
             {
-               *minM = 4;   *minN = 6;
-               *mu = 4;     *nu = 6;
+               *minM = 4;   *minN = 5;
+               *mu = 4;     *nu = 5;
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 16384;
-               return(ATL_zgerk__900007);
+               *CacheElts = 49152;
+               return(ATL_zgerk__900006);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
-   *minM = 4;   *minN = 6;
-   *mu = 4;     *nu = 6;
+   *minM = 8;   *minN = 6;
+   *mu = 8;     *nu = 6;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 16384;
-   return(ATL_zgerk__900006);
+   *CacheElts = 49152;
+   return(ATL_zgerk__900008);
 }
 
-#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 1168; (nb_) = 6; }
+#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 3504; (nb_) = 6; }
 
 #endif  /* end protection around header file contents */

@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x5 unrolled mvt_sse with these params:
+ * This file does a 1x4 unrolled mvt_sse with these params:
  *    CL=4, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -37,8 +37,6 @@
 #define rY2i    %xmm9
 #define rY3r    %xmm10
 #define rY3i    %xmm11
-#define rY4r    %xmm12
-#define rY4i    %xmm13
 #define NONEPONEOFF -72
 #define NONEPONE %xmm15
 /*
@@ -146,7 +144,7 @@ ATL_asmdecor(ATL_UGEMV):
    mov pX, pX0          /* save for restore after M loops */
    mov $-64, incAXm     /* code comp: use reg rather than constant */
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
-   lea (incAn, lda,4), incAn    /* incAn = (5*lda-M)*sizeof */
+   lea (incAn, lda3), incAn     /* incAn = (4*lda-M)*sizeof */
    mov $4*1, incII      /* code comp: use reg rather than constant */
    mov M, II
    ALIGN32
@@ -159,8 +157,6 @@ ATL_asmdecor(ATL_UGEMV):
       xorpd rY2i, rY2i
       xorpd rY3r, rY3r
       xorpd rY3i, rY3i
-      xorpd rY4r, rY4r
-      xorpd rY4i, rY4i
 
       LOOPM:
          movapd 0-128(pX), rX0              /* rX0 = Xi,    Xr */
@@ -194,13 +190,6 @@ ATL_asmdecor(ATL_UGEMV):
          prefA(PFADIST+0(pA0,lda3))
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY3r
-         MOVA   0-128(pA0,lda,4), rA0           /* rA0 = Ai,    Ar */ 
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY4i
-         prefA(PFADIST+0(pA0,lda,4))
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY4r
 
          movapd 16-128(pX), rX0              /* rX0 = Xi,    Xr */
          pshufd $0x4E, rX0, rx0                 /* rx0 = Xr,    Xi */
@@ -229,12 +218,6 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA0, rY3i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY3r
-         MOVA   16-128(pA0,lda,4), rA0           /* rA0 = Ai,    Ar */ 
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY4i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY4r
 
          movapd 32-128(pX), rX0              /* rX0 = Xi,    Xr */
          pshufd $0x4E, rX0, rx0                 /* rx0 = Xr,    Xi */
@@ -263,12 +246,6 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA0, rY3i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY3r
-         MOVA   32-128(pA0,lda,4), rA0           /* rA0 = Ai,    Ar */ 
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY4i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY4r
 
          movapd 48-128(pX), rX0              /* rX0 = Xi,    Xr */
          pshufd $0x4E, rX0, rx0                 /* rx0 = Xr,    Xi */
@@ -297,12 +274,6 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA0, rY3i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY3r
-         MOVA   48-128(pA0,lda,4), rA0           /* rA0 = Ai,    Ar */ 
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY4i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY4r
 
          sub incAXm, pX
          sub incAXm, pA0
@@ -340,12 +311,6 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA0, rY3i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY3r
-         MOVA   -128(pA0,lda,4), rA0                /* rA0 = Ai,    Ar */
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY4i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY4r
          add $16, pX
          add $16, pA0
       dec II
@@ -382,19 +347,12 @@ MCLEANED:
          addpd 48(pY), rY3r
       #endif
       movapd rY3r, 48(pY)
-
-      mulpd NONEPONE, rY4r   /* rYr = {-Ai*Xi, Ar*Xr} */
-      haddpd rY4i, rY4r   /* rYr = {Ai*Xr+Ar*Xi, Ar*Xr-Ai*Xi} */
-      #ifndef BETA0
-         addpd 64(pY), rY4r
-      #endif
-      movapd rY4r, 64(pY)
-      prefY(5*16+PFYDIST(pY))
-      add $5*16, pY
+      prefY(4*16+PFYDIST(pY))
+      add $4*16, pY
       add incAn, pA0
       mov pX0, pX
       mov M, II
-   sub $5, N
+   sub $4, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

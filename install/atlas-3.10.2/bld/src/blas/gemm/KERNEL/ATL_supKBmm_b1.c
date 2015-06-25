@@ -32,6 +32,10 @@ void ATL_supKBmm64_8_1_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
+void ATL_supKBmm72_8_1_b1
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
 void ATL_supKBmm4_4_1_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
@@ -68,6 +72,10 @@ void ATL_supKBmm68_4_1_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
+void ATL_supKBmm76_4_1_b1
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
 void ATL_spKBmm_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
@@ -88,7 +96,7 @@ void ATL_spKBmm_b1
     const TYPE beta, TYPE *C, const int ldc)
 {
 
-   static MMfunc mmfunc[72] = 
+   static MMfunc mmfunc[80] = 
    {
       NULL,
       ATL_sgpKBmm,
@@ -159,6 +167,14 @@ void ATL_spKBmm_b1
       ATL_sgpKBmm,
       ATL_sgpKBmm,
       ATL_supKBmm68_4_1_b1,
+      ATL_sgpKBmm,
+      ATL_sgpKBmm,
+      ATL_sgpKBmm,
+      ATL_supKBmm72_8_1_b1,
+      ATL_sgpKBmm,
+      ATL_sgpKBmm,
+      ATL_sgpKBmm,
+      ATL_supKBmm76_4_1_b1,
       ATL_sgpKBmm,
       ATL_sgpKBmm,
       ATL_sgpKBmm

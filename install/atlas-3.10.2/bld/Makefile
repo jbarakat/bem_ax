@@ -1,6 +1,6 @@
-BLDdir=/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld
-TOPdir=/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src/
-DESTDIR=/home/jmb/Codes/bem_ax/install/atlas-3.10.2/lib
+BLDdir=/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld
+TOPdir=/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src/
+DESTDIR=/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/lib
 INCINSTdir=$(DESTDIR)/include
 LIBINSTdir=$(DESTDIR)/lib
 CC=gcc

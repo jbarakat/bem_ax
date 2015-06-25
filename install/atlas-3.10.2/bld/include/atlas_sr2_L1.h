@@ -6,7 +6,10 @@
 typedef void (*ATL_r2kern_t)
    (ATL_CINT, ATL_CINT, const float*, const float*, const float*,
     const float*, float*, ATL_CINT);
-void ATL_sger2k__900004
+void ATL_sger2k__900008
+   (ATL_CINT, ATL_CINT, const float*, const float*, const float*,
+    const float*, float*, ATL_CINT);
+void ATL_sger2k__900007
    (ATL_CINT, ATL_CINT, const float*, const float*, const float*,
     const float*, float*, ATL_CINT);
 
@@ -15,15 +18,34 @@ static ATL_r2kern_t ATL_GetR2Kern
     int *mu, int *nu, int *minM, int *minN, int *alignX, int *ALIGNX2A,
     int *alignY, int *FNU, ATL_INT *CacheElts) 
 {
-   *minM = 48;   *minN = 4;
-   *mu = 48;     *nu = 4;
+   if ((((((((size_t)(A))) >> 4)) << 4)) == (size_t)(A))
+   {
+      if ((((((ATL_MulBySize(lda)) >> 4)) << 4)) == ATL_MulBySize(lda))
+      {
+         if (N >= 5)
+         {
+            if (M >= 32)
+            {
+               *minM = 32;   *minN = 5;
+               *mu = 32;     *nu = 5;
+               *alignX = 16;  *alignY = 16;
+               *ALIGNX2A = 0;
+               *FNU = 1;
+               *CacheElts = 32112;
+               return(ATL_sger2k__900008);
+            } /* end if on minimal N guard */
+         } /* end if on minimal M guard */
+      } /* end if on lda multiple restriction */
+   } /* end if on align of A */
+   *minM = 32;   *minN = 5;
+   *mu = 32;     *nu = 5;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 8192;
-   return(ATL_sger2k__900004);
+   *CacheElts = 32112;
+   return(ATL_sger2k__900007);
 }
 
-#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 816; (nb_) = 4; }
+#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 2656; (nb_) = 5; }
 
 #endif  /* end protection around header file contents */

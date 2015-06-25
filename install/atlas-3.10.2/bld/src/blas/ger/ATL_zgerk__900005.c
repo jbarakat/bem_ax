@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 2x4 unrolled r1_sse with these params:
+ * This file does a 1x5 unrolled r1_sse with these params:
  *    CL=4, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -36,6 +36,9 @@
 #define rYi2     %xmm8
 #define rYr3     %xmm9
 #define rYi3     %xmm10
+#define rYr4     %xmm11
+#define rYi4     %xmm12
+#define ra0     %xmm14
 #define rponenone %xmm15
 #define PONENONEOFF -72
 
@@ -43,7 +46,7 @@
  * macros
  */
 #ifndef MOVA
-   #define MOVA movaps
+   #define MOVA movups
 #endif
 #define movapd movaps
 #define movupd movups
@@ -116,8 +119,8 @@ ATL_asmdecor(ATL_UGERK):
    mov  %r9, lda        /* move lda to assigned register, rax */
    mov  %rcx, pY        /* move pY to assigned register, r9 */
    mov  M, Mr           /* Mr = M */
-   shr $3, M            /* M = M / MU */
-   shl $3, M            /* M = (M/MU)*MU */
+   shr $2, M            /* M = M / MU */
+   shl $2, M            /* M = (M/MU)*MU */
    sub M, Mr            /* Mr = M - (M/MU)*MU */
 /*
  * Construct ponenone = {-1.0,1.0}
@@ -140,10 +143,10 @@ ATL_asmdecor(ATL_UGERK):
    sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
    sub $-128, pX        /* code compaction by using signed 1-byte offsets */
    mov pX, pX0          /* save for restore after M loops */
-   mov $-128, incAXm     /* code comp: use reg rather than constant */
+   mov $-64, incAXm     /* code comp: use reg rather than constant */
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
-   lea (incAn, lda3), incAn     /* incAn = (4*lda-M)*sizeof */
-   mov $4*2, incII      /* code comp: use reg rather than constant */
+   lea (incAn, lda,4), incAn    /* incAn = (5*lda-M)*sizeof */
+   mov $4*1, incII      /* code comp: use reg rather than constant */
    mov M, II
 
    ALIGN32
@@ -164,13 +167,18 @@ ATL_asmdecor(ATL_UGERK):
       pshufd $0xEE, rYr3, rYi3  /* rYi3 = {Yi,  Yi} */
       mulpd  rponenone, rYi3    /* rYi3 = {Yi, -Yi} */
       unpcklpd rYr3, rYr3    /* rYr3 = {Yr, Yr} */
+      movapd 4*16(pY), rYr4  /* rYr4 = {Yi,  Yr} */
+      pshufd $0xEE, rYr4, rYi4  /* rYi4 = {Yi,  Yi} */
+      mulpd  rponenone, rYi4    /* rYi4 = {Yi, -Yi} */
+      unpcklpd rYr4, rYr4    /* rYr4 = {Yr, Yr} */
 
       LOOPM:
          movapd 0-128(pX), rX0      /* rX0 = {Xi, Xr} */
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  0-128(pA0), rA0     /* rA0 += present A */
+         MOVA    0-128(pA0), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 0-128(pA0)
@@ -179,7 +187,8 @@ ATL_asmdecor(ATL_UGERK):
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  0-128(pA0,lda), rA0     /* rA0 += present A */
+         MOVA    0-128(pA0,lda), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 0-128(pA0,lda)
@@ -187,7 +196,8 @@ ATL_asmdecor(ATL_UGERK):
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  0-128(pA0,lda,2), rA0     /* rA0 += present A */
+         MOVA    0-128(pA0,lda,2), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 0-128(pA0,lda,2)
@@ -195,224 +205,146 @@ ATL_asmdecor(ATL_UGERK):
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  0-128(pA0,lda3), rA0     /* rA0 += present A */
+         MOVA    0-128(pA0,lda3), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 0-128(pA0,lda3)
-
-         movapd 64-128(pX), rX0      /* rX0 = {Xi, Xr} */
+         prefA(PFADIST+0(pA0,lda,4))
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
+         movapd rYr4, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  64-128(pA0), rA0     /* rA0 += present A */
-         mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
+         MOVA    0-128(pA0,lda,4), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
+         mulpd  rYi4, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 64-128(pA0)
-         prefA(PFADIST+64(pA0))
-         prefA(PFADIST+64(pA0,lda))
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  64-128(pA0,lda), rA0     /* rA0 += present A */
-         mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 64-128(pA0,lda)
-         prefA(PFADIST+64(pA0,lda,2))
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  64-128(pA0,lda,2), rA0     /* rA0 += present A */
-         mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 64-128(pA0,lda,2)
-         prefA(PFADIST+64(pA0,lda3))
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  64-128(pA0,lda3), rA0     /* rA0 += present A */
-         mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 64-128(pA0,lda3)
+         MOVA rA0, 0-128(pA0,lda,4)
 
          movapd 16-128(pX), rX0      /* rX0 = {Xi, Xr} */
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  16-128(pA0), rA0     /* rA0 += present A */
+         MOVA    16-128(pA0), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 16-128(pA0)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  16-128(pA0,lda), rA0     /* rA0 += present A */
+         MOVA    16-128(pA0,lda), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 16-128(pA0,lda)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  16-128(pA0,lda,2), rA0     /* rA0 += present A */
+         MOVA    16-128(pA0,lda,2), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 16-128(pA0,lda,2)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  16-128(pA0,lda3), rA0     /* rA0 += present A */
+         MOVA    16-128(pA0,lda3), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 16-128(pA0,lda3)
+         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
+         movapd rYr4, rA0               /* rA0 = {Yr, Yr} */
+         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
+         MOVA    16-128(pA0,lda,4), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
+         mulpd  rYi4, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
+         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
+         MOVA rA0, 16-128(pA0,lda,4)
 
          movapd 32-128(pX), rX0      /* rX0 = {Xi, Xr} */
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  32-128(pA0), rA0     /* rA0 += present A */
+         MOVA    32-128(pA0), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 32-128(pA0)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  32-128(pA0,lda), rA0     /* rA0 += present A */
+         MOVA    32-128(pA0,lda), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 32-128(pA0,lda)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  32-128(pA0,lda,2), rA0     /* rA0 += present A */
+         MOVA    32-128(pA0,lda,2), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 32-128(pA0,lda,2)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  32-128(pA0,lda3), rA0     /* rA0 += present A */
+         MOVA    32-128(pA0,lda3), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 32-128(pA0,lda3)
+         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
+         movapd rYr4, rA0               /* rA0 = {Yr, Yr} */
+         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
+         MOVA    32-128(pA0,lda,4), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
+         mulpd  rYi4, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
+         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
+         MOVA rA0, 32-128(pA0,lda,4)
 
          movapd 48-128(pX), rX0      /* rX0 = {Xi, Xr} */
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  48-128(pA0), rA0     /* rA0 += present A */
+         MOVA    48-128(pA0), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 48-128(pA0)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  48-128(pA0,lda), rA0     /* rA0 += present A */
+         MOVA    48-128(pA0,lda), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 48-128(pA0,lda)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  48-128(pA0,lda,2), rA0     /* rA0 += present A */
+         MOVA    48-128(pA0,lda,2), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 48-128(pA0,lda,2)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  48-128(pA0,lda3), rA0     /* rA0 += present A */
+         MOVA    48-128(pA0,lda3), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, 48-128(pA0,lda3)
-
-         movapd 80-128(pX), rX0      /* rX0 = {Xi, Xr} */
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
+         movapd rYr4, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  80-128(pA0), rA0     /* rA0 += present A */
-         mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
+         MOVA    48-128(pA0,lda,4), ra0    /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
+         mulpd  rYi4, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 80-128(pA0)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  80-128(pA0,lda), rA0     /* rA0 += present A */
-         mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 80-128(pA0,lda)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  80-128(pA0,lda,2), rA0     /* rA0 += present A */
-         mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 80-128(pA0,lda,2)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  80-128(pA0,lda3), rA0     /* rA0 += present A */
-         mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 80-128(pA0,lda3)
-
-         movapd 96-128(pX), rX0      /* rX0 = {Xi, Xr} */
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  96-128(pA0), rA0     /* rA0 += present A */
-         mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 96-128(pA0)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  96-128(pA0,lda), rA0     /* rA0 += present A */
-         mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 96-128(pA0,lda)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  96-128(pA0,lda,2), rA0     /* rA0 += present A */
-         mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 96-128(pA0,lda,2)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  96-128(pA0,lda3), rA0     /* rA0 += present A */
-         mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 96-128(pA0,lda3)
-
-         movapd 112-128(pX), rX0      /* rX0 = {Xi, Xr} */
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  112-128(pA0), rA0     /* rA0 += present A */
-         mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 112-128(pA0)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  112-128(pA0,lda), rA0     /* rA0 += present A */
-         mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 112-128(pA0,lda)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  112-128(pA0,lda,2), rA0     /* rA0 += present A */
-         mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 112-128(pA0,lda,2)
-         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
-         movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
-         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  112-128(pA0,lda3), rA0     /* rA0 += present A */
-         mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
-         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
-         MOVA rA0, 112-128(pA0,lda3)
+         MOVA rA0, 48-128(pA0,lda,4)
 
          sub incAXm, pX
          sub incAXm, pA0
@@ -428,43 +360,55 @@ ATL_asmdecor(ATL_UGERK):
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr0, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  -128(pA0), rA0          /* rA0 += present A */
+         MOVA    -128(pA0), ra0         /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi0, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, -128(pA0)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr1, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  -128(pA0,lda), rA0        /* rA0 += present A */
+         MOVA    -128(pA0,lda), ra0       /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi1, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, -128(pA0,lda)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr2, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  -128(pA0,lda,2), rA0        /* rA0 += present A */
+         MOVA    -128(pA0,lda,2), ra0       /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi2, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, -128(pA0,lda,2)
          pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
          movapd rYr3, rA0               /* rA0 = {Yr, Yr} */
          mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
-         addpd  -128(pA0,lda3), rA0        /* rA0 += present A */
+         MOVA    -128(pA0,lda3), ra0       /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
          mulpd  rYi3, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
          addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
          MOVA rA0, -128(pA0,lda3)
+         pshufd $0x4E, rX0, rxt         /* rxt = {Xr, Xi} */
+         movapd rYr4, rA0               /* rA0 = {Yr, Yr} */
+         mulpd  rX0, rA0                /* rA0 = {Xi*Yr, Xr*Yr} */
+         MOVA    -128(pA0,lda,4), ra0       /* ra0 = present A */
+         addpd   ra0, rA0               /* rA0 += present A */
+         mulpd  rYi4, rxt               /* rxt = {Xr*Yi, -xi*Yi} */
+         addpd  rxt, rA0                /* rA0 = {Xi*Yr+Xr*Yi, Xr*Yr-Xi*Yi} */
+         MOVA rA0, -128(pA0,lda,4)
          add $16, pX
          add $16, pA0
       dec II
       jnz LOOPMCU
 
 MCLEANED:
-      prefY(4*16+PFYDIST(pY))
-      add $4*16, pY
+      prefY(5*16+PFYDIST(pY))
+      add $5*16, pY
       add incAn, pA0
       mov pX0, pX
       mov M, II
-   sub $4, N
+   sub $5, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

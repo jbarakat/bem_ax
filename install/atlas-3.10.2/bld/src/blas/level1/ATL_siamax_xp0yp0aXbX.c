@@ -1,27 +1,29 @@
 #define ATL_UIAMAX ATL_siamax_xp0yp0aXbX
 
 #include "atlas_misc.h"
-#include <math.h>
 
 int ATL_UIAMAX(const int N, const TYPE *X, const int incX)
 {
-   register TYPE xmax, x0;
-   int i, iret=0;
-   if (N > 0)
+   int i, imax=N;
+   register TYPE pmax=0.0, nmax=0.0, x0;
+
+   if (N < 2) return(0);
+   for(i=N; i; i--, X += incX)
    {
-      xmax = *X;
-      xmax = fabs(xmax); X += incX;
-      for (i=1; i < N; i++, X += incX)
+      x0 = *X;
+      if (x0 <= pmax && x0 >= nmax) continue;
+      if (x0 > pmax)
       {
-         x0 = *X;
-         x0 = fabs(x0);
-         if (x0 <= xmax) continue;
-         else
-         {
-            xmax = x0;
-            iret = i;
-         }
+         nmax = -x0;
+         pmax =  x0;
+         imax = i;
+      }
+      else   /* if (x0 < nmax) */
+      {
+         nmax =  x0;
+         pmax = -x0;
+         imax = i;
       }
    }
-   return(iret);
+   return(N-imax);
 }

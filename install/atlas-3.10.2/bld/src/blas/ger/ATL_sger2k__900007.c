@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x5 unrolled r2_sse with these params:
+ * This file does a 2x5 unrolled r2_sse with these params:
  *    CL=16, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -20,7 +20,7 @@
 #define II      %rbx
 #define M0      %r11
 #define Mr      %rcx
-#define incM    $-64
+#define incM    $-128
 #define incII   %r15
 #define incAn   %r14
 #define lda3    %r12
@@ -45,7 +45,7 @@
  * macros
  */
 #ifndef MOVA
-   #define MOVA movaps
+   #define MOVA movups
 #endif
 #define movapd movaps
 #define movupd movups
@@ -127,8 +127,8 @@ ATL_asmdecor(ATL_UGER2K):
    mov M, M0            /* save full M for W/X restoration */
    shl $2, M0           /* M0 *= sizeof */
    mov  M, Mr           /* Mr = M */
-   shr $4, M            /* M = M / MU */
-   shl $4, M            /* M = (M/MU)*MU */
+   shr $5, M            /* M = M / MU */
+   shl $5, M            /* M = (M/MU)*MU */
    sub M, Mr            /* Mr = M - (M/MU)*MU */
 /*
  * Setup constants
@@ -143,7 +143,7 @@ ATL_asmdecor(ATL_UGER2K):
    sub $-128, pW
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
    lea (incAn, lda,4), incAn    /* incAn = (5*lda-M)*sizeof */
-   mov $16*1, incII      /* code comp: use reg rather than constant */
+   mov $16*2, incII      /* code comp: use reg rather than constant */
    mov M, II
 
    ALIGN32
@@ -167,161 +167,358 @@ ATL_asmdecor(ATL_UGER2K):
 
       LOOPM:
          movapd 0-128(pX), rX0
-         movapd rX0, rA0
-         mulpd rY0, rA0
-         addpd 0-128(pA0), rA0
+         movapd rY0, ryt
+         MOVA   0-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd 0-128(pW), rW0
          movapd rZ0, ryt
          mulpd  rW0, ryt
          addpd  ryt, rA0
          MOVA   rA0, 0-128(pA0)
          prefA(PFADIST+0(pA0))
-         movapd rX0, rA0
-         mulpd rY1, rA0
-         addpd 0-128(pA0,lda), rA0
+         movapd rY1, ryt
+         MOVA   0-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ1, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 0-128(pA0,lda)
          prefA(PFADIST+0(pA0,lda))
-         movapd rX0, rA0
-         mulpd rY2, rA0
-         addpd 0-128(pA0,lda,2), rA0
+         movapd rY2, ryt
+         MOVA   0-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ2, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 0-128(pA0,lda,2)
          prefA(PFADIST+0(pA0,lda,2))
-         movapd rX0, rA0
-         mulpd rY3, rA0
-         addpd 0-128(pA0,lda3), rA0
+         movapd rY3, ryt
+         MOVA   0-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ3, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 0-128(pA0,lda3)
          prefA(PFADIST+0(pA0,lda3))
-         movapd rX0, rA0
-         mulpd rY4, rA0
-         addpd 0-128(pA0,lda,4), rA0
+         movapd rY4, ryt
+         MOVA   0-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ4, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 0-128(pA0,lda,4)
          prefA(PFADIST+0(pA0,lda,4))
 
+         movapd 64-128(pX), rX0
+         movapd rY0, ryt
+         MOVA   64-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd 64-128(pW), rW0
+         movapd rZ0, ryt
+         mulpd  rW0, ryt
+         addpd  ryt, rA0
+         MOVA   rA0, 64-128(pA0)
+         prefA(PFADIST+64(pA0))
+         movapd rY1, ryt
+         MOVA   64-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ1, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 64-128(pA0,lda)
+         prefA(PFADIST+64(pA0,lda))
+         movapd rY2, ryt
+         MOVA   64-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ2, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 64-128(pA0,lda,2)
+         prefA(PFADIST+64(pA0,lda,2))
+         movapd rY3, ryt
+         MOVA   64-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ3, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 64-128(pA0,lda3)
+         prefA(PFADIST+64(pA0,lda3))
+         movapd rY4, ryt
+         MOVA   64-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 64-128(pA0,lda,4)
+         prefA(PFADIST+64(pA0,lda,4))
+
          movapd 16-128(pX), rX0
-         movapd rX0, rA0
-         mulpd rY0, rA0
-         addpd 16-128(pA0), rA0
+         movapd rY0, ryt
+         MOVA   16-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd 16-128(pW), rW0
          movapd rZ0, ryt
          mulpd  rW0, ryt
          addpd  ryt, rA0
          MOVA   rA0, 16-128(pA0)
-         movapd rX0, rA0
-         mulpd rY1, rA0
-         addpd 16-128(pA0,lda), rA0
+         movapd rY1, ryt
+         MOVA   16-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ1, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 16-128(pA0,lda)
-         movapd rX0, rA0
-         mulpd rY2, rA0
-         addpd 16-128(pA0,lda,2), rA0
+         movapd rY2, ryt
+         MOVA   16-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ2, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 16-128(pA0,lda,2)
-         movapd rX0, rA0
-         mulpd rY3, rA0
-         addpd 16-128(pA0,lda3), rA0
+         movapd rY3, ryt
+         MOVA   16-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ3, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 16-128(pA0,lda3)
-         movapd rX0, rA0
-         mulpd rY4, rA0
-         addpd 16-128(pA0,lda,4), rA0
+         movapd rY4, ryt
+         MOVA   16-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ4, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 16-128(pA0,lda,4)
 
          movapd 32-128(pX), rX0
-         movapd rX0, rA0
-         mulpd rY0, rA0
-         addpd 32-128(pA0), rA0
+         movapd rY0, ryt
+         MOVA   32-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd 32-128(pW), rW0
          movapd rZ0, ryt
          mulpd  rW0, ryt
          addpd  ryt, rA0
          MOVA   rA0, 32-128(pA0)
-         movapd rX0, rA0
-         mulpd rY1, rA0
-         addpd 32-128(pA0,lda), rA0
+         movapd rY1, ryt
+         MOVA   32-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ1, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 32-128(pA0,lda)
-         movapd rX0, rA0
-         mulpd rY2, rA0
-         addpd 32-128(pA0,lda,2), rA0
+         movapd rY2, ryt
+         MOVA   32-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ2, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 32-128(pA0,lda,2)
-         movapd rX0, rA0
-         mulpd rY3, rA0
-         addpd 32-128(pA0,lda3), rA0
+         movapd rY3, ryt
+         MOVA   32-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ3, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 32-128(pA0,lda3)
-         movapd rX0, rA0
-         mulpd rY4, rA0
-         addpd 32-128(pA0,lda,4), rA0
+         movapd rY4, ryt
+         MOVA   32-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ4, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 32-128(pA0,lda,4)
 
          movapd 48-128(pX), rX0
-         movapd rX0, rA0
-         mulpd rY0, rA0
-         addpd 48-128(pA0), rA0
+         movapd rY0, ryt
+         MOVA   48-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd 48-128(pW), rW0
          movapd rZ0, ryt
          mulpd  rW0, ryt
          addpd  ryt, rA0
          MOVA   rA0, 48-128(pA0)
-         movapd rX0, rA0
-         mulpd rY1, rA0
-         addpd 48-128(pA0,lda), rA0
+         movapd rY1, ryt
+         MOVA   48-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ1, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 48-128(pA0,lda)
-         movapd rX0, rA0
-         mulpd rY2, rA0
-         addpd 48-128(pA0,lda,2), rA0
+         movapd rY2, ryt
+         MOVA   48-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ2, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 48-128(pA0,lda,2)
-         movapd rX0, rA0
-         mulpd rY3, rA0
-         addpd 48-128(pA0,lda3), rA0
+         movapd rY3, ryt
+         MOVA   48-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ3, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 48-128(pA0,lda3)
-         movapd rX0, rA0
-         mulpd rY4, rA0
-         addpd 48-128(pA0,lda,4), rA0
+         movapd rY4, ryt
+         MOVA   48-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
          movapd rZ4, ryt
          mulpd rW0, ryt
          addpd ryt, rA0
          MOVA   rA0, 48-128(pA0,lda,4)
+
+         movapd 80-128(pX), rX0
+         movapd rY0, ryt
+         MOVA   80-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd 80-128(pW), rW0
+         movapd rZ0, ryt
+         mulpd  rW0, ryt
+         addpd  ryt, rA0
+         MOVA   rA0, 80-128(pA0)
+         movapd rY1, ryt
+         MOVA   80-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ1, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 80-128(pA0,lda)
+         movapd rY2, ryt
+         MOVA   80-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ2, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 80-128(pA0,lda,2)
+         movapd rY3, ryt
+         MOVA   80-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ3, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 80-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   80-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 80-128(pA0,lda,4)
+
+         movapd 96-128(pX), rX0
+         movapd rY0, ryt
+         MOVA   96-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd 96-128(pW), rW0
+         movapd rZ0, ryt
+         mulpd  rW0, ryt
+         addpd  ryt, rA0
+         MOVA   rA0, 96-128(pA0)
+         movapd rY1, ryt
+         MOVA   96-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ1, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 96-128(pA0,lda)
+         movapd rY2, ryt
+         MOVA   96-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ2, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 96-128(pA0,lda,2)
+         movapd rY3, ryt
+         MOVA   96-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ3, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 96-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   96-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 96-128(pA0,lda,4)
+
+         movapd 112-128(pX), rX0
+         movapd rY0, ryt
+         MOVA   112-128(pA0), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd 112-128(pW), rW0
+         movapd rZ0, ryt
+         mulpd  rW0, ryt
+         addpd  ryt, rA0
+         MOVA   rA0, 112-128(pA0)
+         movapd rY1, ryt
+         MOVA   112-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ1, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 112-128(pA0,lda)
+         movapd rY2, ryt
+         MOVA   112-128(pA0,lda,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ2, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 112-128(pA0,lda,2)
+         movapd rY3, ryt
+         MOVA   112-128(pA0,lda3), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ3, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 112-128(pA0,lda3)
+         movapd rY4, ryt
+         MOVA   112-128(pA0,lda,4), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         movapd rZ4, ryt
+         mulpd rW0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 112-128(pA0,lda,4)
 
          sub incM, pX
          sub incM, pW

@@ -9,12 +9,12 @@
       (ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 
 #endif
-void ATL_zmvnk__900005(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
-void ATL_zmvnk__900005_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 void ATL_zmvnk__900003(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 void ATL_zmvnk__900003_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
-void ATL_zmvnk__900004(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
-void ATL_zmvnk__900004_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_zmvnk__900006(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_zmvnk__900006_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_zmvnk__900007(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_zmvnk__900007_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 
 static ATL_mvkern_t ATL_GetMVNKern
    (ATL_CINT M, ATL_CINT N, const void *A, ATL_CINT lda,
@@ -35,10 +35,10 @@ static ATL_mvkern_t ATL_GetMVNKern
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 1187;
-               *mvk_b0 = ATL_zmvnk__900005_b0;
+               *CacheElts = 7372;
+               *mvk_b0 = ATL_zmvnk__900003_b0;
                *DOTBASED = 0;
-               return(ATL_zmvnk__900005);
+               return(ATL_zmvnk__900003);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
@@ -49,32 +49,32 @@ static ATL_mvkern_t ATL_GetMVNKern
       {
          if (N >= 4)
          {
-            if (M >= 4)
+            if (M >= 12)
             {
-               *minM = 4;   *minN = 4;
-               *mu = 4;     *nu = 4;
+               *minM = 12;   *minN = 4;
+               *mu = 12;     *nu = 4;
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 1187;
-               *mvk_b0 = ATL_zmvnk__900003_b0;
+               *CacheElts = 7372;
+               *mvk_b0 = ATL_zmvnk__900006_b0;
                *DOTBASED = 0;
-               return(ATL_zmvnk__900003);
+               return(ATL_zmvnk__900006);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
-   *minM = 4;   *minN = 5;
-   *mu = 4;     *nu = 5;
+   *minM = 8;   *minN = 5;
+   *mu = 8;     *nu = 5;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 1187;
-   *mvk_b0 = ATL_zmvnk__900004_b0;
+   *CacheElts = 7372;
+   *mvk_b0 = ATL_zmvnk__900007_b0;
    *DOTBASED = 0;
-   return(ATL_zmvnk__900004);
+   return(ATL_zmvnk__900007);
 }
 
-#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 96; *(nb_) = 5; }
+#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 608; *(nb_) = 5; }
 
 #endif  /* end protection around header file contents */

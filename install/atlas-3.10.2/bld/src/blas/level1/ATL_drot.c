@@ -1,7 +1,5 @@
 #include "atlas_misc.h"
 
-void ATL_drot_xp1yp1aXbX
-   (const int, TYPE*, const int, TYPE*, const int, const TYPE, const TYPE);
 void ATL_drot_xp0yp0aXbX
    (const int, TYPE*, const int, TYPE*, const int, const TYPE, const TYPE);
 void ATL_drot(const int N, TYPE *X, const int incX, TYPE *Y, const int incY,
@@ -45,9 +43,6 @@ void ATL_drot(const int N, TYPE *X, const int incX, TYPE *Y, const int incY,
       else if (!incX || !incY) return;
 L1:
 
-      if (incx == 1 && incy == 1)
-         ATL_drot_xp1yp1aXbX(N, X, incx, Y, incy, alpha, beta);
-      else
-         ATL_drot_xp0yp0aXbX(N, X, incx, Y, incy, alpha, beta);
+      ATL_drot_xp0yp0aXbX(N, X, incx, Y, incy, alpha, beta);
    }
 }

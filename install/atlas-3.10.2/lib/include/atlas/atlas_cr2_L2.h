@@ -9,7 +9,7 @@ typedef void (*ATL_r2kern_t)
 void ATL_cger2k__900003
    (ATL_CINT, ATL_CINT, const float*, const float*, const float*,
     const float*, float*, ATL_CINT);
-void ATL_cger2k__900004
+void ATL_cger2k__900007
    (ATL_CINT, ATL_CINT, const float*, const float*, const float*,
     const float*, float*, ATL_CINT);
 
@@ -31,21 +31,21 @@ static ATL_r2kern_t ATL_GetR2Kern
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 28672;
+               *CacheElts = 57344;
                return(ATL_cger2k__900003);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
-   *minM = 16;   *minN = 1;
-   *mu = 16;     *nu = 1;
+   *minM = 32;   *minN = 2;
+   *mu = 32;     *nu = 2;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 28672;
-   return(ATL_cger2k__900004);
+   *CacheElts = 57344;
+   return(ATL_cger2k__900007);
 }
 
-#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 7152; (nb_) = 1; }
+#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 9536; (nb_) = 2; }
 
 #endif  /* end protection around header file contents */

@@ -1,52 +1,52 @@
-#define ATL_USERMM ATL_cJIK0x0x72TN72x72x80_a1_b0
-#define ATL_USERMM_b1 ATL_cJIK0x0x72TN72x72x80_a1_b1
-#define ATL_USERMM_bn1 ATL_cJIK0x0x72TN72x72x80_a1_bn1
-#define ATL_USERMM_b0 ATL_cJIK0x0x72TN72x72x80_a1_b0
-#define ATL_USERMM_bX ATL_cJIK0x0x72TN72x72x80_a1_bX
+#define ATL_USERMM ATL_cJIK0x0x80TN80x80x88_a1_b0
+#define ATL_USERMM_b1 ATL_cJIK0x0x80TN80x80x88_a1_b1
+#define ATL_USERMM_bn1 ATL_cJIK0x0x80TN80x80x88_a1_bn1
+#define ATL_USERMM_b0 ATL_cJIK0x0x80TN80x80x88_a1_b0
+#define ATL_USERMM_bX ATL_cJIK0x0x80TN80x80x88_a1_bX
 #define BETA0
 #define SCPLX
 
 #define MB 0
 #define NB 0
-#define KB 72
+#define KB 80
 
 #define MBMB 0
 #define NBNB 0
-#define KBKB 5184
+#define KBKB 6400
 
 #define MB2 0
 #define NB2 0
-#define KB2 144
+#define KB2 160
 
 
 #define MB3 0
 #define NB3 0
-#define KB3 216
+#define KB3 240
 
 
 #define MB4 0
 #define NB4 0
-#define KB4 288
+#define KB4 320
 
 
 #define MB5 0
 #define NB5 0
-#define KB5 360
+#define KB5 400
 
 
 #define MB6 0
 #define NB6 0
-#define KB6 432
+#define KB6 480
 
 
 #define MB7 0
 #define NB7 0
-#define KB7 504
+#define KB7 560
 
 
 #define MB8 0
 #define NB8 0
-#define KB8 576
+#define KB8 640
 
 /*
  *             Automatically Tuned Linear Algebra Software v3.10.2

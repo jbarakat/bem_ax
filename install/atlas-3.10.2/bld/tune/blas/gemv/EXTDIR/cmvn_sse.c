@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 2x6 unrolled mvn_sse with these params:
+ * This file does a 1x4 unrolled mvn_sse with these params:
  *    CL=8, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -22,7 +22,6 @@
 #define incII   %r15
 #define incAn   %r14
 #define lda3    %r12
-#define lda5    %r13
 /*
  * SSE register assignment
  */
@@ -38,17 +37,13 @@
 #define iX2     %xmm9
 #define rX3     %xmm10
 #define iX3     %xmm11
-#define rX4     %xmm12
-#define iX4     %xmm13
-#define rX5     %xmm14
-#define iX5     %xmm15
 #define NONEPONEOFF -72
 #define NONEPONE %xmm15
 /*
  * macros
  */
 #ifndef MOVA
-   #define MOVA movups
+   #define MOVA movaps
 #endif
 #define movapd movaps
 #define movupd movups
@@ -129,8 +124,8 @@ ATL_asmdecor(ATL_UGEMV):
  */
    mov  %rcx, lda       /* move lda to assigned register, rax */
    mov  M, Mr           /* Mr = M */
-   shr $4, M            /* M = M / MU */
-   shl $4, M            /* M = (M/MU)*MU */
+   shr $3, M            /* M = M / MU */
+   shl $3, M            /* M = (M/MU)*MU */
    sub M, Mr            /* Mr = M - (M/MU)*MU */
 /*
  * Construct nonepone = {1.0,-1.0,1.0,-1.0}
@@ -143,6 +138,7 @@ ATL_asmdecor(ATL_UGEMV):
    fstps NONEPONEOFF+8(%rsp)            /* ST=1.0 */
    fsts NONEPONEOFF+4(%rsp)             /* ST=1.0 */
    fstps NONEPONEOFF+12(%rsp)          /* ST=NULL, mem={1.0, -1.0, 1.0, -1.0}*/
+   movapd NONEPONEOFF(%rsp), NONEPONE
 /*
  * Setup constants
  */
@@ -154,11 +150,10 @@ ATL_asmdecor(ATL_UGEMV):
    sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
    sub $-128, pY        /* code compaction by using signed 1-byte offsets */
    mov pY, pY0          /* save for restore after M loops */
-   mov $-128, incAYm     /* code comp: use reg rather than constant */
+   mov $-64, incAYm     /* code comp: use reg rather than constant */
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
-   lea (lda, lda,4), lda5       /* lda5 = 5*lda */
-   add lda5, incAn              /* incAn = (6*lda-M)*sizeof */
-   mov $8*2, incII      /* code comp: use reg rather than constant */
+   lea (incAn, lda3), incAn     /* incAn = (4*lda-M)*sizeof */
+   mov $8*1, incII      /* code comp: use reg rather than constant */
    mov M, II
 /*
  * Zero Y if beta = 0;  Has error if there is Mr and/or M isn't mul of veclen
@@ -183,28 +178,20 @@ DONE_ZERO_CLEAN:
 
    ALIGN32
    LOOPN:
-      movapd NONEPONEOFF(%rsp), rA
       movaps (pX), iX1       /* iX1 = {iX1, rX1, iX0, rX0} */
       pshufd $0x00, iX1, rX0 /* rX0 = {rX0, rX0, rX0, rX0} */
       pshufd $0x55, iX1, iX0 /* iX0 = {iX0, iX0, iX0, iX0} */
-      mulps rA, iX0          /* iX0 = {iX0,-iX0, iX0,-iX0} */
+      mulps NONEPONE, iX0          /* iX0 = {iX0,-iX0, iX0,-iX0} */
       pshufd $0xAA, iX1, rX1 /* rX1 = {rX1, rX1, rX1, rX1} */
       pshufd $0xFF, iX1, iX1 /* iX1 = {iX1, iX1, iX1, iX1} */
-      mulps rA, iX1          /* iX1 = {iX1,-iX1, iX1,-iX1} */
+      mulps NONEPONE, iX1          /* iX1 = {iX1,-iX1, iX1,-iX1} */
       movaps 16(pX), iX3     /* iX3 = {iX3, rX3, iX2, rX2} */
       pshufd $0x00, iX3, rX2 /* rX2 = {rX2, rX2, rX2, rX2} */
       pshufd $0x55, iX3, iX2 /* iX2 = {iX2, iX2, iX2, iX2} */
-      mulps rA, iX2          /* iX2 = {iX2,-iX2, iX2,-iX2} */
+      mulps NONEPONE, iX2          /* iX2 = {iX2,-iX2, iX2,-iX2} */
       pshufd $0xAA, iX3, rX3 /* rX3 = {rX3, rX3, rX3, rX3} */
       pshufd $0xFF, iX3, iX3 /* iX3 = {iX3, iX3, iX3, iX3} */
-      mulps rA, iX3          /* iX3 = {iX3,-iX3, iX3,-iX3} */
-      movaps 32(pX), iX5     /* iX5 = {iX5, rX5, iX4, rX4} */
-      pshufd $0x00, iX5, rX4 /* rX4 = {rX4, rX4, rX4, rX4} */
-      pshufd $0x55, iX5, iX4 /* iX4 = {iX4, iX4, iX4, iX4} */
-      mulps rA, iX4          /* iX4 = {iX4,-iX4, iX4,-iX4} */
-      pshufd $0xAA, iX5, rX5 /* rX5 = {rX5, rX5, rX5, rX5} */
-      pshufd $0xFF, iX5, iX5 /* iX5 = {iX5, iX5, iX5, iX5} */
-      mulps rA, iX5          /* iX5 = {iX5,-iX5, iX5,-iX5} */
+      mulps NONEPONE, iX3          /* iX3 = {iX3,-iX3, iX3,-iX3} */
 
       LOOPM:
          MOVA   0-128(pA0), rY         /* rY = {iA0, rA0} */
@@ -235,67 +222,8 @@ DONE_ZERO_CLEAN:
          prefA(PFADIST+0(pA0,lda3))
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
-         MOVA   0-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         prefA(PFADIST+0(pA0,lda,4))
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   0-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         prefA(PFADIST+0(pA0,lda5))
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
          addpd ry, rY
          movapd rY, 0-128(pY)
-
-         MOVA   64-128(pA0), rY         /* rY = {iA0, rA0} */
-         pshufd $0xB1, rY, ry           /* ry = {rA0, iA0} */
-         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
-         addpd 64-128(pY), rY       
-         prefA(PFADIST+64(pA0))
-         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
-
-         MOVA   64-128(pA0,lda), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         prefA(PFADIST+64(pA0,lda))
-         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   64-128(pA0,lda,2), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         prefA(PFADIST+64(pA0,lda,2))
-         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   64-128(pA0,lda3), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         prefA(PFADIST+64(pA0,lda3))
-         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   64-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         prefA(PFADIST+64(pA0,lda,4))
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   64-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         prefA(PFADIST+64(pA0,lda5))
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         addpd ry, rY
-         movapd rY, 64-128(pY)
 
          MOVA   16-128(pA0), rY         /* rY = {iA0, rA0} */
          pshufd $0xB1, rY, ry           /* ry = {rA0, iA0} */
@@ -320,18 +248,6 @@ DONE_ZERO_CLEAN:
          mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
          addpd rA, rY
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   16-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   16-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
          addpd ry, rY
          movapd rY, 16-128(pY)
@@ -360,18 +276,6 @@ DONE_ZERO_CLEAN:
          addpd rA, rY
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
-         MOVA   32-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   32-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
          addpd ry, rY
          movapd rY, 32-128(pY)
 
@@ -399,137 +303,8 @@ DONE_ZERO_CLEAN:
          addpd rA, rY
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
-         MOVA   48-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   48-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
          addpd ry, rY
          movapd rY, 48-128(pY)
-
-         MOVA   80-128(pA0), rY         /* rY = {iA0, rA0} */
-         pshufd $0xB1, rY, ry           /* ry = {rA0, iA0} */
-         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
-         addpd 80-128(pY), rY       
-         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
-
-         MOVA   80-128(pA0,lda), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   80-128(pA0,lda,2), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   80-128(pA0,lda3), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   80-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   80-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         addpd ry, rY
-         movapd rY, 80-128(pY)
-
-         MOVA   96-128(pA0), rY         /* rY = {iA0, rA0} */
-         pshufd $0xB1, rY, ry           /* ry = {rA0, iA0} */
-         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
-         addpd 96-128(pY), rY       
-         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
-
-         MOVA   96-128(pA0,lda), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   96-128(pA0,lda,2), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   96-128(pA0,lda3), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   96-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   96-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         addpd ry, rY
-         movapd rY, 96-128(pY)
-
-         MOVA   112-128(pA0), rY         /* rY = {iA0, rA0} */
-         pshufd $0xB1, rY, ry           /* ry = {rA0, iA0} */
-         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
-         addpd 112-128(pY), rY       
-         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
-
-         MOVA   112-128(pA0,lda), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   112-128(pA0,lda,2), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   112-128(pA0,lda3), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   112-128(pA0,lda,4), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         MOVA   112-128(pA0,lda5), rA    /* rA = {iA, rA} */
-         pshufd $0xB1, rA, ra           /* ra = {rA, iA} */
-         mulpd rX5, rA               /* rA = {rX*iA, rX*rA} */
-         addpd rA, rY
-         mulpd iX5, ra               /* ra = {iX*rA, -iX*iA} */
-         addpd ra, ry
-         addpd ry, rY
-         movapd rY, 112-128(pY)
 
          sub incAYm, pY
          sub incAYm, pA0
@@ -565,18 +340,6 @@ DONE_ZERO_CLEAN:
          addpd rA, rY
          mulpd iX3, ra
          addpd ra, ry
-         movlps -128(pA0,lda,4), rA
-         pshufd $0x11, rA, ra
-         mulpd rX4, rA
-         addpd rA, rY
-         mulpd iX4, ra
-         addpd ra, ry
-         movlps -128(pA0,lda5), rA
-         pshufd $0x11, rA, ra
-         mulpd rX5, rA
-         addpd rA, rY
-         mulpd iX5, ra
-         addpd ra, ry
          addpd ry, rY
          movlps rY, -128(pY)
          add $8, pY
@@ -585,12 +348,12 @@ DONE_ZERO_CLEAN:
       jnz LOOPMCU
 
 MCLEANED:
-      prefX(6*8+PFXDIST(pX))
-      add $6*8, pX
+      prefX(4*8+PFXDIST(pX))
+      add $4*8, pX
       add incAn, pA0
       mov pY0, pY
       mov M, II
-   sub $6, N
+   sub $4, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

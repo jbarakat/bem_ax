@@ -7,46 +7,46 @@
 #define SCPLX
 
 #define MB 0
-#define NB 72
-#define KB 72
+#define NB 80
+#define KB 80
 
 #define MBMB 0
-#define NBNB 5184
-#define KBKB 5184
+#define NBNB 6400
+#define KBKB 6400
 
 #define MB2 0
-#define NB2 144
-#define KB2 144
+#define NB2 160
+#define KB2 160
 
 
 #define MB3 0
-#define NB3 216
-#define KB3 216
+#define NB3 240
+#define KB3 240
 
 
 #define MB4 0
-#define NB4 288
-#define KB4 288
+#define NB4 320
+#define KB4 320
 
 
 #define MB5 0
-#define NB5 360
-#define KB5 360
+#define NB5 400
+#define KB5 400
 
 
 #define MB6 0
-#define NB6 432
-#define KB6 432
+#define NB6 480
+#define KB6 480
 
 
 #define MB7 0
-#define NB7 504
-#define KB7 504
+#define NB7 560
+#define KB7 560
 
 
 #define MB8 0
-#define NB8 576
-#define KB8 576
+#define NB8 640
+#define KB8 640
 
 /*
  *             Automatically Tuned Linear Algebra Software v3.10.2

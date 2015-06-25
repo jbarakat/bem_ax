@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x1 unrolled r1_sse with these params:
+ * This file does a 1x2 unrolled r1_sse with these params:
  *    CL=16, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -28,6 +28,7 @@
 #define rX0     %xmm1
 #define ryt     %xmm2
 #define rY0     %xmm3
+#define rY1     %xmm4
 
 /*
  * macros
@@ -127,13 +128,15 @@ ATL_asmdecor(ATL_UGERK):
    sub $-128, pX        /* code compaction by using signed 1-byte offsets */
    mov pX, pX0          /* save for restore after M loops */
    mov $-64, incAXm     /* code comp: use reg rather than constant */
+   add lda, incAn               /* incAn = (2*lda-M)*sizeof */
    mov $16*1, incII      /* code comp: use reg rather than constant */
    mov M, II
 
    ALIGN32
    LOOPN:
-      movss (pY), rY0
-      pshufd $0x00, rY0, rY0    /* rY0 = {Y0, Y0, Y0, Y0} */
+      movlps (pY), rY1          /* rY1 = {xx, xx, Y1, Y0} */
+      pshufd $0x00, rY1, rY0    /* rY0 = {Y0, Y0, Y0, Y0} */
+      pshufd $0x55, rY1, rY1    /* rY1 = {Y1, Y1, Y1, Y1} */
 
       LOOPM:
          movapd 0-128(pX), rX0
@@ -142,6 +145,11 @@ ATL_asmdecor(ATL_UGERK):
          mulpd rX0, ryt
          addpd ryt, rA0
          MOVA   rA0, 0-128(pA0)
+         movapd rY1, ryt
+         MOVA   0-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 0-128(pA0,lda)
 
          movapd 16-128(pX), rX0
          movapd rY0, ryt
@@ -149,6 +157,11 @@ ATL_asmdecor(ATL_UGERK):
          mulpd rX0, ryt
          addpd ryt, rA0
          MOVA   rA0, 16-128(pA0)
+         movapd rY1, ryt
+         MOVA   16-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 16-128(pA0,lda)
 
          movapd 32-128(pX), rX0
          movapd rY0, ryt
@@ -156,6 +169,11 @@ ATL_asmdecor(ATL_UGERK):
          mulpd rX0, ryt
          addpd ryt, rA0
          MOVA   rA0, 32-128(pA0)
+         movapd rY1, ryt
+         MOVA   32-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 32-128(pA0,lda)
 
          movapd 48-128(pX), rX0
          movapd rY0, ryt
@@ -163,9 +181,15 @@ ATL_asmdecor(ATL_UGERK):
          mulpd rX0, ryt
          addpd ryt, rA0
          MOVA   rA0, 48-128(pA0)
+         movapd rY1, ryt
+         MOVA   48-128(pA0,lda), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 48-128(pA0,lda)
 
          prefA(PFADIST+0(pA0))
          sub incAXm, pX
+         prefA(PFADIST+0(pA0,lda))
          sub incAXm, pA0
       sub incII, II
       jnz LOOPM
@@ -184,18 +208,22 @@ ATL_asmdecor(ATL_UGERK):
          mulsd rY0, rA0
          addsd -128(pA0), rA0
          movsd rA0, -128(pA0)
+         movsd rX0, rA0
+         mulsd rY1, rA0
+         addsd -128(pA0,lda), rA0
+         movsd rA0, -128(pA0,lda)
          add $4, pX
          add $4, pA0
       dec II
       jnz LOOPMCU
 
 MCLEANED:
-      prefY(1*4+PFYDIST(pY))
-      add $1*4, pY
+      prefY(2*4+PFYDIST(pY))
+      add $2*4, pY
       add incAn, pA0
       mov pX0, pX
       mov M, II
-   sub $1, N
+   sub $2, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

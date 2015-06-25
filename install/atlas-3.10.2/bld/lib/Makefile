@@ -1,9 +1,5 @@
 LIBTOOL=libtool
-DESTDIR=/home/jmb/Codes/bem_ax/install/atlas-3.10.2/lib
-INCINSTdir=$(DESTDIR)/include
-LIBINSTdir=$(DESTDIR)/lib
-LIBTOOL=libtool
-DESTDIR=/home/jmb/Codes/bem_ax/install/atlas-3.10.2/lib
+DESTDIR=/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/lib
 INCINSTdir=$(DESTDIR)/include
 LIBINSTdir=$(DESTDIR)/lib
 include Make.inc

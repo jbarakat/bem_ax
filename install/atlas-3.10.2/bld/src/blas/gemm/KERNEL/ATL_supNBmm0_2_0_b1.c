@@ -6,47 +6,47 @@
 #define BETA1
 #define SREAL
 
-#define MB 72
+#define MB 80
 #define NB 0
-#define KB 72
+#define KB 80
 
-#define MBMB 5184
+#define MBMB 6400
 #define NBNB 0
-#define KBKB 5184
+#define KBKB 6400
 
-#define MB2 144
+#define MB2 160
 #define NB2 0
-#define KB2 144
+#define KB2 160
 
 
-#define MB3 216
+#define MB3 240
 #define NB3 0
-#define KB3 216
+#define KB3 240
 
 
-#define MB4 288
+#define MB4 320
 #define NB4 0
-#define KB4 288
+#define KB4 320
 
 
-#define MB5 360
+#define MB5 400
 #define NB5 0
-#define KB5 360
+#define KB5 400
 
 
-#define MB6 432
+#define MB6 480
 #define NB6 0
-#define KB6 432
+#define KB6 480
 
 
-#define MB7 504
+#define MB7 560
 #define NB7 0
-#define KB7 504
+#define KB7 560
 
 
-#define MB8 576
+#define MB8 640
 #define NB8 0
-#define KB8 576
+#define KB8 640
 
 /*
  *             Automatically Tuned Linear Algebra Software v3.10.2

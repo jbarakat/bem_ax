@@ -8,7 +8,7 @@
 7 2 1 1 axpy16p4m0_x1y1.c  "R. Clint Whaley"
 8 2 1 1 axpy4p40_x1y1.c    "R. Clint Whaley"
 9 2 1 1 saxpy_sse.c         "R. Clint Whaley" \
-gcc -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64 -m64
+gcc -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64 -m64
 -x assembler-with-cpp
 
 <ID> <alpha> <incX> <incY> <rout> <author> [\

@@ -1027,6 +1027,7 @@ void GetFlags(int nargs,                /* nargs as passed into main */
    *NoCygwin = 0;
    *NoF77 = 0;
    *ThrChk = 1;
+   *ThrChk = 0;
    *nthreads = -1;
    *tids = NULL;
    *omp = *AntThr = 0;

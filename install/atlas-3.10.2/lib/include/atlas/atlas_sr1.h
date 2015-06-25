@@ -13,15 +13,15 @@ static ATL_r1kern_t ATL_GetR1Kern
     int *mu, int *nu, int *minM, int *minN, int *alignX, int *ALIGNX2A,
     int *alignY, int *FNU, ATL_INT *CacheElts) 
 {
-   *minM = 16;   *minN = 1;
-   *mu = 16;     *nu = 1;
+   *minM = 16;   *minN = 2;
+   *mu = 16;     *nu = 2;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 40960;
+   *CacheElts = 25559;
    return(ATL_sgerk__900002);
 }
 
-#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 10224; (nb_) = 1; }
+#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 4256; (nb_) = 2; }
 
 #endif  /* end protection around header file contents */

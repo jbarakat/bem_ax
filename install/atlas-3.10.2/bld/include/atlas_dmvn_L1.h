@@ -9,8 +9,8 @@
       (ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 
 #endif
-void ATL_dmvnk__900009(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
-void ATL_dmvnk__900009_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_dmvnk__900006(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_dmvnk__900006_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 void ATL_dmvnk__900005(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 void ATL_dmvnk__900005_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 
@@ -24,19 +24,19 @@ static ATL_mvkern_t ATL_GetMVNKern
    {
       if ((((((ATL_MulBySize(lda)) >> 4)) << 4)) == ATL_MulBySize(lda))
       {
-         if (N >= 6)
+         if (N >= 8)
          {
             if (M >= 8)
             {
-               *minM = 8;   *minN = 6;
-               *mu = 8;     *nu = 6;
+               *minM = 8;   *minN = 8;
+               *mu = 8;     *nu = 8;
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 3850;
-               *mvk_b0 = ATL_dmvnk__900009_b0;
+               *CacheElts = 13762;
+               *mvk_b0 = ATL_dmvnk__900006_b0;
                *DOTBASED = 0;
-               return(ATL_dmvnk__900009);
+               return(ATL_dmvnk__900006);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
@@ -46,12 +46,12 @@ static ATL_mvkern_t ATL_GetMVNKern
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 3850;
+   *CacheElts = 13762;
    *mvk_b0 = ATL_dmvnk__900005_b0;
    *DOTBASED = 0;
    return(ATL_dmvnk__900005);
 }
 
-#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 208; *(nb_) = 8; }
+#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 760; *(nb_) = 8; }
 
 #endif  /* end protection around header file contents */

@@ -9,8 +9,8 @@
       (ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 
 #endif
-void ATL_cmvtk__900007(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvtk__900007_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvtk__900002(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvtk__900002_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 
 static ATL_mvkern_t ATL_GetMVTKern
    (ATL_CINT M, ATL_CINT N, const void *A, ATL_CINT lda,
@@ -23,11 +23,11 @@ static ATL_mvkern_t ATL_GetMVTKern
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 0;
-   *mvk_b0 = ATL_cmvtk__900007_b0;
-   return(ATL_cmvtk__900007);
+   *CacheElts = 49152;
+   *mvk_b0 = ATL_cmvtk__900002_b0;
+   return(ATL_cmvtk__900002);
 }
 
-#define ATL_GetPartMVT(A_, lda_, mb_, nb_) { *(mb_) = 0; *(nb_) = 0; }
+#define ATL_GetPartMVT(A_, lda_, mb_, nb_) { *(mb_) = 4912; *(nb_) = 4; }
 
 #endif  /* end protection around header file contents */

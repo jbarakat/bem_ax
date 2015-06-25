@@ -18,10 +18,10 @@ static ATL_r1kern_t ATL_GetR1Kern
    *alignX = 8;  *alignY = 8;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 1822;
+   *CacheElts = 5324;
    return(ATL_UGERK);
 }
 
-#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 452; (nb_) = 1; }
+#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 1328; (nb_) = 1; }
 
 #endif  /* end protection around header file contents */

@@ -1,12 +1,12 @@
 #
-#  This file generated at line 658 of /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/ger/r2hgen.c
+#  This file generated at line 658 of /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/ger/r2hgen.c
 #
 include Make.inc
 
 R2CC = $(SKC)
 R2FLAGS = $(CDEFS) $(SKCFLAGS) -DSREAL
 
-obj = ATL_sger2k__900002.o ATL_sger2k__900007.o ATL_sger2k__900006.o ATL_sger2k__900004.o
+obj = ATL_sger2k__900002.o ATL_sger2k__900005.o ATL_sger2k__900007.o ATL_sger2k__900008.o
 lib : slib
 slib : sr2k.grd
 sr2k.grd : $(obj)
@@ -22,13 +22,13 @@ killlib :
 	- $(ARCHIVER) d $(ATLASlib) $(obj)
 	$(RANLIB) $(ATLASlib)
 killall : killlib clean
-	 rm -f ATL_sger2k__900002.c ATL_sger2k__900007.c ATL_sger2k__900006.c ATL_sger2k__900004.c
+	 rm -f ATL_sger2k__900002.c ATL_sger2k__900005.c ATL_sger2k__900007.c ATL_sger2k__900008.c
 
 ATL_sger2k__900002.o : ATL_sger2k__900002.c
-	 $(GOODGCC) -o ATL_sger2k__900002.o -c -DATL_UGER2K=ATL_sger2k__900002 -x assembler-with-cpp -DPFIA=prefetcht2 -DPFIX=prefetcht1 -DPFIY=prefetcht1 -DPFADIST=512 -DPFXDIST=832 -DPFYDIST=512 -DSREAL $(CDEFS) ATL_sger2k__900002.c
+	 $(GOODGCC) -o ATL_sger2k__900002.o -c -DATL_UGER2K=ATL_sger2k__900002 -x assembler-with-cpp -DPFIA=prefetcht2 -DPFIY=prefetchnta -DPFADIST=384 -DPFXDIST=512 -DPFYDIST=576 -DSREAL $(CDEFS) ATL_sger2k__900002.c
+ATL_sger2k__900005.o : ATL_sger2k__900005.c
+	 $(GOODGCC) -o ATL_sger2k__900005.o -c -DATL_UGER2K=ATL_sger2k__900005 -x assembler-with-cpp -DPFIA=prefetcht1 -DPFIX=prefetcht2 -DPFIY=prefetcht0 -DPFADIST=0 -DPFXDIST=128 -DPFYDIST=128 -DSREAL $(CDEFS) ATL_sger2k__900005.c
 ATL_sger2k__900007.o : ATL_sger2k__900007.c
-	 $(GOODGCC) -o ATL_sger2k__900007.o -c -DATL_UGER2K=ATL_sger2k__900007 -x assembler-with-cpp -DPFIA=prefetcht2 -DPFIX=prefetcht2 -DPFIY=prefetcht2 -DPFADIST=0 -DPFXDIST=0 -DPFYDIST=320 -DSREAL $(CDEFS) ATL_sger2k__900007.c
-ATL_sger2k__900006.o : ATL_sger2k__900006.c
-	 $(GOODGCC) -o ATL_sger2k__900006.o -c -DATL_UGER2K=ATL_sger2k__900006 -x assembler-with-cpp -DPFIX=prefetchnta -DPFIY=prefetchnta -DPFADIST=256 -DPFXDIST=192 -DPFYDIST=192 -DSREAL $(CDEFS) ATL_sger2k__900006.c
-ATL_sger2k__900004.o : ATL_sger2k__900004.c
-	 $(GOODGCC) -o ATL_sger2k__900004.o -c -DATL_UGER2K=ATL_sger2k__900004 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIX=prefetcht1 -DPFADIST=0 -DSREAL $(CDEFS) ATL_sger2k__900004.c
+	 $(GOODGCC) -o ATL_sger2k__900007.o -c -DATL_UGER2K=ATL_sger2k__900007 -x assembler-with-cpp -DPFIY=prefetcht2 -DPFADIST=0 -DPFXDIST=512 -DPFYDIST=832 -DSREAL $(CDEFS) ATL_sger2k__900007.c
+ATL_sger2k__900008.o : ATL_sger2k__900008.c
+	 $(GOODGCC) -o ATL_sger2k__900008.o -c -DATL_UGER2K=ATL_sger2k__900008 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht0 -DPFADIST=0 -DPFXDIST=128 -DPFYDIST=0 -DSREAL $(CDEFS) ATL_sger2k__900008.c

@@ -10,13 +10,13 @@
 #  -------------------------------------------------
 #  Name indicating the platform to configure BLAS to
 #  -------------------------------------------------
-   ARCH = Corei264AVX
+   ARCH = Corei364AVXMAC
 
 #  ----------------------------
 #  Paths to various directories
 #  ----------------------------
-   BLDdir = /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld
-   SRCdir = /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src/
+   BLDdir = /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld
+   SRCdir = /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src/
    INCAdir = $(BLDdir)/include
    INCSdir = $(SRCdir)/include
    BINdir = $(BLDdir)/bin
@@ -77,7 +77,7 @@
 #  ------------------------------
 #  Architecture identifying flags
 #  ------------------------------
-   ARCHDEFS = -DATL_OS_Linux -DATL_ARCH_Corei2 -DATL_CPUMHZ=3301 -DATL_AVX -DATL_SSE3 -DATL_SSE2 -DATL_SSE1 -DATL_USE64BITS -DATL_GAS_x8664
+   ARCHDEFS = -DATL_OS_Linux -DATL_ARCH_Corei3 -DATL_CPUMHZ=3936 -DATL_AVXMAC -DATL_AVX -DATL_SSE3 -DATL_SSE2 -DATL_SSE1 -DATL_USE64BITS -DATL_GAS_x8664
 
 TIDLIST=
 
@@ -109,22 +109,22 @@ TIDLIST=
    NPROC=8
    CDEFS = $(L2SIZE) $(INCLUDES) $(F2CDEFS) $(ARCHDEFS) -m64 -DATL_FULL_LAPACK -DATL_NCPU=$(NPROC)
 
-   ICC = /usr/bin/gcc-4.6
-   ICCFLAGS = $(CDEFS) -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64
-   SMC = /usr/bin/gcc-4.6
-   SMCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64
-   DMC = /usr/bin/gcc-4.6
-   DMCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64
-   SKC = /usr/bin/gcc-4.6
-   SKCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64
-   DKC = /usr/bin/gcc-4.6
-   DKCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64
-   XCC = /usr/bin/gcc-4.6
-   XCCFLAGS = $(CDEFS) -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -m64
-   GCC = /usr/bin/gcc-4.6
-   GCCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64
-   F77 = /usr/bin/x86_64-linux-gnu-gfortran
-   F77FLAGS = -O -mavx -m64
+   ICC = /usr/bin/gcc-4.8
+   ICCFLAGS = $(CDEFS) -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64
+   SMC = /usr/bin/gcc-4.8
+   SMCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64
+   DMC = /usr/bin/gcc-4.8
+   DMCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64
+   SKC = /usr/bin/gcc-4.8
+   SKCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64
+   DKC = /usr/bin/gcc-4.8
+   DKCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64
+   XCC = /usr/bin/gcc-4.8
+   XCCFLAGS = $(CDEFS) -fomit-frame-pointer -mfpmath=sse -O2 -m64
+   GCC = /usr/bin/gcc-4.8
+   GCCFLAGS = -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64
+   F77 = /usr/bin/gfortran
+   F77FLAGS = -O -mavx2 -mfma -m64
    F77NOOPT = $(F77FLAGS) -O0   # turn off optimization
    SMAFLAGS =
    DMAFLAGS =
@@ -134,11 +134,11 @@ TIDLIST=
    dKCFLAGS = $(CDEFS) $(DKCFLAGS)
    cKCFLAGS = $(CDEFS) $(SKCFLAGS)
    zKCFLAGS = $(CDEFS) $(DKCFLAGS)
-   GOODGCC = gcc -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64 -m64
+   GOODGCC = gcc -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -m64 -m64
    KC = $(DKC)
    KCFLAGS = $(CDEFS) $(DKCFLAGS)
    LDFLAGS = -melf_x86_64
-   F77SYSLIB = -L/usr/lib/gcc/x86_64-linux-gnu/4.6 -lgfortran 
+   F77SYSLIB = -L/usr/lib/gcc/x86_64-linux-gnu/4.8 -lgfortran 
    BC = $(KC)
    NCFLAGS = $(KCFLAGS)
 

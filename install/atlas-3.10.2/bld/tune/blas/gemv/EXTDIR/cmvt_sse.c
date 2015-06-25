@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 2x2 unrolled mvt_sse with these params:
+ * This file does a 1x4 unrolled mvt_sse with these params:
  *    CL=8, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -21,6 +21,7 @@
 #define incAXm  %r10
 #define incII   %r15
 #define incAn   %r14
+#define lda3    %r12
 /*
  * SSE register assignment
  */
@@ -32,13 +33,17 @@
 #define rY0i    %xmm5
 #define rY1r    %xmm6
 #define rY1i    %xmm7
+#define rY2r    %xmm8
+#define rY2i    %xmm9
+#define rY3r    %xmm10
+#define rY3i    %xmm11
 #define NONEPONEOFF -72
 #define NONEPONE %xmm15
 /*
  * macros
  */
 #ifndef MOVA
-   #define MOVA movups
+   #define MOVA movaps
 #endif
 #define movapd movaps
 #define movupd movups
@@ -119,8 +124,8 @@ ATL_asmdecor(ATL_UGEMV):
  */
    mov  %rcx, lda       /* move lda to assigned register, rax */
    mov  M, Mr           /* Mr = M */
-   shr $4, M            /* M = M / MU */
-   shl $4, M            /* M = (M/MU)*MU */
+   shr $3, M            /* M = M / MU */
+   shl $3, M            /* M = (M/MU)*MU */
    sub M, Mr            /* Mr = M - (M/MU)*MU */
 /*
  * Construct ponenone = {-1.0,1.0,-1.0,1.0}
@@ -145,9 +150,10 @@ ATL_asmdecor(ATL_UGEMV):
    sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
    sub $-128, pX        /* code compaction by using signed 1-byte offsets */
    mov pX, pX0          /* save for restore after M loops */
-   mov $-128, incAXm     /* code comp: use reg rather than constant */
-   add lda, incAn               /* incAn = (2*lda-M)*sizeof */
-   mov $8*2, incII      /* code comp: use reg rather than constant */
+   mov $-64, incAXm     /* code comp: use reg rather than constant */
+   lea (lda, lda,2), lda3       /* lda3 = 3*lda */
+   lea (incAn, lda3), incAn     /* incAn = (4*lda-M)*sizeof */
+   mov $8*1, incII      /* code comp: use reg rather than constant */
    mov M, II
    ALIGN32
    LOOPN:
@@ -155,6 +161,10 @@ ATL_asmdecor(ATL_UGEMV):
       xorpd rY0i, rY0i
       xorpd rY1r, rY1r
       xorpd rY1i, rY1i
+      xorpd rY2r, rY2r
+      xorpd rY2i, rY2i
+      xorpd rY3r, rY3r
+      xorpd rY3i, rY3i
 
       LOOPM:
          movapd 0-128(pX), rX0              /* rX0 = Xi,    Xr */
@@ -174,24 +184,20 @@ ATL_asmdecor(ATL_UGEMV):
          prefA(PFADIST+0(pA0,lda))
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY1r
-
-         movapd 64-128(pX), rX0              /* rX0 = Xi,    Xr */
-         pshufd $0xB1, rX0, rx0                 /* rx0 = Xr,    Xi */
-         MOVA   64-128(pA0), rA0             /* rA0 = Ai,    Ar */
+         MOVA   0-128(pA0,lda,2), rA0           /* rA0 = Ai,    Ar */ 
          movapd rA0, rt0                        /* rt0 = Ai,    Ar */
          mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY0i
-         prefA(PFADIST+64(pA0))
+         addpd rA0, rY2i
+         prefA(PFADIST+0(pA0,lda,2))
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY0r
-
-         MOVA   64-128(pA0,lda), rA0           /* rA0 = Ai,    Ar */ 
+         addpd rt0, rY2r
+         MOVA   0-128(pA0,lda3), rA0           /* rA0 = Ai,    Ar */ 
          movapd rA0, rt0                        /* rt0 = Ai,    Ar */
          mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY1i
-         prefA(PFADIST+64(pA0,lda))
+         addpd rA0, rY3i
+         prefA(PFADIST+0(pA0,lda3))
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY1r
+         addpd rt0, rY3r
 
          movapd 16-128(pX), rX0              /* rX0 = Xi,    Xr */
          pshufd $0xB1, rX0, rx0                 /* rx0 = Xr,    Xi */
@@ -208,6 +214,18 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA0, rY1i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY1r
+         MOVA   16-128(pA0,lda,2), rA0           /* rA0 = Ai,    Ar */ 
+         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
+         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
+         addpd rA0, rY2i
+         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
+         addpd rt0, rY2r
+         MOVA   16-128(pA0,lda3), rA0           /* rA0 = Ai,    Ar */ 
+         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
+         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
+         addpd rA0, rY3i
+         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
+         addpd rt0, rY3r
 
          movapd 32-128(pX), rX0              /* rX0 = Xi,    Xr */
          pshufd $0xB1, rX0, rx0                 /* rx0 = Xr,    Xi */
@@ -224,6 +242,18 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA0, rY1i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY1r
+         MOVA   32-128(pA0,lda,2), rA0           /* rA0 = Ai,    Ar */ 
+         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
+         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
+         addpd rA0, rY2i
+         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
+         addpd rt0, rY2r
+         MOVA   32-128(pA0,lda3), rA0           /* rA0 = Ai,    Ar */ 
+         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
+         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
+         addpd rA0, rY3i
+         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
+         addpd rt0, rY3r
 
          movapd 48-128(pX), rX0              /* rX0 = Xi,    Xr */
          pshufd $0xB1, rX0, rx0                 /* rx0 = Xr,    Xi */
@@ -240,66 +270,26 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA0, rY1i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
          addpd rt0, rY1r
-
-         movapd 80-128(pX), rX0              /* rX0 = Xi,    Xr */
-         pshufd $0xB1, rX0, rx0                 /* rx0 = Xr,    Xi */
-         MOVA   80-128(pA0), rA0             /* rA0 = Ai,    Ar */
+         MOVA   48-128(pA0,lda,2), rA0           /* rA0 = Ai,    Ar */ 
          movapd rA0, rt0                        /* rt0 = Ai,    Ar */
          mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY0i
+         addpd rA0, rY2i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY0r
-
-         MOVA   80-128(pA0,lda), rA0           /* rA0 = Ai,    Ar */ 
+         addpd rt0, rY2r
+         MOVA   48-128(pA0,lda3), rA0           /* rA0 = Ai,    Ar */ 
          movapd rA0, rt0                        /* rt0 = Ai,    Ar */
          mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY1i
+         addpd rA0, rY3i
          mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY1r
-
-         movapd 96-128(pX), rX0              /* rX0 = Xi,    Xr */
-         pshufd $0xB1, rX0, rx0                 /* rx0 = Xr,    Xi */
-         MOVA   96-128(pA0), rA0             /* rA0 = Ai,    Ar */
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY0i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY0r
-
-         MOVA   96-128(pA0,lda), rA0           /* rA0 = Ai,    Ar */ 
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY1i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY1r
-
-         movapd 112-128(pX), rX0              /* rX0 = Xi,    Xr */
-         pshufd $0xB1, rX0, rx0                 /* rx0 = Xr,    Xi */
-         MOVA   112-128(pA0), rA0             /* rA0 = Ai,    Ar */
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY0i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY0r
-
-         MOVA   112-128(pA0,lda), rA0           /* rA0 = Ai,    Ar */ 
-         movapd rA0, rt0                        /* rt0 = Ai,    Ar */
-         mulpd rx0, rA0                         /* rA0 = Ai*Xr, Ar*Xi */
-         addpd rA0, rY1i
-         mulpd rX0, rt0                         /* rt0 = Ai*Xi, Ar*Xr */
-         addpd rt0, rY1r
+         addpd rt0, rY3r
 
          sub incAXm, pX
          sub incAXm, pA0
       sub incII, II
       jnz LOOPM
 
-      #ifdef ATL_OS_OSX     /* workaround retarded OS X assembly */
-         cmp $0, Mr
-         jz  MCLEANED
-      #else
-         jecxz MCLEANED        /* skip cleanup loop if Mr == 0 */
-      #endif
+      cmp $0, Mr
+      jz  MCLEANED
 
       mov Mr, II
       xorps rA0, rA0
@@ -320,6 +310,18 @@ ATL_asmdecor(ATL_UGEMV):
          addps rA0, rY1i
          mulps rX0, rt0                 /* rt0 = {0, 0, Xi*Ai, Xr*Ar} */
          addps rt0, rY1r
+         movlps -128(pA0,lda,2), rA0        /* rA0 = {0, 0, Ai, Ar} */
+         movaps rA0, rt0                /* rt0 = {0, 0, Ai, Ar} */
+         mulps rx0, rA0                 /* rA0 = {0, 0, Xr*Ai, Xi*Ar} */
+         addps rA0, rY2i
+         mulps rX0, rt0                 /* rt0 = {0, 0, Xi*Ai, Xr*Ar} */
+         addps rt0, rY2r
+         movlps -128(pA0,lda3), rA0        /* rA0 = {0, 0, Ai, Ar} */
+         movaps rA0, rt0                /* rt0 = {0, 0, Ai, Ar} */
+         mulps rx0, rA0                 /* rA0 = {0, 0, Xr*Ai, Xi*Ar} */
+         addps rA0, rY3i
+         mulps rX0, rt0                 /* rt0 = {0, 0, Xi*Ai, Xr*Ar} */
+         addps rt0, rY3r
          add $8, pX
          add $8, pA0
       dec II
@@ -337,12 +339,21 @@ MCLEANED:
          addpd 0(pY), rY0r
       #endif
       movaps rY0r, 0(pY)
-      prefY(2*8+PFYDIST(pY))
-      add $2*8, pY
+      mulps NONEPONE, rY2r   /* rYr = {rY0d,  rY0c,    rY0b,   rY0a} */
+      mulps NONEPONE, rY3r   /* rYr = {rY1d,  rY1c,    rY1b,   rY1a} */
+      haddps rY2i, rY2r   /* rYr = {iY0cd  ,iY0ab,  rY0cd,  rY0ab} */
+      haddps rY3i, rY3r   /* rYr = {iY1cd  ,iY1ab,  rY1cd,  rY1ab} */
+      haddps rY3r, rY2r   /* rYr = {iY1abcd,rY1abcd,iY0abcd,rY0abcd} */
+      #ifndef BETA0
+         addpd 16(pY), rY2r
+      #endif
+      movaps rY2r, 16(pY)
+      prefY(4*8+PFYDIST(pY))
+      add $4*8, pY
       add incAn, pA0
       mov pX0, pX
       mov M, II
-   sub $2, N
+   sub $4, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

@@ -1,12 +1,12 @@
 #
-#  This file generated at line 270 of /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/mvnhgen.c
+#  This file generated at line 270 of /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/mvnhgen.c
 #
 include Make.inc
 
 MVNCC = $(DKC)
 MVNFLAGS = $(CDEFS) $(DKCFLAGS) -DDREAL
 
-obj = ATL_dmvnk__900002.o ATL_dmvnk__900002_b0.o ATL_dmvnk__900009.o ATL_dmvnk__900009_b0.o ATL_dmvnk__900008.o ATL_dmvnk__900008_b0.o ATL_dmvnk__900005.o ATL_dmvnk__900005_b0.o
+obj = ATL_dmvnk__900001.o ATL_dmvnk__900001_b0.o ATL_dmvnk__900003.o ATL_dmvnk__900003_b0.o ATL_dmvnk__900002.o ATL_dmvnk__900002_b0.o ATL_dmvnk__900006.o ATL_dmvnk__900006_b0.o ATL_dmvnk__900005.o ATL_dmvnk__900005_b0.o
 lib : dlib
 dlib : dmvnk.grd
 dmvnk.grd : $(obj)
@@ -22,21 +22,25 @@ killlib :
 	- $(ARCHIVER) d $(ATLASlib) $(obj)
 	$(RANLIB) $(ATLASlib)
 killall : killlib clean
-	 rm -f ATL_dmvnk__900002.c ATL_dmvnk__900009.c ATL_dmvnk__900008.c ATL_dmvnk__900005.c
+	 rm -f ATL_dmvnk__900001.c ATL_dmvnk__900003.c ATL_dmvnk__900002.c ATL_dmvnk__900006.c ATL_dmvnk__900005.c
 
+ATL_dmvnk__900001.o : ATL_dmvnk__900001.c
+	 $(MVNCC) -o ATL_dmvnk__900001.o -c -DATL_UGEMV=ATL_dmvnk__900001 $(MVNFLAGS) -DDREAL -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -g -m64 -DPFIA=prefetcht2 -DPFIX=prefetcht0 -DPFIY=prefetchnta -DPFADIST=0 -DPFXDIST=128 ATL_dmvnk__900001.c
+ATL_dmvnk__900001_b0.o : ATL_dmvnk__900001.c
+	 $(MVNCC) -o ATL_dmvnk__900001_b0.o -c -DATL_UGEMV=ATL_dmvnk__900001_b0 -DBETA0 $(MVNFLAGS) -DDREAL -fomit-frame-pointer -mfpmath=sse -O2 -mavx2 -mfma -g -m64 -DPFIA=prefetcht2 -DPFIX=prefetcht0 -DPFIY=prefetchnta -DPFADIST=0 -DPFXDIST=128 ATL_dmvnk__900001.c
+ATL_dmvnk__900003.o : ATL_dmvnk__900003.c
+	 $(GOODGCC) -o ATL_dmvnk__900003.o -c -DATL_UGEMV=ATL_dmvnk__900003 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIY=prefetchnta -DPFADIST=128 -DPFXDIST=192 -DPFYDIST=0 -DDREAL $(CDEFS) ATL_dmvnk__900003.c
+ATL_dmvnk__900003_b0.o : ATL_dmvnk__900003.c
+	 $(GOODGCC) -o ATL_dmvnk__900003_b0.o -c -DATL_UGEMV=ATL_dmvnk__900003_b0 -DBETA0 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIY=prefetchnta -DPFADIST=128 -DPFXDIST=192 -DPFYDIST=0 -DDREAL $(CDEFS) ATL_dmvnk__900003.c
 ATL_dmvnk__900002.o : ATL_dmvnk__900002.c
-	 $(GOODGCC) -o ATL_dmvnk__900002.o -c -DATL_UGEMV=ATL_dmvnk__900002 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht2 -DPFADIST=384 -DPFXDIST=256 -DPFYDIST=0 -DDREAL $(CDEFS) ATL_dmvnk__900002.c
+	 $(GOODGCC) -o ATL_dmvnk__900002.o -c -DATL_UGEMV=ATL_dmvnk__900002 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht0 -DPFADIST=128 -DPFXDIST=320 -DPFYDIST=384 -DDREAL $(CDEFS) ATL_dmvnk__900002.c
 ATL_dmvnk__900002_b0.o : ATL_dmvnk__900002.c
-	 $(GOODGCC) -o ATL_dmvnk__900002_b0.o -c -DATL_UGEMV=ATL_dmvnk__900002_b0 -DBETA0 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht2 -DPFADIST=384 -DPFXDIST=256 -DPFYDIST=0 -DDREAL $(CDEFS) ATL_dmvnk__900002.c
-ATL_dmvnk__900009.o : ATL_dmvnk__900009.c
-	 $(GOODGCC) -o ATL_dmvnk__900009.o -c -DATL_UGEMV=ATL_dmvnk__900009 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIX=prefetchnta -DPFIY=prefetcht2 -DPFADIST=128 -DPFXDIST=0 -DPFYDIST=128 -DDREAL $(CDEFS) ATL_dmvnk__900009.c
-ATL_dmvnk__900009_b0.o : ATL_dmvnk__900009.c
-	 $(GOODGCC) -o ATL_dmvnk__900009_b0.o -c -DATL_UGEMV=ATL_dmvnk__900009_b0 -DBETA0 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIX=prefetchnta -DPFIY=prefetcht2 -DPFADIST=128 -DPFXDIST=0 -DPFYDIST=128 -DDREAL $(CDEFS) ATL_dmvnk__900009.c
-ATL_dmvnk__900008.o : ATL_dmvnk__900008.c
-	 $(GOODGCC) -o ATL_dmvnk__900008.o -c -DATL_UGEMV=ATL_dmvnk__900008 -x assembler-with-cpp -DPFIX=prefetcht0 -DPFIY=prefetchnta -DPFADIST=128 -DPFYDIST=256 -DDREAL $(CDEFS) ATL_dmvnk__900008.c
-ATL_dmvnk__900008_b0.o : ATL_dmvnk__900008.c
-	 $(GOODGCC) -o ATL_dmvnk__900008_b0.o -c -DATL_UGEMV=ATL_dmvnk__900008_b0 -DBETA0 -x assembler-with-cpp -DPFIX=prefetcht0 -DPFIY=prefetchnta -DPFADIST=128 -DPFYDIST=256 -DDREAL $(CDEFS) ATL_dmvnk__900008.c
+	 $(GOODGCC) -o ATL_dmvnk__900002_b0.o -c -DATL_UGEMV=ATL_dmvnk__900002_b0 -DBETA0 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht0 -DPFADIST=128 -DPFXDIST=320 -DPFYDIST=384 -DDREAL $(CDEFS) ATL_dmvnk__900002.c
+ATL_dmvnk__900006.o : ATL_dmvnk__900006.c
+	 $(GOODGCC) -o ATL_dmvnk__900006.o -c -DATL_UGEMV=ATL_dmvnk__900006 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIY=prefetcht2 -DPFADIST=0 -DPFXDIST=0 -DPFYDIST=192 -DDREAL $(CDEFS) ATL_dmvnk__900006.c
+ATL_dmvnk__900006_b0.o : ATL_dmvnk__900006.c
+	 $(GOODGCC) -o ATL_dmvnk__900006_b0.o -c -DATL_UGEMV=ATL_dmvnk__900006_b0 -DBETA0 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIY=prefetcht2 -DPFADIST=0 -DPFXDIST=0 -DPFYDIST=192 -DDREAL $(CDEFS) ATL_dmvnk__900006.c
 ATL_dmvnk__900005.o : ATL_dmvnk__900005.c
-	 $(GOODGCC) -o ATL_dmvnk__900005.o -c -DATL_UGEMV=ATL_dmvnk__900005 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht2 -DPFADIST=0 -DPFXDIST=256 -DPFYDIST=128 -DDREAL $(CDEFS) ATL_dmvnk__900005.c
+	 $(GOODGCC) -o ATL_dmvnk__900005.o -c -DATL_UGEMV=ATL_dmvnk__900005 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIX=prefetchnta -DPFIY=prefetcht1 -DPFADIST=128 -DPFXDIST=128 -DDREAL $(CDEFS) ATL_dmvnk__900005.c
 ATL_dmvnk__900005_b0.o : ATL_dmvnk__900005.c
-	 $(GOODGCC) -o ATL_dmvnk__900005_b0.o -c -DATL_UGEMV=ATL_dmvnk__900005_b0 -DBETA0 -x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht2 -DPFADIST=0 -DPFXDIST=256 -DPFYDIST=128 -DDREAL $(CDEFS) ATL_dmvnk__900005.c
+	 $(GOODGCC) -o ATL_dmvnk__900005_b0.o -c -DATL_UGEMV=ATL_dmvnk__900005_b0 -DBETA0 -x assembler-with-cpp -DPFIA=prefetchnta -DPFIX=prefetchnta -DPFIY=prefetcht1 -DPFADIST=128 -DPFXDIST=128 -DDREAL $(CDEFS) ATL_dmvnk__900005.c

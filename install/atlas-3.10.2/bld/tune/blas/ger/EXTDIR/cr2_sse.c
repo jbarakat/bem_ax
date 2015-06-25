@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 2x1 unrolled r2_sse with these params:
+ * This file does a 2x2 unrolled r2_sse with these params:
  *    CL=8, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -154,6 +154,7 @@ ATL_asmdecor(ATL_UGER2K):
    sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
    sub $-128, pX        /* code compaction by using signed 1-byte offsets */
    sub $-128, pW
+   add lda, incAn               /* incAn = (2*lda-M)*sizeof */
    mov $8*2, incII      /* code comp: use reg rather than constant */
    mov M, II
 
@@ -167,6 +168,14 @@ ATL_asmdecor(ATL_UGER2K):
       movlhps rZ0, rZ0      /* rZ0 = {Z0i, Z0r, Z0i, Z0r} */
       pshufd $0x11, rZ0, rZh0 /* rZh0 = {Z0r, Z0i, Z0r, Z0i} */
       mulps rneg, rZh0  /* rZh0 = {Z0r,-Z0i, Z0r,-Z0i} */
+      movlps 1*8(pY), rY1   /* rY1 = {xx,xx, Y1i, Y1r} */
+      movlhps rY1, rY1      /* rY1 = {Y1i, Y1r, Y1i, Y1r} */
+      pshufd $0x11, rY1, rYh1 /* rYh1 = {Y1r, Y1i, Y1r, Y1i} */
+      mulps rneg, rYh1  /* rYh1 = {Y1r,-Y1i, Y1r,-Y1i} */
+      movlps 1*8(pZ), rZ1   /* rZ1 = {xx,xx, Z1i, Z1r} */
+      movlhps rZ1, rZ1      /* rZ1 = {Z1i, Z1r, Z1i, Z1r} */
+      pshufd $0x11, rZ1, rZh1 /* rZh1 = {Z1r, Z1i, Z1r, Z1i} */
+      mulps rneg, rZh1  /* rZh1 = {Z1r,-Z1i, Z1r,-Z1i} */
 
       LOOPM:
          movsldup 0-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
@@ -187,6 +196,22 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 0-128(pA0)
+         prefA(PFADIST+0(pA0))
+         prefA(PFADIST+0(pA0,lda))
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   0-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 0-128(pA0,lda)
 
          movsldup 64-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
          movaps rY0, rA0   /* rA0 = {Y0i, Y0r,Y0i, Y0r} */
@@ -206,6 +231,22 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 64-128(pA0)
+         prefA(PFADIST+64(pA0))
+         prefA(PFADIST+64(pA0,lda))
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   64-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 64-128(pA0,lda)
 
          movsldup 16-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
          movaps rY0, rA0   /* rA0 = {Y0i, Y0r,Y0i, Y0r} */
@@ -225,6 +266,20 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 16-128(pA0)
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   16-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 16-128(pA0,lda)
 
          movsldup 32-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
          movaps rY0, rA0   /* rA0 = {Y0i, Y0r,Y0i, Y0r} */
@@ -244,6 +299,20 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 32-128(pA0)
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   32-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 32-128(pA0,lda)
 
          movsldup 48-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
          movaps rY0, rA0   /* rA0 = {Y0i, Y0r,Y0i, Y0r} */
@@ -263,6 +332,20 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 48-128(pA0)
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   48-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 48-128(pA0,lda)
 
          movsldup 80-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
          movaps rY0, rA0   /* rA0 = {Y0i, Y0r,Y0i, Y0r} */
@@ -282,6 +365,20 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 80-128(pA0)
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   80-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 80-128(pA0,lda)
 
          movsldup 96-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
          movaps rY0, rA0   /* rA0 = {Y0i, Y0r,Y0i, Y0r} */
@@ -301,6 +398,20 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 96-128(pA0)
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   96-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 96-128(pA0,lda)
 
          movsldup 112-128(pX), rXr /* rXr = { X1r, X1r, X0r, X0r} */
          movaps rY0, rA0   /* rA0 = {Y0i, Y0r,Y0i, Y0r} */
@@ -320,21 +431,29 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          MOVA   rA0, 112-128(pA0)
+         movaps rY1, rA0   /* rA0 = {Y1i, Y1r,Y1i, Y1r} */
+         mulps  rXr, rA0   /* rA0 = {X1r*Y1i,X1r*Y1r,X0r*Y1i,X0r*Y1r} */
+         MOVA   112-128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0  /* ra0 = {Y1r,-Y1i,Y1r,-Y1i} */
+         mulps  rXi, ra0   /* ra0 = {X1i*Y0r,-X1i*Y0i,X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0   /* ra0 = {Z1i, Z1r,Z1i, Z1r} */
+         mulps  rWr, ra0   /* rA0 = {W1r*Z1i,W1r*Z1r,W0r*Z1i,W0r*Y1r} */
+         addps ra0, rA0
+         movaps rZh1, ra0  /* ra0 = {Z1r,-Z1i,Z1r,-Z1i} */
+         mulps  rWi, ra0   /* ra0 = {W1i*Z0r,-W1i*Z0i,W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         MOVA   rA0, 112-128(pA0,lda)
 
-         prefA(PFADIST+0(pA0))
          sub incM, pX
-         prefA(PFADIST+64(pA0))
          sub incM, pW
          sub incM, pA0
       sub incII, II
       jnz LOOPM
 
-      #ifdef ATL_OS_OSX     /* workaround retarded OS X assembly */
-         cmp $0, Mr
-         jz  MCLEANED
-      #else
-         jecxz MCLEANED        /* skip cleanup loop if Mr == 0 */
-      #endif
+      cmp $0, Mr
+      jz  MCLEANED
 
       mov Mr, II
       xorps rXr, rXr
@@ -362,6 +481,20 @@ ATL_asmdecor(ATL_UGER2K):
          mulps  rWi, ra0                /* ra0 = {0, 0, W0i*Z0r,-W0i*Z0i} */
          addps  ra0, rA0
          movlps rA0, -128(pA0)
+         movaps rY1, rA0                /* rA0 = {Y1i, Y1r, Y1i, Y1r} */
+         mulps  rXr, rA0                /* rA0 = {0, 0, X0r*Y1i, X0r*Y1r} */
+         movlps -128(pA0,lda), ra0
+         addps ra0, rA0
+         movaps rYh1, ra0               /* ra0 = {Y1r, -Y1i, Y1r,-Y1i} */
+         mulps  rXi, ra0                /* ra0 = {0, 0, X0i*Y0r,-X0i*Y0i} */
+         addps  ra0, rA0
+         movaps rZ1, ra0                /* ra0 = {Z1i, Z1r, Z1i, Z1r} */
+         mulps  rWr, ra0                /* ra0 = {0, 0, W0r*Z1i, W0r*Z1r} */
+         addps  ra0, rA0
+         movaps rZh1, ra0               /* ra0 = {Z1r, -Z1i, Z1r,-Z1i} */
+         mulps  rWi, ra0                /* ra0 = {0, 0, W0i*Z0r,-W0i*Z0i} */
+         addps  ra0, rA0
+         movlps rA0, -128(pA0,lda)
          add $8, pX
          add $8, pW
          add $8, pA0
@@ -369,15 +502,15 @@ ATL_asmdecor(ATL_UGER2K):
       jnz LOOPMCU
 
 MCLEANED:
-      prefY(1*8+PFYDIST(pY))
-      add $1*8, pY
+      prefY(2*8+PFYDIST(pY))
+      add $2*8, pY
       sub M0, pX
-      prefY(1*8+PFYDIST(pZ))
-      add $1*8, pZ
+      prefY(2*8+PFYDIST(pZ))
+      add $2*8, pZ
       add incAn, pA0
       sub M0, pW
       mov M, II
-   sub $1, N
+   sub $2, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

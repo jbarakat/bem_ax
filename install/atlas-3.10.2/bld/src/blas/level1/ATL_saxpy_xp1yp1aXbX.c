@@ -1,156 +1,90 @@
 #define ATL_UAXPY ATL_saxpy_xp1yp1aXbX
 
-#include "atlas_asm.h"
-
-#ifndef ATL_SSE2
-   #error "This kernel requires SSE2"
-#endif
-#ifdef ATL_GAS_x8632
-   #define movq movl
-   #define addq addl
-   #define subq subl
-   #define X    %ebp
-   #define Y    %edx
-   #define N    %ecx
-   #define Nr   %eax
-   #define Nr_b %al
-   #define JTRG %ebx
-#elif defined(ATL_GAS_x8664)
-   #define N    %rdi
-   #define X    %rsi
-   #define Y    %rcx
-   #define Nr   %rax
-   #define Nr_b %al
-   #define JTRG %rdx
-#else
-   #error "This kernel requires x86 assembly!"
-#endif
-
-#define alpha %xmm0
-#define rY0   %xmm1
-#define rX0   %xmm2
-
-#ifndef PFDIST
-   #ifdef ATL_ARCH_P4E
-      #define PFDIST 192
-   #else
-      #define PFDIST 3072
-   #endif
-#endif
-
-# byte offset              4                  8              12             16
-# void ATL_UAXPY(const int N, const SCALAR alpha, const TYPE *X, const int incX,
-#                TYPE *Y, const int incY)
-        .text
-.global ATL_asmdecor(ATL_UAXPY)
-ATL_asmdecor(ATL_UAXPY):
-#ifdef ATL_GAS_x8632
-   #define OFF 12
-        subl    $OFF, %esp
-        movl    %ebp, (%esp)
-        movl    %ebx, 4(%esp)
-
-        movl    OFF+4(%esp), N
-        movss   OFF+8(%esp),  alpha
-        movl    OFF+12(%esp), X
-        movl    OFF+20(%esp), Y
-#endif
-        prefetchw       (Y)
-        prefetcht0      (X)
-        shufps  $0x00, alpha, alpha   # alpha = {alpha,alpha,alpha,alpha}
-
-        movq    N, Nr
-        xor     JTRG, JTRG
-        cmp     $7, N
-        jbe     SCALAR_TEST
-#
-#       Nr = (((char*)Y+15)/16)*16 - Y
-#
-        movq    $1, JTRG
-        lea     15(Y), Nr
-        andb    $0xF0, Nr_b
-        subq    Y, Nr
-        jnz     FORCE_ALIGN
-YALIGNED:
-        test    $0xF, X
-        jnz     XUNALIGNED
-
-        movq    N, Nr
-        shr     $2, N
-        shl     $2, N
-        sub     N, Nr
-        lea     (X,N,4), X
-        lea     (Y,N,4), Y
-        neg     N
-NLOOP:
-        movaps  (X,N,4), rX0
-        movaps  (Y,N,4), rY0
-        mulps   alpha, rX0
-                                prefetchw      PFDIST(Y,N,8)
-        addps   rX0, rY0
-        movaps  rY0, (Y,N,4)
-        addq    $4, N
-        jnz     NLOOP
-
-        xor     JTRG, JTRG
-        cmp     $0, Nr
-        jne     SCALAR_TEST
-#
-#       Epilogue
-#
-DONE:
-#ifdef ATL_GAS_x8632
-        movl    (%esp), %ebp
-        movl    4(%esp), %ebx
-        addl    $OFF, %esp
-#endif
-        ret
-XUNALIGNED:
-        movq    N, Nr
-        shr     $2, N
-        shl     $2, N
-        sub     N, Nr
-        lea     (X,N,4), X
-        lea     (Y,N,4), Y
-        neg     N
-UNLOOP:
-        movups  (X,N,4), rX0
-        movaps  (Y,N,4), rY0
-        mulps   alpha, rX0
-                                prefetchw      PFDIST(Y,N,8)
-        addps   rX0, rY0
-        movaps  rY0, (Y,N,4)
-        addq    $4, N
-        jnz     UNLOOP
-        xor     JTRG, JTRG
-        jmp     SCALAR_TEST
-#
-#       Assumes Nr has number of bytes until aligned
-#
-FORCE_ALIGN:
-        shr     $2, Nr    # Nr = (Ya-Y)/sizeof(float)
-        cmp     N, Nr
-        cmova   N, Nr     # Nr = MIN(N,Nr)
-        sub     Nr, N
-#
-#  This loop assumes num of iterations is in Nr, return @ in JTRG
-#  NOTE: to aid portability, changed JTRG to boolean, 0 means jump to DONE,
-#        1 means jump to  YALIGNED
-#
-SCALAR_TEST:
-        cmp     $0, Nr
-        je      DONE
-        lea     (X,Nr,4), X
-        lea     (Y,Nr,4), Y
-        neg     Nr
-SLOOP:
-        movss   (X,Nr,4), rX0
-        mulss   alpha, rX0
-        movss   (Y,Nr,4), rY0
-        addss   rX0, rY0
-        movss   rY0, (Y,Nr,4)
-        addq    $1, Nr
-        jnz     SLOOP
-        cmp     $0, JTRG
-        je      DONE
-        jmp     YALIGNED
+#include "atlas_misc.h"
+void ATL_UAXPY(const int N, const SCALAR alpha0, const TYPE *X, const int incX,
+               TYPE *Y, const int incY)
+{
+   register TYPE x0, y0;
+   const register TYPE alpha=alpha0;
+   const TYPE *stX, *stXN = X+N;
+   if (N >= 64)
+   {
+      stX = X + ((N>>6)<<6) - 32;
+      x0 = *X;
+      y0 = *Y;
+      do
+      {
+         *Y = y0 + x0 * alpha; x0 = X[32]; y0 = Y[32];
+         Y[ 1] += X[ 1] * alpha;
+         Y[ 2] += X[ 2] * alpha;
+         Y[ 3] += X[ 3] * alpha;
+         Y[ 4] += X[ 4] * alpha;
+         Y[ 5] += X[ 5] * alpha;
+         Y[ 6] += X[ 6] * alpha;
+         Y[ 7] += X[ 7] * alpha;
+         Y[ 8] += X[ 8] * alpha;
+         Y[ 9] += X[ 9] * alpha;
+         Y[10] += X[10] * alpha;
+         Y[11] += X[11] * alpha;
+         Y[12] += X[12] * alpha;
+         Y[13] += X[13] * alpha;
+         Y[14] += X[14] * alpha;
+         Y[15] += X[15] * alpha;
+         Y[16] += X[16] * alpha;
+         Y[17] += X[17] * alpha;
+         Y[18] += X[18] * alpha;
+         Y[19] += X[19] * alpha;
+         Y[20] += X[20] * alpha;
+         Y[21] += X[21] * alpha;
+         Y[22] += X[22] * alpha;
+         Y[23] += X[23] * alpha;
+         Y[24] += X[24] * alpha;
+         Y[25] += X[25] * alpha;
+         Y[26] += X[26] * alpha;
+         Y[27] += X[27] * alpha;
+         Y[28] += X[28] * alpha;
+         Y[29] += X[29] * alpha;
+         Y[30] += X[30] * alpha;
+         Y[31] += X[31] * alpha;
+         X += 32; Y += 32;
+      }
+      while(X != stX);
+      *Y = y0 + x0 * alpha;
+      Y[ 1] += X[ 1] * alpha;
+      Y[ 2] += X[ 2] * alpha;
+      Y[ 3] += X[ 3] * alpha;
+      Y[ 4] += X[ 4] * alpha;
+      Y[ 5] += X[ 5] * alpha;
+      Y[ 6] += X[ 6] * alpha;
+      Y[ 7] += X[ 7] * alpha;
+      Y[ 8] += X[ 8] * alpha;
+      Y[ 9] += X[ 9] * alpha;
+      Y[10] += X[10] * alpha;
+      Y[11] += X[11] * alpha;
+      Y[12] += X[12] * alpha;
+      Y[13] += X[13] * alpha;
+      Y[14] += X[14] * alpha;
+      Y[15] += X[15] * alpha;
+      Y[16] += X[16] * alpha;
+      Y[17] += X[17] * alpha;
+      Y[18] += X[18] * alpha;
+      Y[19] += X[19] * alpha;
+      Y[20] += X[20] * alpha;
+      Y[21] += X[21] * alpha;
+      Y[22] += X[22] * alpha;
+      Y[23] += X[23] * alpha;
+      Y[24] += X[24] * alpha;
+      Y[25] += X[25] * alpha;
+      Y[26] += X[26] * alpha;
+      Y[27] += X[27] * alpha;
+      Y[28] += X[28] * alpha;
+      Y[29] += X[29] * alpha;
+      Y[30] += X[30] * alpha;
+      Y[31] += X[31] * alpha;
+      X += 32; Y += 32;
+   }
+   if (X != stXN)
+   {
+      do *Y++ += *X++ * alpha; while (X != stXN);
+   }
+}

@@ -5,11 +5,11 @@
 
 typedef void (*ATL_r1kern_t)
    (ATL_CINT, ATL_CINT, const float*, const float*, float*, ATL_CINT);
-void ATL_cgerk__900007
+void ATL_cgerk__900005
    (ATL_CINT, ATL_CINT, const float*, const float*, float*, ATL_CINT);
 void ATL_cgerk__3
    (ATL_CINT, ATL_CINT, const float*, const float*, float*, ATL_CINT);
-void ATL_cgerk__900006
+void ATL_cgerk__900004
    (ATL_CINT, ATL_CINT, const float*, const float*, float*, ATL_CINT);
 
 static ATL_r1kern_t ATL_GetR1Kern
@@ -30,8 +30,8 @@ static ATL_r1kern_t ATL_GetR1Kern
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 14336;
-               return(ATL_cgerk__900007);
+               *CacheElts = 73728;
+               return(ATL_cgerk__900005);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
@@ -49,7 +49,7 @@ static ATL_r1kern_t ATL_GetR1Kern
                *alignX = 4;  *alignY = 8;
                *ALIGNX2A = 1;
                *FNU = 1;
-               *CacheElts = 14336;
+               *CacheElts = 73728;
                return(ATL_cgerk__3);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
@@ -60,10 +60,10 @@ static ATL_r1kern_t ATL_GetR1Kern
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 14336;
-   return(ATL_cgerk__900006);
+   *CacheElts = 73728;
+   return(ATL_cgerk__900004);
 }
 
-#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 1016; (nb_) = 6; }
+#define ATL_GetPartR1(A_, lda_, mb_, nb_) { (mb_) = 5264; (nb_) = 6; }
 
 #endif  /* end protection around header file contents */

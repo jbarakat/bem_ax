@@ -9,7 +9,7 @@ typedef void (*ATL_r2kern_t)
 void ATL_zger2k__4
    (ATL_CINT, ATL_CINT, const double*, const double*, const double*,
     const double*, double*, ATL_CINT);
-void ATL_zger2k__3
+void ATL_zger2k__2
    (ATL_CINT, ATL_CINT, const double*, const double*, const double*,
     const double*, double*, ATL_CINT);
 void ATL_zger2k__900004
@@ -30,7 +30,7 @@ static ATL_r2kern_t ATL_GetR2Kern
          *alignX = 32;  *alignY = 32;
          *ALIGNX2A = 0;
          *FNU = 1;
-         *CacheElts = 10240;
+         *CacheElts = 61440;
          return(ATL_zger2k__4);
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
@@ -38,13 +38,19 @@ static ATL_r2kern_t ATL_GetR2Kern
    {
       if ((((((ATL_MulBySize(lda)) >> 4)) << 4)) == ATL_MulBySize(lda))
       {
-         *minM = 0;   *minN = 0;
-         *mu = 2;     *nu = 3;
-         *alignX = 16;  *alignY = 16;
-         *ALIGNX2A = 0;
-         *FNU = 1;
-         *CacheElts = 10240;
-         return(ATL_zger2k__3);
+         if (N >= 2)
+         {
+            if (M >= 4)
+            {
+               *minM = 4;   *minN = 2;
+               *mu = 1;     *nu = 2;
+               *alignX = 16;  *alignY = 8;
+               *ALIGNX2A = 0;
+               *FNU = 1;
+               *CacheElts = 61440;
+               return(ATL_zger2k__2);
+            } /* end if on minimal N guard */
+         } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
    *minM = 8;   *minN = 2;
@@ -52,10 +58,10 @@ static ATL_r2kern_t ATL_GetR2Kern
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 10240;
+   *CacheElts = 61440;
    return(ATL_zger2k__900004);
 }
 
-#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 1704; (nb_) = 2; }
+#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 10232; (nb_) = 2; }
 
 #endif  /* end protection around header file contents */

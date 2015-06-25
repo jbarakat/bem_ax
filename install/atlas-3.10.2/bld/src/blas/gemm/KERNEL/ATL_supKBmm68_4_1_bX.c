@@ -6,51 +6,51 @@
 #define BETAX
 #define SREAL
 
-#define MB 72
-#define NB 72
+#define MB 80
+#define NB 80
 #define KB 68
 
-#define MBMB 5184
-#define NBNB 5184
+#define MBMB 6400
+#define NBNB 6400
 #define KBKB 4624
 
-#define MB2 144
-#define NB2 144
+#define MB2 160
+#define NB2 160
 #define KB2 136
 
 
-#define MB3 216
-#define NB3 216
+#define MB3 240
+#define NB3 240
 #define KB3 204
 
 
-#define MB4 288
-#define NB4 288
+#define MB4 320
+#define NB4 320
 #define KB4 272
 
 
-#define MB5 360
-#define NB5 360
+#define MB5 400
+#define NB5 400
 #define KB5 340
 
 
-#define MB6 432
-#define NB6 432
+#define MB6 480
+#define NB6 480
 #define KB6 408
 
 
-#define MB7 504
-#define NB7 504
+#define MB7 560
+#define NB7 560
 #define KB7 476
 
 
-#define MB8 576
-#define NB8 576
+#define MB8 640
+#define NB8 640
 #define KB8 544
 
 /*
  *             Automatically Tuned Linear Algebra Software v3.10.2
- *                    (C) Copyright 2004 R. Clint Whaley
+ *                    (C) Copyright 2008 R. Clint Whaley
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,1318 +80,1153 @@
 #include "atlas_asm.h"
 
 
-#if !defined(ATL_GAS_x8632) && !defined(ATL_GAS_x8664)
-   #error "This kernel requires x86 gas 32 or 64 bit assembler!"
-#endif
+#include "atlas_asm.h"   /* usually do this in include file */
 #ifndef ATL_SSE1
    #error "This routine requires SSE1!"
 #endif
 
-#ifdef SCPLX
-   #define CMUL(i_) ((i_)+(i_))
-#else
-   #define CMUL(i_) i_
-#endif
-
-#if !defined(KB) || (KB == 0)
-   #error "KB must be a compile-time constant!"
-#endif
-#if KB > 80
-   #error "Max KB is 80!"
+#if !defined(MB)
+   #define MB 0
 #endif
 #if !defined(NB)
    #define NB 0
 #endif
-#if !defined(MB)
-   #define MB 0
+#if !defined(KB)
+   #define KB 0
 #endif
-#if (MB/6)*6 != MB
-   #error "MB must be multiple of 6!"
+#if KB == 0
+   #error "KB must be compile time constant!"
 #endif
-
-#if MB <= 6 || defined(ATL_OS_SunOS)  /* retarded gcc on SunOS has no divis */
-   #define PFAINC 64
-#else
-   #define PFAINC ((MB*4+MB/6-2)/(MB/6-1))
+#if KB/4*4 != KB
+   #error "KB must be a multiple of 4!"
 #endif
-#if PFAINC < -6400
-   #undef PFAINC
-   #define PFAINC 64
+#if KB > 256
+   #error "KB must be <= 256!"
 #endif
-
-#ifdef ATL_GAS_x8664
-   #define movL movl
-   #define movl movq
-   #define subl subq
-   #define addl addq
-   #define movb movq
-   #define subb subq
+#if (MB/4)*4 != MB
+   #error "MB must be a multiple of 4!"
 #endif
 
-/*
- * Integer register usage shown be these defines
- */
-#ifdef ATL_GAS_x8664
-   #define pC      %r10
-   #define pA      %rcx
-   #define pB      %r9
-   #define incCn   %rax
-   #define stM     %rdi
-   #define stN     %rsi
-   #define ldab    %r8
-   #define pA3     %rdx
-   #define pfA     %r11
-   #define M_m     %rbx
-   #define incAn_m %rbp
-   #define incCn_m incCn
-#else
-   #define pC      %esi
-   #define pA      %ecx
-   #define pB      %edi
-   #define incCn   %eax
-   #define stM	%bl
-   #define stN	%bh
-   #define ldab	%edx
-   #define pA3	%ebp
-   #ifdef BETAX
-      #define COFF 36
-   #else
-      #define COFF 16
-   #endif
-   #define M_m     COFF(%esp)
-   #define incAn_m COFF+4(%esp)
-   #define incCn_m COFF+8(%esp)
-   #define pfA	incCn
-#endif
-
-#define pA0	pA
-#define pB0	pB
-
-#define rC0	%xmm0
-#define rC1	%xmm1
-#define rC2	%xmm2
-#define rC3	%xmm3
-#define rC4	%xmm4
-#define rC5	%xmm5
-#define rA0	%xmm6
-#define rB0	%xmm7
-#ifdef ATL_GAS_x8664
-   #define rbeta %xmm8
-#else
-   #define rbeta rA0
-#endif
-
-#define NBso	(KB*4)
-#if MB != 0
-   #define MBKBso  (MB*KB*4)
-#endif
-#define NB2so   (NBso+NBso)
-#define NB3so   (NBso+NBso+NBso)
-#define NB4so   (NBso+NBso+NBso+NBso)
-#define NB5so   (NBso+NBso+NBso+NBso+NBso)
-#define NB6so   (NBso+NBso+NBso+NBso+NBso+NBso)
-#define NB7so   (NB6so+NBso)
-#define NB8so   (NB6so+NB2so)
-#define NB9so   (NB6so+NB3so)
-#define NB10so   (NB6so+NB4so)
-#define NB11so   (NB6so+NB5so)
-
-/*
- * Prefetch defines
- */
 #if 1
-#define pref2(mem) prefetcht1	mem
-#define prefB(mem) prefetchnta	mem
-#define prefC(mem) prefetcht0	mem
+   #define pref2(mem) prefetcht1        mem
+   #define prefB(mem) prefetcht1        mem
+   #define prefC(mem) prefetcht0        mem
 #else
-#define pref2(mem)
-#define prefB(mem)
-#define prefC(mem)
+   #define pref2(mem)
+   #define prefB(mem)
+   #define prefC(mem)
 #endif
-/*offset                rdi/4        rsi/8       rdx/12           xmm0/16
- *void ATL_USERMM(const int M, const int N, const int K, const TYPE alpha,
- *offset                rcx/ 20          r8/24          r9/28         8/ 32
- *                const TYPE *A, const int lda, const TYPE *B, const int ldb,
- *offset                  xmm1/36    16/40          24/44
- *                const TYPE beta, TYPE *C, const int ldc)
- */
-	.text
+
+#define PFAINC 16
+
+#define rA0     %xmm0
+#define rB0     %xmm1
+#define rC0     %xmm2
+#define rC1     %xmm3
+#define rC2     %xmm4
+#define rC3     %xmm5
+#define rc0     %xmm6
+#define BETA    %xmm7
+
+#ifdef ATL_GAS_x8632
+   #define pC0          %esi
+   #define pA0          %ecx
+   #define ldab3        %eax
+   #define pB0          %edi
+   #define ldab         %edx
+   #define pfA          %ebp
+   #define stM          %ebx
+
+   #define subL subl
+   #define addL addl
+   #define movL movl
+#elif defined(ATL_GAS_x8664)
+   #define pC0          %rdx
+   #define pA0          %rcx
+   #define ldab3        %rax
+   #define pB0          %rbx
+   #define ldab         %rsi
+   #define pfA          %rbp
+   #define stM          %rdi
+   #define stN          %r8
+   #define AORIG        %r9
+   #define MORIG        %r10
+   #define INCCn        %r11
+
+   #define subL subq
+   #define addL addq
+   #define movL movq
+#else
+   #error "This kernel requires a gas x86 assembler!"
+#endif
+
+/*
+                      %rdi/4       %rsi/8       %rdx/12          %xmm0/16
+ void ATL_AUSERMM(const int M, const int N, const int K, const TYPE alpha,
+                       %rcx/20         %r8/24         %r9/28             32
+                 const TYPE *A, const int lda, const TYPE *B, const int ldb,
+                        %xmm1/36    16/40          24/44
+                 const TYPE beta, TYPE *C, const int ldc)
+*/
+        .text
 .global ATL_asmdecor(ATL_USERMM)
+ALIGN16
 ATL_asmdecor(ATL_USERMM):
-#ifdef ATL_GAS_x8664
-        movq    %rbx, -8(%rsp)
-        movq    %rbp, -16(%rsp)
-   #ifdef BETAX
-        movapd  %xmm1, rbeta
-   #endif
-        movq    16(%rsp), pC
-        mov     24(%rsp), %eax    /* incCn = ldc */
-        cltq
-   #if MB == 0
-        movq    stM, M_m
-   #endif
-        movq    stM, incAn_m
-        subq    $6, incAn_m
-        imul    $NBso, incAn_m
-#else
+#ifdef ATL_GAS_x8632
+      #define FSIZE     32
+        subl    $FSIZE, %esp
+        movl    %ebp,    (%esp)
+        movl    %ebx,   4(%esp)
+        movl    %esi,   8(%esp)
+        movl    %edi,  12(%esp)
 /*
- *      Save callee-saved iregs; Save old stack pointer in eax,
- *      so we can adjust for BETA alignment
+ *      Load (and save where necessary) parameters
  */
-	movl %esp, %eax
    #ifdef BETAX
-	subl	$48, %esp
-	shr	$4, %esp
-	shl	$4, %esp
-	movl	%ebp, 32(%esp)
-	movl	%ebx, 28(%esp)
-	movl	%esi, 24(%esp)
-	movl	%edi, 20(%esp)
-	movl	%eax, 16(%esp)
-	movss	36(%eax), rC0
-	movaps	rC0, (%esp)
-      #define BETAOFF 0
-   #else
-	subl	$28, %esp
-	movl	%ebp, 12(%esp)
-	movl	%ebx,  8(%esp)
-	movl	%esi,  4(%esp)
-	movl	%edi,   (%esp)
+        movss   FSIZE+36(%esp), BETA
+        shufps  $0x00, BETA, BETA
    #endif
-/*
- *      Initialize pA = A;  pB = B; pC = C;
- */
-   #if MB == 0
-        movl    4(%eax), %ebx
-        movl    %ebx, M_m
-        imul    $NBso, %ebx
-        subl    $NB6so, %ebx
-        movl    %ebx, incAn_m
-   #endif
-	movl	20(%eax), pA
-	movl	28(%eax), pB
-	movl	40(%eax), pC
-   #if NB == 0
-        movb    8(%eax), stN
-   #else
-        movb    $NB, stN
-   #endif
-	movl	44(%eax), incCn
-#endif
-	addl	$120, pA
-	addl	$120, pB
-/*
- *      Set incCn = (ldc - NB)*sizeof
- */
-#if MB == 0
-        subl    M_m, incCn
-	addl	$6, incCn
-#else
-	subl	$MB-6, incCn
-#endif
-   #ifdef SCPLX
-	shl	$3, incCn
-   #else
-	shl	$2, incCn
-   #endif
-   #ifndef ATL_GAS_x8664
-   	movl	incCn, incCn_m
-   #endif
-	movl	$NBso, ldab
-	movl	pA0, pA3
-	addl	$NB3so, pA3
-        movl    pA0, pfA
-#if MB == 0
-        addl    $NB6so-120, pfA
-        addl    incAn_m, pfA
-#else
-	addl	$MBKBso-120, pfA
-#endif
-UNLOOP:
-#if MB == 0
-        movb    M_m, stM
-        subb     $6, stM
-        jz      ULMLOOP
-#else
-        movb    $MB-6, stM
-#endif
-#if MB != 6
-        ALIGN16
-UMLOOP:
-#ifdef BETA0
-	xorps	rC0, rC0
-	xorps	rC1, rC1
-	xorps	rC2, rC2
-	xorps	rC3, rC3
-	xorps	rC4, rC4
-	xorps	rC5, rC5
-#else
-	movss	(pC), rC0
-	movss	CMUL(4)(pC), rC1
-	movss	CMUL(8)(pC), rC2
-	movss	CMUL(12)(pC), rC3
-	movss	CMUL(16)(pC), rC4
-	movss	CMUL(20)(pC), rC5
-   #ifdef BETAX
-      #ifndef ATL_GAS_x8664
-	movss	(%esp), rbeta
+      #define stN 16(%esp)
+        movl    FSIZE+8(%esp), %eax     /* get N */
+        movl    %eax, stN               /* store to stack */
+      #define  AORIG     20(%esp)
+        movl    FSIZE+20(%esp), pA0
+      #define MORIG 24(%esp)
+        movl    FSIZE+4(%esp), stM      /* get M */
+        movl    stM, MORIG              /* store to stack */
+      #define INCCn     28(%esp)
+        movl    FSIZE+44(%esp), %eax    /* get ldc */
+        subl    stM, %eax               /* incCn = (ldc-M) */
+      #ifdef SCPLX
+        shl     $3, %eax                /* incCn = (ldc-M)*sizeof */
+      #else
+        shl     $2, %eax                /* incCn = (ldc-M)*sizeof */
       #endif
-	mulss	rbeta, rC0
-	mulss	rbeta, rC1
-	mulss	rbeta, rC2
-	mulss	rbeta, rC3
-	mulss	rbeta, rC4
-	mulss	rbeta, rC5
-   #endif
-#endif
+        movl    %eax, INCCn             /* store to stack */
+        movl    FSIZE+20(%esp), pA0
+        movl    FSIZE+28(%esp), pB0
+        movl    FSIZE+40(%esp), pC0
+#else                                   /* x86-64 prologue */
 /*
- *      Completely unrolled K-loop
+ *      Save callee-saved registers
  */
-        ALIGN16
-	movaps	0-120(pB0), rB0
-	movaps	0-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	0-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	0-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	0-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	0-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	0-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-
-#if KB > 4
-	movaps	16-120(pB0), rB0
-	movaps	16-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	16-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	16-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	16-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	16-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	16-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+        movq    %rbp,  -8(%rsp)
+        movq    %rbx, -16(%rsp)
+/*        movq    %r12, -24(%rsp) */
+/*
+ *      Get parameters in correct registers
+ */
+        movq    %rsi, stN
+        movq    %r9, pB0
+        shufps  $0x00, %xmm1, %xmm1
+        movaps  %xmm1, BETA
+        movq    16(%rsp), pC0
+        movslq  24(%rsp), INCCn         /* incCn = ldc (32-to-64 extension) */
+        sub     stM, INCCn              /* incCn = ldc-M */
+   #ifdef SCPLX
+        shl     $3, INCCn               /* incCn = (ldc-M)*sizeof */
+   #else
+        shl     $2, INCCn               /* incCn = (ldc-M)*sizeof */
+   #endif
+        movq    stM, MORIG
 #endif
+        mov     stM, pfA
+        imul    $KB*4, pfA              /* pfA = M * K * sizeof */
+        add     pA0, pfA                /* pfA = A + M*K*sizeof */
+        mov     $KB*4, ldab             /* ld[a,b] = KB*sizeof */
+        lea     (ldab,ldab,2), ldab3    /* ldab3 = 3*ldab */
+        sub     $-128, pA0
+        sub     $-128, pB0
+        movL    pA0, AORIG
+ALIGN32
+NLOOP:
+MLOOP:
+/* BEGIN KLOOP */
 
-#if KB > 8
-	movaps	32-120(pB0), rB0
-	movaps	32-120(pA0), rA0
+#if KB > 3
+	movaps	-128(pB0), rC3
+	movaps	-128(pA0), rC0
+	mulps	rC3, rC0
+	movaps	-128(pA0,ldab), rC1
+	mulps	rC3, rC1
+	movaps	-128(pA0,ldab,2), rC2
+	mulps	rC3, rC2
+	mulps	-128(pA0,ldab3), rC3
+#endif
+#if KB > 7
+	movaps	-128+16(pB0), rB0
+	movaps	-128+16(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	32-120(pA0,ldab), rA0
+	movaps	-128+16(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	32-120(pA0,ldab,2), rA0
+	movaps	-128+16(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	32-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	32-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	32-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+16(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 12
-	movaps	48-120(pB0), rB0
-	movaps	48-120(pA0), rA0
+#if KB > 11
+	movaps	-128+32(pB0), rB0
+	movaps	-128+32(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	48-120(pA0,ldab), rA0
+	movaps	-128+32(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	48-120(pA0,ldab,2), rA0
+	movaps	-128+32(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	48-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	48-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	48-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+32(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 16
-	movaps	64-120(pB0), rB0
-	movaps	64-120(pA0), rA0
+#if KB > 15
+	movaps	-128+48(pB0), rB0
+	movaps	-128+48(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	64-120(pA0,ldab), rA0
+	movaps	-128+48(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	64-120(pA0,ldab,2), rA0
+	movaps	-128+48(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	64-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	64-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	64-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+48(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 20
-	movaps	80-120(pB0), rB0
-	movaps	80-120(pA0), rA0
+#if KB > 19
+	movaps	-128+64(pB0), rB0
+	movaps	-128+64(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	80-120(pA0,ldab), rA0
+	movaps	-128+64(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	80-120(pA0,ldab,2), rA0
+	movaps	-128+64(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	80-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	80-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	80-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+64(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 24
-	movaps	96-120(pB0), rB0
-	movaps	96-120(pA0), rA0
+#if KB > 23
+	movaps	-128+80(pB0), rB0
+	movaps	-128+80(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	96-120(pA0,ldab), rA0
+	movaps	-128+80(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	96-120(pA0,ldab,2), rA0
+	movaps	-128+80(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	96-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	96-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	96-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+80(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 28
-	movaps	112-120(pB0), rB0
-	movaps	112-120(pA0), rA0
+#if KB > 27
+	movaps	-128+96(pB0), rB0
+	movaps	-128+96(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	112-120(pA0,ldab), rA0
+	movaps	-128+96(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	112-120(pA0,ldab,2), rA0
+	movaps	-128+96(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	112-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	112-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	112-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+96(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 32
-	movaps	128-120(pB0), rB0
-	movaps	128-120(pA0), rA0
+#if KB > 31
+	movaps	-128+112(pB0), rB0
+	movaps	-128+112(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	128-120(pA0,ldab), rA0
+	movaps	-128+112(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	128-120(pA0,ldab,2), rA0
+	movaps	-128+112(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	128-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	128-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	128-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+112(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 36
-	movaps	144-120(pB0), rB0
-	movaps	144-120(pA0), rA0
+#if KB > 35
+	movaps	-128+128(pB0), rB0
+	movaps	-128+128(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	144-120(pA0,ldab), rA0
+	movaps	-128+128(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	144-120(pA0,ldab,2), rA0
+	movaps	-128+128(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	144-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	144-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	144-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+128(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 40
-	movaps	160-120(pB0), rB0
-	movaps	160-120(pA0), rA0
+#if KB > 39
+	movaps	-128+144(pB0), rB0
+	movaps	-128+144(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	160-120(pA0,ldab), rA0
+	movaps	-128+144(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	160-120(pA0,ldab,2), rA0
+	movaps	-128+144(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	160-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	160-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	160-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+144(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 44
-	movaps	176-120(pB0), rB0
-	movaps	176-120(pA0), rA0
+#if KB > 43
+	movaps	-128+160(pB0), rB0
+	movaps	-128+160(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	176-120(pA0,ldab), rA0
+	movaps	-128+160(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	176-120(pA0,ldab,2), rA0
+	movaps	-128+160(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	176-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	176-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	176-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+160(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 48
-	movaps	192-120(pB0), rB0
-	movaps	192-120(pA0), rA0
+#if KB > 47
+	movaps	-128+176(pB0), rB0
+	movaps	-128+176(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	192-120(pA0,ldab), rA0
+	movaps	-128+176(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	192-120(pA0,ldab,2), rA0
+	movaps	-128+176(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	192-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	192-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	192-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+176(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 52
-	movaps	208-120(pB0), rB0
-	movaps	208-120(pA0), rA0
+#if KB > 51
+	movaps	-128+192(pB0), rB0
+	movaps	-128+192(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	208-120(pA0,ldab), rA0
+	movaps	-128+192(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	208-120(pA0,ldab,2), rA0
+	movaps	-128+192(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	208-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	208-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	208-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+192(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-                        pref2((pfA))
-                        addl    $PFAINC, pfA
-
-#if KB > 56
-	movaps	224-120(pB0), rB0
-	movaps	224-120(pA0), rA0
+#if KB > 55
+	movaps	-128+208(pB0), rB0
+	movaps	-128+208(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	224-120(pA0,ldab), rA0
+	movaps	-128+208(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	224-120(pA0,ldab,2), rA0
+	movaps	-128+208(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	224-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	224-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	224-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+208(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 60
-	movaps	240-120(pB0), rB0
-	movaps	240-120(pA0), rA0
+#if KB > 59
+	movaps	-128+224(pB0), rB0
+	movaps	-128+224(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	240-120(pA0,ldab), rA0
+	movaps	-128+224(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	240-120(pA0,ldab,2), rA0
+	movaps	-128+224(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	240-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	240-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	240-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+224(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 64
-	movaps	256-120(pB0), rB0
-	movaps	256-120(pA0), rA0
+#if KB > 63
+	movaps	-128+240(pB0), rB0
+	movaps	-128+240(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	256-120(pA0,ldab), rA0
+	movaps	-128+240(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	256-120(pA0,ldab,2), rA0
+	movaps	-128+240(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	256-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	256-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	256-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+240(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 68
-	movaps	272-120(pB0), rB0
-	movaps	272-120(pA0), rA0
+#if KB > 67
+	movaps	-128+256(pB0), rB0
+	movaps	-128+256(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	272-120(pA0,ldab), rA0
+	movaps	-128+256(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	272-120(pA0,ldab,2), rA0
+	movaps	-128+256(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	272-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	272-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	272-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+256(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 72
-	movaps	288-120(pB0), rB0
-	movaps	288-120(pA0), rA0
+#if KB > 71
+	movaps	-128+272(pB0), rB0
+	movaps	-128+272(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	288-120(pA0,ldab), rA0
+	movaps	-128+272(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	288-120(pA0,ldab,2), rA0
+	movaps	-128+272(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	288-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	288-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	288-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+272(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
-#if KB > 76
-	movaps	304-120(pB0), rB0
-	movaps	304-120(pA0), rA0
+#if KB > 75
+	movaps	-128+288(pB0), rB0
+	movaps	-128+288(pA0), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC0
-	movaps	304-120(pA0,ldab), rA0
+	movaps	-128+288(pA0,ldab), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC1
-	movaps	304-120(pA0,ldab,2), rA0
+	movaps	-128+288(pA0,ldab,2), rA0
 	mulps	rB0, rA0
 	addps	rA0, rC2
-	movaps	304-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	304-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	304-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
+	mulps	-128+288(pA0,ldab3), rB0
+	addps	rB0, rC3
 #endif
-
+#if KB > 79
+	movaps	-128+304(pB0), rB0
+	movaps	-128+304(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+304(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+304(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+304(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 83
+	movaps	-128+320(pB0), rB0
+	movaps	-128+320(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+320(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+320(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+320(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 87
+	movaps	-128+336(pB0), rB0
+	movaps	-128+336(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+336(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+336(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+336(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 91
+	movaps	-128+352(pB0), rB0
+	movaps	-128+352(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+352(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+352(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+352(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 95
+	movaps	-128+368(pB0), rB0
+	movaps	-128+368(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+368(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+368(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+368(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 99
+	movaps	-128+384(pB0), rB0
+	movaps	-128+384(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+384(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+384(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+384(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 103
+	movaps	-128+400(pB0), rB0
+	movaps	-128+400(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+400(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+400(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+400(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 107
+	movaps	-128+416(pB0), rB0
+	movaps	-128+416(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+416(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+416(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+416(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 111
+	movaps	-128+432(pB0), rB0
+	movaps	-128+432(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+432(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+432(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+432(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 115
+	movaps	-128+448(pB0), rB0
+	movaps	-128+448(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+448(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+448(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+448(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 119
+	movaps	-128+464(pB0), rB0
+	movaps	-128+464(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+464(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+464(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+464(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 123
+	movaps	-128+480(pB0), rB0
+	movaps	-128+480(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+480(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+480(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+480(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 127
+	movaps	-128+496(pB0), rB0
+	movaps	-128+496(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+496(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+496(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+496(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 131
+	movaps	-128+512(pB0), rB0
+	movaps	-128+512(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+512(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+512(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+512(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 135
+	movaps	-128+528(pB0), rB0
+	movaps	-128+528(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+528(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+528(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+528(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 139
+	movaps	-128+544(pB0), rB0
+	movaps	-128+544(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+544(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+544(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+544(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 143
+	movaps	-128+560(pB0), rB0
+	movaps	-128+560(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+560(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+560(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+560(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 147
+	movaps	-128+576(pB0), rB0
+	movaps	-128+576(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+576(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+576(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+576(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 151
+	movaps	-128+592(pB0), rB0
+	movaps	-128+592(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+592(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+592(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+592(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 155
+	movaps	-128+608(pB0), rB0
+	movaps	-128+608(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+608(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+608(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+608(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 159
+	movaps	-128+624(pB0), rB0
+	movaps	-128+624(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+624(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+624(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+624(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 163
+	movaps	-128+640(pB0), rB0
+	movaps	-128+640(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+640(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+640(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+640(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 167
+	movaps	-128+656(pB0), rB0
+	movaps	-128+656(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+656(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+656(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+656(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 171
+	movaps	-128+672(pB0), rB0
+	movaps	-128+672(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+672(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+672(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+672(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 175
+	movaps	-128+688(pB0), rB0
+	movaps	-128+688(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+688(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+688(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+688(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 179
+	movaps	-128+704(pB0), rB0
+	movaps	-128+704(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+704(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+704(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+704(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 183
+	movaps	-128+720(pB0), rB0
+	movaps	-128+720(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+720(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+720(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+720(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 187
+	movaps	-128+736(pB0), rB0
+	movaps	-128+736(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+736(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+736(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+736(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 191
+	movaps	-128+752(pB0), rB0
+	movaps	-128+752(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+752(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+752(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+752(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 195
+	movaps	-128+768(pB0), rB0
+	movaps	-128+768(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+768(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+768(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+768(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 199
+	movaps	-128+784(pB0), rB0
+	movaps	-128+784(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+784(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+784(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+784(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 203
+	movaps	-128+800(pB0), rB0
+	movaps	-128+800(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+800(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+800(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+800(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 207
+	movaps	-128+816(pB0), rB0
+	movaps	-128+816(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+816(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+816(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+816(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 211
+	movaps	-128+832(pB0), rB0
+	movaps	-128+832(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+832(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+832(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+832(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 215
+	movaps	-128+848(pB0), rB0
+	movaps	-128+848(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+848(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+848(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+848(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 219
+	movaps	-128+864(pB0), rB0
+	movaps	-128+864(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+864(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+864(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+864(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 223
+	movaps	-128+880(pB0), rB0
+	movaps	-128+880(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+880(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+880(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+880(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 227
+	movaps	-128+896(pB0), rB0
+	movaps	-128+896(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+896(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+896(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+896(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 231
+	movaps	-128+912(pB0), rB0
+	movaps	-128+912(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+912(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+912(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+912(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 235
+	movaps	-128+928(pB0), rB0
+	movaps	-128+928(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+928(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+928(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+928(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 239
+	movaps	-128+944(pB0), rB0
+	movaps	-128+944(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+944(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+944(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+944(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 243
+	movaps	-128+960(pB0), rB0
+	movaps	-128+960(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+960(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+960(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+960(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 247
+	movaps	-128+976(pB0), rB0
+	movaps	-128+976(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+976(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+976(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+976(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 251
+	movaps	-128+992(pB0), rB0
+	movaps	-128+992(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+992(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+992(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+992(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+#if KB > 255
+	movaps	-128+1008(pB0), rB0
+	movaps	-128+1008(pA0), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC0
+	movaps	-128+1008(pA0,ldab), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC1
+	movaps	-128+1008(pA0,ldab,2), rA0
+	mulps	rB0, rA0
+	addps	rA0, rC2
+	mulps	-128+1008(pA0,ldab3), rB0
+	addps	rB0, rC3
+#endif
+/* End KLOOP */
 /*
  *      Get these bastard things summed up correctly
- *      Note this initial quad summation is Camm's, as his sequence was faster
+ *      Note this summation is Camm's, as his sequence was faster
  *      than the piece of crap I came up with
  */
-                                        /* rC0 = c0a  c0b */
-                                        /* rC1 = c1a  c1b */
-                                        /* rC2 = c2a  c2b */
-                                        /* rC3 = c3a  c3b */
-/* */
-                                        /* rC4 = c4a  c4b */
-                                        /* rC5 = c5a  c5b */
-        movaps          rC0, rA0        /* rA0 = c0d    c0c    c0b    c0a      */
+        movaps          rC0, rA0        /* rA0 = c0d    c0c    c0b    c0a */
         unpcklps        rC1, rC0        /* rC0 = c1b    c0b    c1a    c0d */
         movaps          rC2, rB0        /* rB0 = c2d    c2c    c2b    c2a */
         unpckhps        rC1, rA0        /* rA0 = c1d    c0d    c1c    c0c */
+                                   pref2((pfA))
         unpcklps        rC3, rC2        /* rC2 = c3b    c2b    c3a    c2a */
         addps           rA0, rC0        /* rC0 = c1bd   c0bd   c1ac   c0ac */
         unpckhps        rC3, rB0        /* rB0 = c3d    c2d    c3c    c2c */
         movaps          rC0, rA0        /* rA0 = c1bd   c0bd   c1ac   c0ac */
         addps           rB0, rC2        /* rC2 = c3bd   c2bd   c3ac   c2ac */
+                        prefC(16(pC0))
         shufps          $0x44,rC2,rC0   /* rC0 = c3ac   c2ac   c1ac   c0ac */
+                                    add     $PFAINC, pfA
         shufps          $0xEE,rC2,rA0   /* rA0 = c3bd   c2bd   c1bd   c0bd */
         addps           rA0, rC0        /* rC0 = c3abcd c2abcd c1abcd c0abcd */
-                                        /* rC4 = c4d    c4c    c4b    c4a */
-                                        /* rC5 = c5d    c5c    c5b    c5a */
-        movaps          rC4, rB0        /* rB0 = c4d    c4c    c4b    c4a */
-        unpcklps        rC5, rC4        /* rC4 = c5b    c4b    c5a    c4a */
-        unpckhps        rC5, rB0        /* rB0 = c5d    c4d    c5c    c4c */
-        addps           rB0, rC4        /* rC4 = c5bd   c4bd   c5ac   c4ac */
-        movhlps         rC4, rA0        /* rA0 = X      X      c5bd   c4bd */
-        addps           rA0, rC4        /* rC4 = X      X      c5abcd c4abcd */
-   #ifdef SCPLX
-                                        /* rC0 = c3 c2 c1 c0 */
-                                        /* rC4 =  X  X c5 c4 */
-        pshufd  $0xB1, rC0, rC1         /* rC1 = c2 c3 c0 c1 */
-        movhlps rC0, rC2                /* rC2 =  X  X c3 c2 */
-        movhlps rC1, rC3                /* rC3 =  X  X c2 c3 */
-        pshufd  $0xC1, rC4, rC5         /* rC5 =  X  X c4 c5 */
-        movss   rC0, (pC)
-        movss   rC1, 8(pC)
-        movss   rC2, 16(pC)
-        movss   rC3, 24(pC)
-        movss   rC4, 32(pC)
-        movss   rC5, 40(pC)
-   #else
-	movups		rC0, (pC)
-        movlps          rC4, 16(pC)
+#ifndef BETA0
+        movups          (pC0), rc0
+   #ifdef SCPLX                         /* rc0 = XX   c1  XX  c0 */
+        movss           24(pC0), rB0    /* rB0 = XX   XX  XX  c3 */
+        movlhps         rB0, rB0        /* rB0 = XX   c3  XX  c3 */
+        movlps          16(pC0), rB0    /* rB0 = XX   c3  XX  c2 */
+        shufps          $0x88, rB0, rc0
    #endif
-                                addl    $NB6so, pA0
-                                addl    $NB6so, pA3
-/*
- *      Write results back to C
- */
-
-/*
- *      pC += 6;   pA += 6*NB
- */
-	addl	$CMUL(24), pC
-/*
- *      while (pA != stM);
- */
-	subb	$6, stM
-	jnz	UMLOOP
-#endif
-
-/*
- *      Last iteration of MLOOP unrolled to prefetch C & B
- */
-#if MB == 0
-ULMLOOP:
-#endif
-#ifdef BETA0
-	xorps	rC0, rC0
-	xorps	rC1, rC1
-	xorps	rC2, rC2
-	xorps	rC3, rC3
-	xorps	rC4, rC4
-	xorps	rC5, rC5
-#else
-	movss	(pC), rC0
-	movss	CMUL(4)(pC), rC1
-	movss	CMUL(8)(pC), rC2
-	movss	CMUL(12)(pC), rC3
-	movss	CMUL(16)(pC), rC4
-	movss	CMUL(20)(pC), rC5
    #ifdef BETAX
-      #ifndef ATL_GAS_x8664
-	movss	(%esp), rbeta
-      #endif
-	mulss	rbeta, rC0
-	mulss	rbeta, rC1
-	mulss	rbeta, rC2
-	mulss	rbeta, rC3
-	mulss	rbeta, rC4
-	mulss	rbeta, rC5
+        mulps           BETA, rc0
    #endif
-#endif
-/*
- *      Completely unrolled K-loop
- */
-	movaps	0-120(pB0), rB0
-	movaps	0-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	0-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	0-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	0-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	0-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	0-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-
-#if KB > 4
-	movaps	16-120(pB0), rB0
-	movaps	16-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	16-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	16-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	16-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	16-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	16-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-                                        prefB((pB0,ldab))
-                                        prefB(128(pB0,ldab))
-                                   #if KB > 64
-                                        prefB(256(pB0,ldab))
-                                   #endif
-
-#if KB > 8
-	movaps	32-120(pB0), rB0
-	movaps	32-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	32-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	32-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	32-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	32-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	32-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 12
-	movaps	48-120(pB0), rB0
-	movaps	48-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	48-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	48-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	48-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	48-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	48-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 16
-	movaps	64-120(pB0), rB0
-	movaps	64-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	64-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	64-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	64-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	64-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	64-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 20
-	movaps	80-120(pB0), rB0
-	movaps	80-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	80-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	80-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	80-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	80-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	80-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 24
-	movaps	96-120(pB0), rB0
-	movaps	96-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	96-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	96-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	96-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	96-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	96-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 28
-	movaps	112-120(pB0), rB0
-	movaps	112-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	112-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	112-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	112-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	112-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	112-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 32
-	movaps	128-120(pB0), rB0
-	movaps	128-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	128-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	128-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	128-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	128-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	128-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 36
-	movaps	144-120(pB0), rB0
-	movaps	144-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	144-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	144-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	144-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	144-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	144-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 40
-	movaps	160-120(pB0), rB0
-	movaps	160-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	160-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	160-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	160-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	160-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	160-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 44
-	movaps	176-120(pB0), rB0
-	movaps	176-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	176-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	176-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	176-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	176-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	176-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 48
-	movaps	192-120(pB0), rB0
-	movaps	192-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	192-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	192-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	192-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	192-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	192-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 52
-	movaps	208-120(pB0), rB0
-	movaps	208-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	208-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	208-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	208-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	208-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	208-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-/*                        pref2((pfA)) */
-/*                        addl    $PFAINC, pfA */
-
-#if KB > 56
-	movaps	224-120(pB0), rB0
-	movaps	224-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	224-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	224-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	224-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	224-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	224-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 60
-	movaps	240-120(pB0), rB0
-	movaps	240-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	240-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	240-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	240-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	240-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	240-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 64
-	movaps	256-120(pB0), rB0
-	movaps	256-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	256-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	256-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	256-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	256-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	256-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 68
-	movaps	272-120(pB0), rB0
-	movaps	272-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	272-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	272-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	272-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	272-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	272-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 72
-	movaps	288-120(pB0), rB0
-	movaps	288-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	288-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	288-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	288-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	288-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	288-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-#if KB > 76
-	movaps	304-120(pB0), rB0
-	movaps	304-120(pA0), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC0
-	movaps	304-120(pA0,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC1
-	movaps	304-120(pA0,ldab,2), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC2
-	movaps	304-120(pA3), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC3
-	movaps	304-120(pA3,ldab), rA0
-	mulps	rB0, rA0
-	addps	rA0, rC4
-	mulps	304-120(pA3,ldab,2), rB0
-	addps	rB0, rC5
-#endif
-
-/*
- *      Get these bastard things summed up correctly
- *      Note this initial quad summation is Camm's, as his sequence was faster
- *      than the piece of crap I came up with
- */
-                                        /* rC0 = c0a  c0b */
-                                        /* rC1 = c1a  c1b */
-                                        /* rC2 = c2a  c2b */
-                                        /* rC3 = c3a  c3b */
-/* */
-                                        /* rC4 = c4a  c4b */
-                                        /* rC5 = c5a  c5b */
-        movaps          rC0, rA0        /* rA0 = c0d    c0c    c0b    c0a      */
-        unpcklps        rC1, rC0        /* rC0 = c1b    c0b    c1a    c0a */
-        movaps          rC2, rB0        /* rB0 = c2d    c2c    c2b    c2a */
-        unpckhps        rC1, rA0        /* rA0 = c1d    c0d    c1c    c0c */
-        unpcklps        rC3, rC2        /* rC2 = c3b    c2b    c3a    c2a */
-        addps           rA0, rC0        /* rC0 = c1bd   c0bd   c1ac   c0ac */
-        unpckhps        rC3, rB0        /* rB0 = c3d    c2d    c3c    c2c */
-        movaps          rC0, rA0        /* rA0 = c1bd   c0bd   c1ac   c0ac */
-        addps           rB0, rC2        /* rC2 = c3bd   c2bd   c3ac   c2ac */
-        shufps          $0x44,rC2,rC0   /* rC0 = c3ac   c2ac   c1ac   c0ac */
-        shufps          $0xEE,rC2,rA0   /* rA0 = c3bd   c2bd   c1bd   c0bd */
-        addps           rA0, rC0        /* rC0 = c3abcd c2abcd c1abcd c0abcd */
-                                        /* rC4 = c4d    c4c    c4b    c4a */
-                                        /* rC5 = c5d    c5c    c5b    c5a */
-        movaps          rC4, rB0        /* rB0 = c4d    c4c    c4b    c4a */
-        unpcklps        rC5, rC4        /* rC4 = c5b    c4b    c5a    c4a */
-        unpckhps        rC5, rB0        /* rB0 = c5d    c4d    c5c    c4c */
-        addps           rB0, rC4        /* rC4 = c5bd   c4bd   c5ac   c4ac */
-        movhlps         rC4, rA0        /* rA0 = X      X      c5bd   c4bd */
-        addps           rA0, rC4        /* rC4 = X      X      c5abcd c4abcd */
-
-   #ifdef SCPLX
-                                        /* rC0 = c3 c2 c1 c0 */
-                                        /* rC4 =  X  X c5 c4 */
-        pshufd  $0xB1, rC0, rC1         /* rC1 = c2 c3 c0 c1 */
-        movhlps rC0, rC2                /* rC2 =  X  X c3 c2 */
-        movhlps rC1, rC3                /* rC3 =  X  X c2 c3 */
-        pshufd  $0xC1, rC4, rC5         /* rC5 =  X  X c4 c5 */
-        movss   rC0, (pC)
-        movss   rC1, 8(pC)
-        movss   rC2, 16(pC)
-        movss   rC3, 24(pC)
-        movss   rC4, 32(pC)
-        movss   rC5, 40(pC)
+   #ifdef BETAN1
+        subps           rc0, rC0
    #else
-	movups		rC0, (pC)
-        movlps          rC4, 16(pC)
+        addps           rc0, rC0
    #endif
-				addl	$NBso, pB0
-        #if MB == 0
-                                subl    incAn_m, pA0
-        #else
-				subl	$MBKBso-NB6so, pA0
-        #endif
-        #if MB == 0
-                                movl    pA0, pA3
-                                addl    $NB3so, pA3
-        #else
-				subl	$MBKBso-NB6so, pA3
-        #endif
+#endif
 /*
  *      Write results back to C
  */
-
-/*
- *      while (pA != stM);
- */
-/*	subb	$6, stM */
-/*	jnz	UMLOOP */
-/*
- *      pC += incCn;   pA += -MBKB; pB0 += NB
- */
-   	addl	incCn_m, pC
-/*
- *      while (pB != stN);
- */
-	sub	$1, stN
-	jnz	UNLOOP
-
-/*
- *      Restore callee-saved iregs
- */
-   #ifdef ATL_GAS_x8664
-        movq    -8(%rsp), %rbx
-        movq    -16(%rsp), %rbp
-   #elif defined(BETAX)
-	movl	32(%esp), %ebp
-	movl	28(%esp), %ebx
-	movl	24(%esp), %esi
-	movl	20(%esp), %edi
-	movl	16(%esp), %esp
+   #ifdef SCPLX
+                                        /* rC0 = c3 c2 c1 c0 */
+#ifdef ATL_SSE2
+        pshufd  $0xB1, rC0, rC1         /* rC1 = c2 c3 c0 c1 */
+#else
+        movaps  rC0, rC1
+        shufps  $0xB1, rC1, rC1         /* rC1 = c2 c3 c0 c1 */
+#endif
+        movhlps rC0, rC2                /* rC2 =  X  X c3 c2 */
+        movhlps rC1, rC3                /* rC3 =  X  X c2 c3 */
+        movss   rC0, (pC0)
+        movss   rC1, 8(pC0)
+        movss   rC2, 16(pC0)
+        movss   rC3, 24(pC0)
    #else
-	movl	12(%esp), %ebp
-	movl	 8(%esp), %ebx
-	movl	 4(%esp), %esi
-	movl	  (%esp), %edi
-	addl	$28, %esp
+        movups  rC0, (pC0)
    #endif
-	ret
+/*
+ *      Increment ptrs and continue MLOOP
+ */
+   #ifdef SCPLX
+        add     $32, pC0
+   #else
+        add     $16, pC0
+   #endif
+        lea     (pA0, ldab, 4), pA0
+        sub     $4, stM
+        jnz     MLOOP
+/*
+ *      incrementer pointers and continue NLOOP
+ */
+        movL    MORIG, stM
+        addL    INCCn, pC0
+        movL    AORIG, pA0
+        add     ldab, pB0
+        subL    $1, stN
+        jnz     NLOOP
+/*
+ *      Epilogue: restore callee-saved iregs and return
+ */
+DONE:
+#ifdef ATL_GAS_x8632
+        movl    (%esp), %ebp
+        movl    4(%esp), %ebx
+        movl    8(%esp), %esi
+        movl    12(%esp), %edi
+        addl    $FSIZE, %esp
+#else
+        movq     -8(%rsp), %rbp
+        movq    -16(%rsp), %rbx
+/*        movq    -24(%rsp), %r12 */
+#endif
+        ret
+

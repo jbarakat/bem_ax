@@ -44,12 +44,24 @@ void ATL_zJIK0x0x41TN41x41x0_a1_bX(const int M, const int N, const int K, const 
 void ATL_zJIK0x0x42TN42x42x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
 void ATL_zJIK0x0x43TN43x43x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
 void ATL_zJIK0x0x44TN44x44x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x45TN45x45x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x46TN46x46x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x47TN47x47x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x48TN48x48x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x49TN49x49x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x50TN50x50x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x51TN51x51x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x52TN52x52x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x53TN53x53x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x54TN54x54x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x55TN55x55x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
+void ATL_zJIK0x0x56TN56x56x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
 void ATL_zJIK0x0x0TN0x0x0_a1_bX(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
 typedef void (*MMfunc)(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc);
 
 void ATL_zgpKBmm(const int M, const int N, const int K, const double alpha, const double *A, const int lda, const double *B, const int ldb, const double beta, double *C, const int ldc)
 {
-   static MMfunc mmfunc[ 42] = {
+   static MMfunc mmfunc[ 54] = {
                          ATL_zJIK0x0x3TN3x3x0_a1_bX,
                          ATL_zJIK0x0x4TN4x4x0_a1_bX,
                          ATL_zJIK0x0x5TN5x5x0_a1_bX,
@@ -92,6 +104,18 @@ void ATL_zgpKBmm(const int M, const int N, const int K, const double alpha, cons
                          ATL_zJIK0x0x42TN42x42x0_a1_bX,
                          ATL_zJIK0x0x43TN43x43x0_a1_bX,
                          ATL_zJIK0x0x44TN44x44x0_a1_bX,
+                         ATL_zJIK0x0x45TN45x45x0_a1_bX,
+                         ATL_zJIK0x0x46TN46x46x0_a1_bX,
+                         ATL_zJIK0x0x47TN47x47x0_a1_bX,
+                         ATL_zJIK0x0x48TN48x48x0_a1_bX,
+                         ATL_zJIK0x0x49TN49x49x0_a1_bX,
+                         ATL_zJIK0x0x50TN50x50x0_a1_bX,
+                         ATL_zJIK0x0x51TN51x51x0_a1_bX,
+                         ATL_zJIK0x0x52TN52x52x0_a1_bX,
+                         ATL_zJIK0x0x53TN53x53x0_a1_bX,
+                         ATL_zJIK0x0x54TN54x54x0_a1_bX,
+                         ATL_zJIK0x0x55TN55x55x0_a1_bX,
+                         ATL_zJIK0x0x56TN56x56x0_a1_bX,
                         };
    MMfunc mm;
 

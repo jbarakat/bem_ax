@@ -1,12 +1,12 @@
 #
-#  This file generated at line 634 of /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/ger/r1hgen.c
+#  This file generated at line 634 of /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/ger/r1hgen.c
 #
 include Make.inc
 
 R1CC = $(DKC)
 R1FLAGS = $(CDEFS) $(DKCFLAGS) -DDCPLX
 
-obj = ATL_zgerk__900002.o ATL_zgerk__900005.o ATL_zgerk__900007.o ATL_zgerk__900006.o
+obj = ATL_zgerk__900002.o ATL_zgerk__900006.o ATL_zgerk__900008.o ATL_zgerk__900009.o ATL_zgerk__900005.o
 lib : zlib
 zlib : zr1k.grd
 zr1k.grd : $(obj)
@@ -22,13 +22,15 @@ killlib :
 	- $(ARCHIVER) d $(ATLASlib) $(obj)
 	$(RANLIB) $(ATLASlib)
 killall : killlib clean
-	 rm -f ATL_zgerk__900002.c ATL_zgerk__900005.c ATL_zgerk__900007.c ATL_zgerk__900006.c
+	 rm -f ATL_zgerk__900002.c ATL_zgerk__900006.c ATL_zgerk__900008.c ATL_zgerk__900009.c ATL_zgerk__900005.c
 
 ATL_zgerk__900002.o : ATL_zgerk__900002.c
-	 $(GOODGCC) -o ATL_zgerk__900002.o -c -DATL_UGERK=ATL_zgerk__900002 -x assembler-with-cpp -DPFADIST=512 -DPFXDIST=256 -DPFYDIST=0 -DDCPLX $(CDEFS) ATL_zgerk__900002.c
-ATL_zgerk__900005.o : ATL_zgerk__900005.c
-	 $(GOODGCC) -o ATL_zgerk__900005.o -c -DATL_UGERK=ATL_zgerk__900005 -x assembler-with-cpp -DPFIX=prefetcht0 -DPFIY=prefetchnta -DPFADIST=0 -DPFXDIST=0 -DPFYDIST=128 -DDCPLX $(CDEFS) ATL_zgerk__900005.c
-ATL_zgerk__900007.o : ATL_zgerk__900007.c
-	 $(GOODGCC) -o ATL_zgerk__900007.o -c -DATL_UGERK=ATL_zgerk__900007 -x assembler-with-cpp -DDCPLX $(CDEFS) ATL_zgerk__900007.c
+	 $(GOODGCC) -o ATL_zgerk__900002.o -c -DATL_UGERK=ATL_zgerk__900002 -x assembler-with-cpp -DPFIX=prefetcht0 -DPFXDIST=512 -DPFYDIST=256 -DDCPLX $(CDEFS) ATL_zgerk__900002.c
 ATL_zgerk__900006.o : ATL_zgerk__900006.c
-	 $(GOODGCC) -o ATL_zgerk__900006.o -c -DATL_UGERK=ATL_zgerk__900006 -x assembler-with-cpp -DPFIX=prefetcht1 -DPFIY=prefetcht0 -DPFXDIST=448 -DPFYDIST=0 -DDCPLX $(CDEFS) ATL_zgerk__900006.c
+	 $(GOODGCC) -o ATL_zgerk__900006.o -c -DATL_UGERK=ATL_zgerk__900006 -x assembler-with-cpp -DPFIA=prefetcht1 -DPFIX=prefetcht1 -DPFIY=prefetcht0 -DPFADIST=0 -DPFXDIST=0 -DDCPLX $(CDEFS) ATL_zgerk__900006.c
+ATL_zgerk__900008.o : ATL_zgerk__900008.c
+	 $(GOODGCC) -o ATL_zgerk__900008.o -c -DATL_UGERK=ATL_zgerk__900008 -x assembler-with-cpp -DPFIY=prefetchnta -DPFADIST=0 -DPFXDIST=832 -DPFYDIST=128 -DDCPLX $(CDEFS) ATL_zgerk__900008.c
+ATL_zgerk__900009.o : ATL_zgerk__900009.c
+	 $(GOODGCC) -o ATL_zgerk__900009.o -c -DATL_UGERK=ATL_zgerk__900009 -x assembler-with-cpp -DDCPLX $(CDEFS) ATL_zgerk__900009.c
+ATL_zgerk__900005.o : ATL_zgerk__900005.c
+	 $(GOODGCC) -o ATL_zgerk__900005.o -c -DATL_UGERK=ATL_zgerk__900005 -x assembler-with-cpp -DPFIA=prefetchnta -DPFADIST=0 -DPFXDIST=1152 -DPFYDIST=0 -DDCPLX $(CDEFS) ATL_zgerk__900005.c

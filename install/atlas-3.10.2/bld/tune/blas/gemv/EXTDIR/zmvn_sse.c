@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x5 unrolled mvn_sse with these params:
+ * This file does a 2x5 unrolled mvn_sse with these params:
  *    CL=4, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -120,8 +120,8 @@ ATL_asmdecor(ATL_UGEMV):
  */
    mov  %rcx, lda       /* move lda to assigned register, rax */
    mov  M, Mr           /* Mr = M */
-   shr $2, M            /* M = M / MU */
-   shl $2, M            /* M = (M/MU)*MU */
+   shr $3, M            /* M = M / MU */
+   shl $3, M            /* M = (M/MU)*MU */
    sub M, Mr            /* Mr = M - (M/MU)*MU */
 /*
  * Construct nonepone = {1.0,-1.0}
@@ -144,10 +144,10 @@ ATL_asmdecor(ATL_UGEMV):
    sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
    sub $-128, pY        /* code compaction by using signed 1-byte offsets */
    mov pY, pY0          /* save for restore after M loops */
-   mov $-64, incAYm     /* code comp: use reg rather than constant */
+   mov $-128, incAYm     /* code comp: use reg rather than constant */
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
    lea (incAn, lda,4), incAn    /* incAn = (5*lda-M)*sizeof */
-   mov $4*1, incII      /* code comp: use reg rather than constant */
+   mov $4*2, incII      /* code comp: use reg rather than constant */
    mov M, II
 /*
  * Zero Y if beta = 0;  Has error if there is Mr and/or M isn't mul of veclen
@@ -220,6 +220,44 @@ ATL_asmdecor(ATL_UGEMV):
          addpd ra, ry
          addpd ry, rY
          movapd rY, 0-128(pY)
+
+         MOVA   64-128(pA0), rY         /* rY = {iA0, rA0} */
+         pshufd $0x4E, rY, ry           /* ry = {rA0, iA0} */
+         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
+         addpd 64-128(pY), rY       
+         prefA(PFADIST+64(pA0))
+         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
+
+         MOVA   64-128(pA0,lda), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         prefA(PFADIST+64(pA0,lda))
+         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   64-128(pA0,lda,2), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         prefA(PFADIST+64(pA0,lda,2))
+         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   64-128(pA0,lda3), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         prefA(PFADIST+64(pA0,lda3))
+         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   64-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         prefA(PFADIST+64(pA0,lda,4))
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         addpd ry, rY
+         movapd rY, 64-128(pY)
 
          MOVA   16-128(pA0), rY         /* rY = {iA0, rA0} */
          pshufd $0x4E, rY, ry           /* ry = {rA0, iA0} */
@@ -319,6 +357,105 @@ ATL_asmdecor(ATL_UGEMV):
          addpd ra, ry
          addpd ry, rY
          movapd rY, 48-128(pY)
+
+         MOVA   80-128(pA0), rY         /* rY = {iA0, rA0} */
+         pshufd $0x4E, rY, ry           /* ry = {rA0, iA0} */
+         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
+         addpd 80-128(pY), rY       
+         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
+
+         MOVA   80-128(pA0,lda), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   80-128(pA0,lda,2), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   80-128(pA0,lda3), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   80-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         addpd ry, rY
+         movapd rY, 80-128(pY)
+
+         MOVA   96-128(pA0), rY         /* rY = {iA0, rA0} */
+         pshufd $0x4E, rY, ry           /* ry = {rA0, iA0} */
+         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
+         addpd 96-128(pY), rY       
+         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
+
+         MOVA   96-128(pA0,lda), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   96-128(pA0,lda,2), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   96-128(pA0,lda3), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   96-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         addpd ry, rY
+         movapd rY, 96-128(pY)
+
+         MOVA   112-128(pA0), rY         /* rY = {iA0, rA0} */
+         pshufd $0x4E, rY, ry           /* ry = {rA0, iA0} */
+         mulpd rX0, rY                  /* rY = {rX0*iA0, rX0*rA0} */
+         addpd 112-128(pY), rY       
+         mulpd iX0, ry                  /* ry = {iX0*rA0, -iX0*iA0} */
+
+         MOVA   112-128(pA0,lda), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX1, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX1, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   112-128(pA0,lda,2), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX2, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX2, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   112-128(pA0,lda3), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   112-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         addpd ry, rY
+         movapd rY, 112-128(pY)
 
          sub incAYm, pY
          sub incAYm, pA0

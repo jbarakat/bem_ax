@@ -20,10 +20,10 @@ static ATL_r2kern_t ATL_GetR2Kern
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 36864;
+   *CacheElts = 81920;
    return(ATL_sger2k__900002);
 }
 
-#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 9200; (nb_) = 1; }
+#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 20464; (nb_) = 1; }
 
 #endif  /* end protection around header file contents */

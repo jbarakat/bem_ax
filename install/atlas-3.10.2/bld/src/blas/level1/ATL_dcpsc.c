@@ -1,7 +1,5 @@
 #include "atlas_misc.h"
 
-void ATL_dcpsc_xp1yp1aXbX
-   (const int, const SCALAR, const TYPE*, const int, TYPE*, const int);
 void ATL_dcpsc_xp0yp0aXbX
    (const int, const SCALAR, const TYPE*, const int, TYPE*, const int);
 void ATL_dzero(const int, TYPE*, const int);
@@ -48,10 +46,7 @@ void ATL_dcpsc(const int N, const SCALAR alpha, const TYPE *X, const int incX,
       else if (!incX || !incY) return;
 L1:
 
-      if (incx == 1 && incy == 1)
-         ATL_dcpsc_xp1yp1aXbX(N, alpha, X, incx, Y, incy);
-      else
-         ATL_dcpsc_xp0yp0aXbX(N, alpha, X, incx, Y, incy);
+      ATL_dcpsc_xp0yp0aXbX(N, alpha, X, incx, Y, incy);
    }
    else if ( SCALAR_IS_ONE(alpha) ) ATL_dcopy(N, X, incX, Y, incY);
    else if ( SCALAR_IS_ZERO(alpha) ) ATL_dzero(N, Y, incY);

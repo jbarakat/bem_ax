@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x8 unrolled r1_sse with these params:
+ * This file does a 1x12 unrolled r1_sse with these params:
  *    CL=8, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -18,12 +18,14 @@
 #define II      %rbx
 #define pX0     %r11
 #define Mr      %rcx
-#define incAXm  %r10
-#define incII   %r15
-#define incAn   %r14
+#define incAn   %r15
+#define incII   $8*1
 #define lda3    %r12
 #define lda5    %r13
 #define lda7    %rbp
+#define lda9    %r14
+#define lda11   %r10
+#define incAXm $-64
 /*
  * SSE register assignment
  */
@@ -38,6 +40,10 @@
 #define rY5     %xmm8
 #define rY6     %xmm9
 #define rY7     %xmm10
+#define rY8     %xmm11
+#define rY9     %xmm12
+#define rY10     %xmm13
+#define rY11     %xmm14
 
 /*
  * macros
@@ -130,12 +136,12 @@ ATL_asmdecor(ATL_UGERK):
    sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
    sub $-128, pX        /* code compaction by using signed 1-byte offsets */
    mov pX, pX0          /* save for restore after M loops */
-   mov $-64, incAXm     /* code comp: use reg rather than constant */
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
    lea (lda, lda,4), lda5       /* lda5 = 5*lda */
    lea (lda3,lda,4), lda7       /* lda7 = 7*lda */
-   add lda7, incAn              /* incAn = (8*lda-M)*sizeof */
-   mov $8*1, incII      /* code comp: use reg rather than constant */
+   lea (lda5,lda,4), lda9       /* lda9 = 9*lda */
+   lea (lda,lda5,2), lda11      /* lda11 = 11*lda */
+   add lda11, incAn             /* incAn = (12*lda-M)*sizeof */
    mov M, II
 
    ALIGN32
@@ -148,6 +154,10 @@ ATL_asmdecor(ATL_UGERK):
       movddup 40(pY), rY5
       movddup 48(pY), rY6
       movddup 56(pY), rY7
+      movddup 64(pY), rY8
+      movddup 72(pY), rY9
+      movddup 80(pY), rY10
+      movddup 88(pY), rY11
 
       LOOPM:
          movapd 0-128(pX), rX0
@@ -199,6 +209,30 @@ ATL_asmdecor(ATL_UGERK):
          addpd ryt, rA0
          MOVA   rA0, 0-128(pA0,lda7)
          prefA(PFADIST+0(pA0,lda7))
+         movapd rY8, ryt
+         MOVA   0-128(pA0,lda,8), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 0-128(pA0,lda,8)
+         prefA(PFADIST+0(pA0,lda,8))
+         movapd rY9, ryt
+         MOVA   0-128(pA0,lda9), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 0-128(pA0,lda9)
+         prefA(PFADIST+0(pA0,lda9))
+         movapd rY10, ryt
+         MOVA   0-128(pA0,lda5,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 0-128(pA0,lda5,2)
+         prefA(PFADIST+0(pA0,lda5,2))
+         movapd rY11, ryt
+         MOVA   0-128(pA0,lda11), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 0-128(pA0,lda11)
+         prefA(PFADIST+0(pA0,lda11))
 
          movapd 16-128(pX), rX0
          movapd rY0, ryt
@@ -241,6 +275,26 @@ ATL_asmdecor(ATL_UGERK):
          mulpd rX0, ryt
          addpd ryt, rA0
          MOVA   rA0, 16-128(pA0,lda7)
+         movapd rY8, ryt
+         MOVA   16-128(pA0,lda,8), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 16-128(pA0,lda,8)
+         movapd rY9, ryt
+         MOVA   16-128(pA0,lda9), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 16-128(pA0,lda9)
+         movapd rY10, ryt
+         MOVA   16-128(pA0,lda5,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 16-128(pA0,lda5,2)
+         movapd rY11, ryt
+         MOVA   16-128(pA0,lda11), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 16-128(pA0,lda11)
 
          movapd 32-128(pX), rX0
          movapd rY0, ryt
@@ -283,6 +337,26 @@ ATL_asmdecor(ATL_UGERK):
          mulpd rX0, ryt
          addpd ryt, rA0
          MOVA   rA0, 32-128(pA0,lda7)
+         movapd rY8, ryt
+         MOVA   32-128(pA0,lda,8), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 32-128(pA0,lda,8)
+         movapd rY9, ryt
+         MOVA   32-128(pA0,lda9), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 32-128(pA0,lda9)
+         movapd rY10, ryt
+         MOVA   32-128(pA0,lda5,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 32-128(pA0,lda5,2)
+         movapd rY11, ryt
+         MOVA   32-128(pA0,lda11), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 32-128(pA0,lda11)
 
          movapd 48-128(pX), rX0
          movapd rY0, ryt
@@ -325,6 +399,26 @@ ATL_asmdecor(ATL_UGERK):
          mulpd rX0, ryt
          addpd ryt, rA0
          MOVA   rA0, 48-128(pA0,lda7)
+         movapd rY8, ryt
+         MOVA   48-128(pA0,lda,8), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 48-128(pA0,lda,8)
+         movapd rY9, ryt
+         MOVA   48-128(pA0,lda9), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 48-128(pA0,lda9)
+         movapd rY10, ryt
+         MOVA   48-128(pA0,lda5,2), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 48-128(pA0,lda5,2)
+         movapd rY11, ryt
+         MOVA   48-128(pA0,lda11), rA0
+         mulpd rX0, ryt
+         addpd ryt, rA0
+         MOVA   rA0, 48-128(pA0,lda11)
 
          sub incAXm, pX
          sub incAXm, pA0
@@ -369,18 +463,34 @@ ATL_asmdecor(ATL_UGERK):
          mulsd rY7, rA0
          addsd -128(pA0,lda7), rA0
          movsd rA0, -128(pA0,lda7)
+         movsd rX0, rA0
+         mulsd rY8, rA0
+         addsd -128(pA0,lda,8), rA0
+         movsd rA0, -128(pA0,lda,8)
+         movsd rX0, rA0
+         mulsd rY9, rA0
+         addsd -128(pA0,lda9), rA0
+         movsd rA0, -128(pA0,lda9)
+         movsd rX0, rA0
+         mulsd rY10, rA0
+         addsd -128(pA0,lda5,2), rA0
+         movsd rA0, -128(pA0,lda5,2)
+         movsd rX0, rA0
+         mulsd rY11, rA0
+         addsd -128(pA0,lda11), rA0
+         movsd rA0, -128(pA0,lda11)
          add $8, pX
          add $8, pA0
       dec II
       jnz LOOPMCU
 
 MCLEANED:
-      prefY(8*8+PFYDIST(pY))
-      add $8*8, pY
+      prefY(12*8+PFYDIST(pY))
+      add $12*8, pY
       add incAn, pA0
       mov pX0, pX
       mov M, II
-   sub $8, N
+   sub $12, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

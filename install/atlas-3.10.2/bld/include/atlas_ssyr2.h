@@ -1,5 +1,5 @@
 /*
- * This file generated on line 445 of /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/ger/r2hgen.c
+ * This file generated on line 445 of /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/ger/r2hgen.c
  */
 #ifndef ATLAS_SSYR2_H
    #define ATLAS_SSYR2_H
@@ -10,7 +10,7 @@
 
 #define ATL_s2L_NU 4
 
-#define ATL_GetPartS2(A_, lda_, mb_, nb_) { (mb_) = 3680; (nb_) = 4; }
+#define ATL_GetPartS2(A_, lda_, mb_, nb_) { (mb_) = 8176; (nb_) = 4; }
 #define ATL_MIN_RESTRICTED_M 16
 #define ATL_URGERK ATL_sger2k__900002
 static void ATL_GENGERK(ATL_CINT M, ATL_CINT N, const TYPE *X,

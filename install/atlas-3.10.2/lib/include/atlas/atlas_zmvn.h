@@ -18,17 +18,17 @@ static ATL_mvkern_t ATL_GetMVNKern
     int *mu, int *nu, int *minM, int *minN, int *alignX, int *ALIGNX2A,
     int *alignY, int *FNU, ATL_INT *CacheElts) 
 {
-   *minM = 4;   *minN = 4;
-   *mu = 4;     *nu = 4;
+   *minM = 4;   *minN = 5;
+   *mu = 4;     *nu = 5;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 13312;
+   *CacheElts = 7372;
    *mvk_b0 = ATL_zmvnk__900002_b0;
    *DOTBASED = 0;
    return(ATL_zmvnk__900002);
 }
 
-#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 1328; *(nb_) = 4; }
+#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 612; *(nb_) = 5; }
 
 #endif  /* end protection around header file contents */

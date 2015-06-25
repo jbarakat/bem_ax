@@ -1,23 +1,23 @@
 #ifndef SMM_H
    #define SMM_H
 
-   #define ATL_mmNOMULADD
-   #define ATL_mmLAT 1
-   #define ATL_mmMU  2
-   #define ATL_mmNU  5
-   #define ATL_mmKU  72
-   #define MB 68
-   #define NB 68
-   #define KB 68
-   #define NBNB 4624
-   #define MBNB 4624
-   #define MBKB 4624
-   #define NBKB 4624
-   #define NB2 136
-   #define NBNB2 9248
+   #define ATL_mmMULADD
+   #define ATL_mmLAT 5
+   #define ATL_mmMU  10
+   #define ATL_mmNU  1
+   #define ATL_mmKU  6
+   #define MB 48
+   #define NB 48
+   #define KB 48
+   #define NBNB 2304
+   #define MBNB 2304
+   #define MBKB 2304
+   #define NBKB 2304
+   #define NB2 96
+   #define NBNB2 4608
 
-   #define ATL_MulByNB(N_) ((N_) * 68)
-   #define ATL_DivByNB(N_) ((N_) / 68)
-   #define ATL_MulByNBNB(N_) ((N_) * 4624)
+   #define ATL_MulByNB(N_) ((N_) * 48)
+   #define ATL_DivByNB(N_) ((N_) / 48)
+   #define ATL_MulByNBNB(N_) ((N_) * 2304)
 
 #endif

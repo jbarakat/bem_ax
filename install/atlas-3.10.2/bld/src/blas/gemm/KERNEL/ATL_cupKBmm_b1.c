@@ -32,6 +32,10 @@ void ATL_cupKBmm64_8_1_b0
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
+void ATL_cupKBmm72_8_1_b0
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
 void ATL_cupKBmm4_4_1_b0
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
@@ -65,6 +69,10 @@ void ATL_cupKBmm60_4_1_b0
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
 void ATL_cupKBmm68_4_1_b0
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
+void ATL_cupKBmm76_4_1_b0
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
@@ -104,6 +112,10 @@ void ATL_cupKBmm64_8_1_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
+void ATL_cupKBmm72_8_1_b1
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
 void ATL_cupKBmm4_4_1_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
@@ -137,6 +149,10 @@ void ATL_cupKBmm60_4_1_b1
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
 void ATL_cupKBmm68_4_1_b1
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
+void ATL_cupKBmm76_4_1_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
@@ -176,6 +192,10 @@ void ATL_cupKBmm64_8_1_bX
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
+void ATL_cupKBmm72_8_1_bX
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
 void ATL_cupKBmm4_4_1_bX
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
@@ -209,6 +229,10 @@ void ATL_cupKBmm60_4_1_bX
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
 void ATL_cupKBmm68_4_1_bX
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc);
+void ATL_cupKBmm76_4_1_bX
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
@@ -309,6 +333,17 @@ static void ATL_CupKBmm64_8_1_b1
    ATL_cupKBmm64_8_1_bX(M, N, K, alpha, rA, lda, rB, ldb, ATL_rnone, C, ldc); 
    ATL_cupKBmm64_8_1_b1(M, N, K, alpha, rA, lda, B, ldb, ATL_rone, C+1, ldc); 
 }
+static void ATL_CupKBmm72_8_1_b1
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc)
+{
+   const float *rA = A + lda*M, *rB = B + ldb*N;
+   ATL_cupKBmm72_8_1_bX(M, N, K, alpha, A, lda, B, ldb, ATL_rnone, C, ldc); 
+   ATL_cupKBmm72_8_1_b1(M, N, K, alpha, A, lda, rB, ldb, beta, C+1, ldc); 
+   ATL_cupKBmm72_8_1_bX(M, N, K, alpha, rA, lda, rB, ldb, ATL_rnone, C, ldc); 
+   ATL_cupKBmm72_8_1_b1(M, N, K, alpha, rA, lda, B, ldb, ATL_rone, C+1, ldc); 
+}
 static void ATL_CupKBmm4_4_1_b1
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
@@ -408,6 +443,17 @@ static void ATL_CupKBmm68_4_1_b1
    ATL_cupKBmm68_4_1_bX(M, N, K, alpha, rA, lda, rB, ldb, ATL_rnone, C, ldc); 
    ATL_cupKBmm68_4_1_b1(M, N, K, alpha, rA, lda, B, ldb, ATL_rone, C+1, ldc); 
 }
+static void ATL_CupKBmm76_4_1_b1
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc)
+{
+   const float *rA = A + lda*M, *rB = B + ldb*N;
+   ATL_cupKBmm76_4_1_bX(M, N, K, alpha, A, lda, B, ldb, ATL_rnone, C, ldc); 
+   ATL_cupKBmm76_4_1_b1(M, N, K, alpha, A, lda, rB, ldb, beta, C+1, ldc); 
+   ATL_cupKBmm76_4_1_bX(M, N, K, alpha, rA, lda, rB, ldb, ATL_rnone, C, ldc); 
+   ATL_cupKBmm76_4_1_b1(M, N, K, alpha, rA, lda, B, ldb, ATL_rone, C+1, ldc); 
+}
 #include "cmm.h"
 
 typedef void (*MMfunc)(const int, const int, const int, const TYPE,
@@ -420,7 +466,7 @@ void ATL_cpKBmm_b1
     const TYPE beta, TYPE *C, const int ldc)
 {
 
-   static MMfunc mmfunc[72] = 
+   static MMfunc mmfunc[80] = 
    {
       NULL,
       ATL_cgpKBmm,
@@ -491,6 +537,14 @@ void ATL_cpKBmm_b1
       ATL_cgpKBmm,
       ATL_cgpKBmm,
       ATL_CupKBmm68_4_1_b1,
+      ATL_cgpKBmm,
+      ATL_cgpKBmm,
+      ATL_cgpKBmm,
+      ATL_CupKBmm72_8_1_b1,
+      ATL_cgpKBmm,
+      ATL_cgpKBmm,
+      ATL_cgpKBmm,
+      ATL_CupKBmm76_4_1_b1,
       ATL_cgpKBmm,
       ATL_cgpKBmm,
       ATL_cgpKBmm

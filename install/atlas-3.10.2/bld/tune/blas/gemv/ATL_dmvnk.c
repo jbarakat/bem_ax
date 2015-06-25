@@ -1,237 +1,222 @@
-#include "atlas_asm.h"
-/*
- * This file does a 1x2 unrolled mvn_sse with these params:
- *    CL=8, ORDER=clmajor
- */
-#ifndef ATL_GAS_x8664
-   #error "This kernel requires x86-64 assembly!"
-#endif
-/*
- * Integer register assignment
- */
-#define M       %rdi
-#define N       %rsi
-#define pA0     %rdx
-#define lda     %rax
-#define pX      %r8
-#define pY      %r9
-#define II      %rbx
-#define pY0     %r11
-#define Mr      %rcx
-#define incAYm  %r10
-#define incII   %r15
-#define incAn   %r14
-/*
- * SSE register assignment
- */
-#define rA0     %xmm0
-#define rY      %xmm1
-#define rX0     %xmm2
-#define rX1     %xmm3
-/*
- * macros
- */
-#ifndef MOVA
-   #define MOVA movups
-#endif
-#define movapd movaps
-#define movupd movups
-#define xorpd xorps
-/*
- * Define macros controlling prefetch
- */
-#ifndef PFDIST
-   #define PFDIST 256
-#endif
-#ifndef PFADIST
-   #define PFADIST PFDIST
-#endif
+#include "atlas_misc.h"
 #ifndef PFYDIST
-   #define PFYDIST 64
+   #define PFYDIST 4
 #endif
 #ifndef PFXDIST
-   #define PFXDIST 64
+   #define PFXDIST 0
 #endif
-#ifndef PFIY
-   #ifdef ATL_3DNow
-      #define PFIY prefetchw
-   #else
-      #define PFIY prefetcht0
+#ifndef PFADIST
+   #define PFADIST 0
+#endif
+
+#if !defined(ATL_3DNow) && !defined(ATL_SSE1) && \
+    (PFADIST != 0 || PFXDIST != 0 || PFYDIST != 0)
+   #include "atlas_prefetch.h"
+#endif
+
+#if defined(ATL_3DNow) || defined(ATL_SSE1)
+   #ifndef PFIY
+      #define PFIY prefetchnta
+   #endif
+   #ifndef PFIX
+      #define PFIX prefetchnta
+   #endif
+   #ifndef PFIA
+      #ifdef ATL_3DNow
+         #define PFIA prefetchw
+      #else
+         #define PFIA prefetcht0
+      #endif
    #endif
 #endif
-#ifndef PFIX
-   #define PFIX prefetchnta
-#endif
-#ifndef PFIA
-   #define PFIA prefetchnta
-#endif
+/*
+ * X & A are prefetched in M loop PF[A,X]DIST (in bytes) ahead
+ */
 #if PFADIST == 0                /* flag for no prefetch */
    #define prefA(mem)
 #else
-   #define prefA(mem) PFIA mem
-#endif
-#if PFYDIST == 0                /* flag for no prefetch */
-   #define prefY(mem)
-#else
-   #define prefY(mem) PFIY mem
+   #if defined(ATL_3DNow) || defined(ATL_SSE1)
+      #define prefA(mem) __asm__ __volatile__ \
+         (Mstr(PFIA) " %0" : : "m" (*(((char *)(mem))+PFADIST)))
+   #else
+      #if PFLVL == 2
+         #define prefA(mem) ATL_pfl2W(((char*)mem)+PFADIST)
+      #else
+         #define prefA(mem) ATL_pfl1W(((char*)mem)+PFADIST)
+      #endif
+   #endif
 #endif
 #if PFXDIST == 0                /* flag for no prefetch */
    #define prefX(mem)
 #else
-   #define prefX(mem) PFIX mem
+   #if defined(ATL_3DNow) || defined(ATL_SSE1)
+      #define prefX(mem) __asm__ __volatile__ \
+         (Mstr(PFIX) " %0" : : "m" (*(((char *)(mem))+PFXDIST)))
+   #else
+      #if PFLVL == 2
+         #define prefX(mem) ATL_pfl2R(((char*)mem)+PFXDIST)
+      #else
+         #define prefX(mem) ATL_pfl1R(((char*)mem)+PFXDIST)
+      #endif
+   #endif
 #endif
 /*
- *                      %rdi        %rsi           %rdx          %rcx
- * void ATL_UGEMV(ATL_CINT M, ATL_CINT N, const TYPE *A, ATL_CINT lda,
- *                          %r8      %r9
- *                const TYPE *X, TYPE *Y)
+ * Y is prefetched in N-loop, and always fetches next NU piece
  */
-.text
-.text
-.global ATL_asmdecor(ATL_UGEMV)
-ALIGN64
-ATL_asmdecor(ATL_UGEMV):
-
-/*
- * Save callee-saved iregs
- */
-   movq %rbp, -8(%rsp)
-   movq %rbx, -16(%rsp)
-   movq %r12, -24(%rsp)
-   movq %r13, -32(%rsp)
-   movq %r14, -40(%rsp)
-   movq %r15, -48(%rsp)
-/*
- * Compute M = (M/MU)*MU, Mr = M - (M/MU)*MU
- * NOTE: Mr is %rcx reg, so we can use jcx to go to cleanup loop
- */
-   mov  %rcx, lda       /* move lda to assigned register, rax */
-   mov  M, Mr           /* Mr = M */
-   shr $3, M            /* M = M / MU */
-   shl $3, M            /* M = (M/MU)*MU */
-   sub M, Mr            /* Mr = M - (M/MU)*MU */
-/*
- * Setup constants
- */
-   mov lda, incAn       /* incAn = lda */
-   sub M, incAn         /* incAn = lda - (M/MU)*MU */
-   sub Mr, incAn        /* incAn = lda - M */
-   shl $3, incAn        /* incAn = (lda-M)*sizeof */
-   shl $3, lda          /* lda *= sizeof */
-   sub $-128, pA0       /* code compaction by using signed 1-byte offsets */
-   sub $-128, pY        /* code compaction by using signed 1-byte offsets */
-   mov pY, pY0          /* save for restore after M loops */
-   mov $-64, incAYm     /* code comp: use reg rather than constant */
-   add lda, incAn               /* incAn = (2*lda-M)*sizeof */
-   mov $8*1, incII      /* code comp: use reg rather than constant */
-   mov M, II
-/*
- * Zero Y if beta = 0;  Has error if there is Mr and/or M isn't mul of veclen
- */
-   #ifdef BETA0
-       add Mr, II
-      shr $1, II
-      xorpd rY, rY
-      LOOPZERO:
-         movapd rY, -128(pY)
-         add $16, pY
-      dec II
-      jnz LOOPZERO
-      lea (M, Mr), II
-      bt $0, II
-      jnc DONE_ZERO_CLEAN
-      movsd rY, -128(pY)
-DONE_ZERO_CLEAN:
-      mov pY0, pY
-      mov M, II
-   #endif
-
-   ALIGN32
-   LOOPN:
-      movddup 0(pX), rX0
-      movddup 8(pX), rX1
-
-      LOOPM:
-         MOVA   0-128(pA0), rY
-         mulpd rX0, rY
-         addpd 0-128(pY), rY
-
-         MOVA   0-128(pA0,lda), rA0
-         mulpd rX1, rA0
-         addpd rA0, rY
-         movapd rY, 0-128(pY)
-
-         MOVA   16-128(pA0), rY
-         mulpd rX0, rY
-         addpd 16-128(pY), rY
-
-         MOVA   16-128(pA0,lda), rA0
-         mulpd rX1, rA0
-         addpd rA0, rY
-         movapd rY, 16-128(pY)
-
-         MOVA   32-128(pA0), rY
-         mulpd rX0, rY
-         addpd 32-128(pY), rY
-
-         MOVA   32-128(pA0,lda), rA0
-         mulpd rX1, rA0
-         addpd rA0, rY
-         movapd rY, 32-128(pY)
-
-         MOVA   48-128(pA0), rY
-         mulpd rX0, rY
-         addpd 48-128(pY), rY
-
-         MOVA   48-128(pA0,lda), rA0
-         mulpd rX1, rA0
-         addpd rA0, rY
-         movapd rY, 48-128(pY)
-
-         prefA(PFADIST+0(pA0))
-         sub incAYm, pY
-         prefA(PFADIST+0(pA0,lda))
-         sub incAYm, pA0
-      sub incII, II
-      jnz LOOPM
-
-      #ifdef ATL_OS_OSX     /* workaround retarded OS X assembly */
-         cmp $0, Mr
-         jz  MCLEANED
+#if PFYDIST == 0                /* flag for no prefetch */
+   #define prefY(mem)
+#else
+   #if defined(ATL_3DNow) || defined(ATL_SSE1)
+      #define prefY(mem) \
+         __asm__ __volatile__ (Mstr(PFIY) " %0" : : "m" (*(((char *)(mem)))))
+   #else
+      #if PFLVL == 2
+         #define prefY(mem) ATL_pfl2R(mem)
       #else
-         jecxz MCLEANED        /* skip cleanup loop if Mr == 0 */
+         #define prefY(mem) ATL_pfl1R(mem)
       #endif
-
-      mov Mr, II
-      LOOPMCU:
-         movsd -128(pY), rY
-         movsd -128(pA0), rA0
-         mulsd rX0, rA0
-         addsd rA0, rY
-         movsd  -128(pA0,lda), rA0
-         mulsd rX1, rA0
-         addsd rA0, rY
-         movsd rY, -128(pY)
-         add $8, pY
-         add $8, pA0
-      dec II
-      jnz LOOPMCU
-
-MCLEANED:
-      prefX(2*8+PFXDIST(pX))
-      add $2*8, pX
-      add incAn, pA0
-      mov pY0, pY
-      mov M, II
-   sub $2, N
-   jnz LOOPN
+   #endif
+#endif
+#ifndef ATL_CINT
+   #define ATL_CINT const int
+#endif
+#ifndef ATL_INT
+   #define ATL_INT int
+#endif
+/* Need to handle BETA=0 case by assigning y to zero outside of loop */
+void ATL_UGEMV(ATL_CINT M, ATL_CINT N, const TYPE *A, ATL_CINT lda,
+               const TYPE *X, TYPE *Y)
 /*
- * EPILOGUE: restore registers and return
+ * 8x4 unrolled mvn_c.
+ * Extracted from ATLAS/tune/blas/gemv/atlas-l2g.base
  */
-   movq -8(%rsp), %rbp
-   movq -16(%rsp), %rbx
-   movq -24(%rsp), %r12
-   movq -32(%rsp), %r13
-   movq -40(%rsp), %r14
-   movq -48(%rsp), %r15
-   ret
+{
+   ATL_CINT N4=(N/4)*4, M8=(M/8)*8, lda4=lda*4;
+   ATL_INT j;
+
+   #ifdef BETA0
+      for (j=0; j < M; j++)
+         Y[j] = ATL_rzero;
+   #endif
+   for (j=N4; j; j -= 4, A += lda4, X += 4)
+   {
+      const double *A0=A, *A1=A0+lda, *A2=A1+lda, *A3=A2+lda;
+      const register double x0=X[0], x1=X[1], x2=X[2], x3=X[3];
+      ATL_INT i;
+      prefY(Y+4+4-1);
+      for (i=0; i < M8; i += 8)
+      {
+         const double a0_0=A0[i+0], a1_0=A0[i+1], a2_0=A0[i+2], a3_0=A0[i+3],
+                      a4_0=A0[i+4], a5_0=A0[i+5], a6_0=A0[i+6], a7_0=A0[i+7],
+                      a0_1=A1[i+0], a1_1=A1[i+1], a2_1=A1[i+2], a3_1=A1[i+3],
+                      a4_1=A1[i+4], a5_1=A1[i+5], a6_1=A1[i+6], a7_1=A1[i+7],
+                      a0_2=A2[i+0], a1_2=A2[i+1], a2_2=A2[i+2], a3_2=A2[i+3],
+                      a4_2=A2[i+4], a5_2=A2[i+5], a6_2=A2[i+6], a7_2=A2[i+7],
+                      a0_3=A3[i+0], a1_3=A3[i+1], a2_3=A3[i+2], a3_3=A3[i+3],
+                      a4_3=A3[i+4], a5_3=A3[i+5], a6_3=A3[i+6], a7_3=A3[i+7];
+         register double y0=Y[i+0], y1=Y[i+1], y2=Y[i+2], y3=Y[i+3], y4=Y[i+4],
+                         y5=Y[i+5], y6=Y[i+6], y7=Y[i+7];
+
+         prefX(X);
+         y0 += a0_0 * x0;
+         prefA(A0);
+         y1 += a1_0 * x0;
+         y2 += a2_0 * x0;
+         y3 += a3_0 * x0;
+         y4 += a4_0 * x0;
+         y5 += a5_0 * x0;
+         y6 += a6_0 * x0;
+         y7 += a7_0 * x0;
+         y0 += a0_1 * x1;
+         prefA(A1);
+         y1 += a1_1 * x1;
+         y2 += a2_1 * x1;
+         y3 += a3_1 * x1;
+         y4 += a4_1 * x1;
+         y5 += a5_1 * x1;
+         y6 += a6_1 * x1;
+         y7 += a7_1 * x1;
+         y0 += a0_2 * x2;
+         prefA(A2);
+         y1 += a1_2 * x2;
+         y2 += a2_2 * x2;
+         y3 += a3_2 * x2;
+         y4 += a4_2 * x2;
+         y5 += a5_2 * x2;
+         y6 += a6_2 * x2;
+         y7 += a7_2 * x2;
+         y0 += a0_3 * x3;
+         prefA(A3);
+         y1 += a1_3 * x3;
+         y2 += a2_3 * x3;
+         y3 += a3_3 * x3;
+         y4 += a4_3 * x3;
+         y5 += a5_3 * x3;
+         y6 += a6_3 * x3;
+         y7 += a7_3 * x3;
+         Y[i+0] = y0;
+         Y[i+1] = y1;
+         Y[i+2] = y2;
+         Y[i+3] = y3;
+         Y[i+4] = y4;
+         Y[i+5] = y5;
+         Y[i+6] = y6;
+         Y[i+7] = y7;
+      }
+      for (i=M8; i < M; i++)
+      {
+         const double a0_0=A0[i], a0_1=A1[i], a0_2=A2[i], a0_3=A3[i];
+         register double y0 = Y[i];
+
+         y0 += a0_0 * x0;
+         y0 += a0_1 * x1;
+         y0 += a0_2 * x2;
+         y0 += a0_3 * x3;
+         Y[i] = y0;
+      }
+   }
+/*
+ * Do remaining columns with NU=1 cleanup
+ */
+   for (j=N-N4; j; j--, A += lda, X++)
+   {
+      const double *A0=A;
+      const register double x0=X[0];
+      ATL_INT i;
+      prefY(Y+1+1-1);
+      for (i=0; i < M8; i += 8)
+      {
+         const double a0_0=A0[i+0], a1_0=A0[i+1], a2_0=A0[i+2], a3_0=A0[i+3],
+                      a4_0=A0[i+4], a5_0=A0[i+5], a6_0=A0[i+6], a7_0=A0[i+7];
+         register double y0=Y[i+0], y1=Y[i+1], y2=Y[i+2], y3=Y[i+3], y4=Y[i+4],
+                         y5=Y[i+5], y6=Y[i+6], y7=Y[i+7];
+
+         prefX(X);
+         y0 += a0_0 * x0;
+         prefA(A0);
+         y1 += a1_0 * x0;
+         y2 += a2_0 * x0;
+         y3 += a3_0 * x0;
+         y4 += a4_0 * x0;
+         y5 += a5_0 * x0;
+         y6 += a6_0 * x0;
+         y7 += a7_0 * x0;
+         Y[i+0] = y0;
+         Y[i+1] = y1;
+         Y[i+2] = y2;
+         Y[i+3] = y3;
+         Y[i+4] = y4;
+         Y[i+5] = y5;
+         Y[i+6] = y6;
+         Y[i+7] = y7;
+      }
+      for (i=M8; i < M; i++)
+      {
+         const double a0_0=A0[i];
+         register double y0 = Y[i];
+
+         y0 += a0_0 * x0;
+         Y[i] = y0;
+      }
+   }
+}

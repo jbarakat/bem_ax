@@ -9,10 +9,10 @@
       (ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 
 #endif
-void ATL_dmvnk__900009(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
-void ATL_dmvnk__900009_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
-void ATL_dmvnk__900008(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
-void ATL_dmvnk__900008_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_dmvnk__900003(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_dmvnk__900003_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_dmvnk__900002(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
+void ATL_dmvnk__900002_b0(ATL_CINT, ATL_CINT, const double*, ATL_CINT, const double*, double*);
 
 static ATL_mvkern_t ATL_GetMVNKern
    (ATL_CINT M, ATL_CINT N, const void *A, ATL_CINT lda,
@@ -33,10 +33,10 @@ static ATL_mvkern_t ATL_GetMVNKern
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 30720;
-               *mvk_b0 = ATL_dmvnk__900009_b0;
+               *CacheElts = 122880;
+               *mvk_b0 = ATL_dmvnk__900003_b0;
                *DOTBASED = 0;
-               return(ATL_dmvnk__900009);
+               return(ATL_dmvnk__900003);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
@@ -46,12 +46,12 @@ static ATL_mvkern_t ATL_GetMVNKern
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 30720;
-   *mvk_b0 = ATL_dmvnk__900008_b0;
+   *CacheElts = 122880;
+   *mvk_b0 = ATL_dmvnk__900002_b0;
    *DOTBASED = 0;
-   return(ATL_dmvnk__900008);
+   return(ATL_dmvnk__900002);
 }
 
-#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 2192; *(nb_) = 6; }
+#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 8776; *(nb_) = 6; }
 
 #endif  /* end protection around header file contents */

@@ -9,14 +9,12 @@
       (ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 
 #endif
-void ATL_cmvnk__900009(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvnk__900009_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvnk__2(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvnk__2_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 void ATL_cmvnk__900003(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 void ATL_cmvnk__900003_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvnk__900005(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
-void ATL_cmvnk__900005_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvnk__2(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvnk__2_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvnk__900002(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
+void ATL_cmvnk__900002_b0(ATL_CINT, ATL_CINT, const float*, ATL_CINT, const float*, float*);
 
 static ATL_mvkern_t ATL_GetMVNKern
    (ATL_CINT M, ATL_CINT N, const void *A, ATL_CINT lda,
@@ -28,19 +26,19 @@ static ATL_mvkern_t ATL_GetMVNKern
    {
       if ((((((ATL_MulBySize(lda)) >> 4)) << 4)) == ATL_MulBySize(lda))
       {
-         if (N >= 6)
+         if (N >= 4)
          {
             if (M >= 8)
             {
-               *minM = 8;   *minN = 6;
-               *mu = 8;     *nu = 6;
+               *minM = 8;   *minN = 4;
+               *mu = 8;     *nu = 4;
                *alignX = 16;  *alignY = 16;
                *ALIGNX2A = 0;
                *FNU = 1;
-               *CacheElts = 4014;
-               *mvk_b0 = ATL_cmvnk__900009_b0;
+               *CacheElts = 15728;
+               *mvk_b0 = ATL_cmvnk__900003_b0;
                *DOTBASED = 0;
-               return(ATL_cmvnk__900009);
+               return(ATL_cmvnk__900003);
             } /* end if on minimal N guard */
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
@@ -58,7 +56,7 @@ static ATL_mvkern_t ATL_GetMVNKern
                *alignX = 4;  *alignY = 16;
                *ALIGNX2A = 1;
                *FNU = 1;
-               *CacheElts = 4014;
+               *CacheElts = 15728;
                *mvk_b0 = ATL_cmvnk__2_b0;
                *DOTBASED = 0;
                return(ATL_cmvnk__2);
@@ -66,38 +64,17 @@ static ATL_mvkern_t ATL_GetMVNKern
          } /* end if on minimal M guard */
       } /* end if on lda multiple restriction */
    } /* end if on align of A */
-   if ((((((((size_t)(A))) >> 4)) << 4)) == (size_t)(A))
-   {
-      if ((((((ATL_MulBySize(lda)) >> 4)) << 4)) == ATL_MulBySize(lda))
-      {
-         if (N >= 2)
-         {
-            if (M >= 8)
-            {
-               *minM = 8;   *minN = 2;
-               *mu = 8;     *nu = 2;
-               *alignX = 16;  *alignY = 16;
-               *ALIGNX2A = 0;
-               *FNU = 1;
-               *CacheElts = 4014;
-               *mvk_b0 = ATL_cmvnk__900003_b0;
-               *DOTBASED = 0;
-               return(ATL_cmvnk__900003);
-            } /* end if on minimal N guard */
-         } /* end if on minimal M guard */
-      } /* end if on lda multiple restriction */
-   } /* end if on align of A */
-   *minM = 16;   *minN = 6;
-   *mu = 16;     *nu = 6;
+   *minM = 8;   *minN = 4;
+   *mu = 8;     *nu = 4;
    *alignX = 16;  *alignY = 16;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 4014;
-   *mvk_b0 = ATL_cmvnk__900005_b0;
+   *CacheElts = 15728;
+   *mvk_b0 = ATL_cmvnk__900002_b0;
    *DOTBASED = 0;
-   return(ATL_cmvnk__900005);
+   return(ATL_cmvnk__900002);
 }
 
-#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 272; *(nb_) = 6; }
+#define ATL_GetPartMVN(A_, lda_, mb_, nb_) { *(mb_) = 1568; *(nb_) = 4; }
 
 #endif  /* end protection around header file contents */

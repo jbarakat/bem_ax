@@ -1,7 +1,5 @@
 #include "atlas_misc.h"
 
-void ATL_daxpby_xp1yp1a1bX
-   (const int, const SCALAR, const TYPE*, const int, const SCALAR, TYPE*, const int);
 void ATL_daxpby_xp0yp0aXbX
    (const int, const SCALAR, const TYPE*, const int, const SCALAR, TYPE*, const int);
 void ATL_daxpy(const int, const SCALAR, const TYPE*, const int, TYPE*, const int);
@@ -62,14 +60,6 @@ L1:
       {
          ATL_dscal(N, beta, Y, incy);
          return;
-      }
-      else if (alpha == ATL_rone)
-      {
-         if (incx == 1 && incy == 1)
-         {
-            ATL_daxpby_xp1yp1a1bX(N, alpha, X, incx, beta, Y, incy);
-            return;
-         }
       }
 
       ATL_daxpby_xp0yp0aXbX(N, alpha, X, incx, beta, Y, incy);

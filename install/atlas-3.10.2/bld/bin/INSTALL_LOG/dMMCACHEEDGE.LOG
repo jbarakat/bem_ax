@@ -2,26 +2,26 @@
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************
-*       BEGAN ATLAS3.10.2 INSTALL OF SECTION 2-1-2 ON 06/24/2015 AT 16:07     *
+*       BEGAN ATLAS3.10.2 INSTALL OF SECTION 2-1-2 ON 06/24/2015 AT 22:38     *
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************
 
 
 
-make[2]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin'
-cd /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm ; make res/atlas_cacheedge.h pre=d
-make[3]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm'
+make[2]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin'
+cd /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm ; make res/atlas_cacheedge.h pre=d
+make[3]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm'
 make[3]: `res/atlas_cacheedge.h' is up to date.
-make[3]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm'
-cp /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm/res/atlas_cacheedge.h /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/include/.
-cp /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm/res/atlas_cacheedge.h INSTALL_LOG/.
-make[2]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin'
+make[3]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm'
+cp /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm/res/atlas_cacheedge.h /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/include/.
+cp /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemm/res/atlas_cacheedge.h INSTALL_LOG/.
+make[2]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin'
 
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************
-*      FINISHED ATLAS3.10.2 INSTALL OF SECTION 2-1-2 ON 06/24/2015 AT 16:07   *
+*      FINISHED ATLAS3.10.2 INSTALL OF SECTION 2-1-2 ON 06/24/2015 AT 22:38   *
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************

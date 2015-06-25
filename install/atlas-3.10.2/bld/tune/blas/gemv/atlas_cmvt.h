@@ -18,16 +18,16 @@ static ATL_mvkern_t ATL_GetMVTKern
     int *mu, int *nu, int *minM, int *minN, int *alignX, int *ALIGNX2A,
     int *alignY, int *FNU, ATL_INT *CacheElts) 
 {
-   *minM = 16;   *minN = 2;
-   *mu = 16;     *nu = 2;
+   *minM = 8;   *minN = 4;
+   *mu = 8;     *nu = 4;
    *alignX = 4;  *alignY = 4;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 4096;
+   *CacheElts = 11960;
    *mvk_b0 = ATL_UGEMVTK_b0;
    return(ATL_UGEMVTK);
 }
 
-#define ATL_GetPartMVT(A_, lda_, mb_, nb_) { *(mb_) = 672; *(nb_) = 2; }
+#define ATL_GetPartMVT(A_, lda_, mb_, nb_) { *(mb_) = 1192; *(nb_) = 4; }
 
 #endif  /* end protection around header file contents */

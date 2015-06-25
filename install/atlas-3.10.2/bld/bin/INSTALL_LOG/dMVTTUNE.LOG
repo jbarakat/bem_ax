@@ -2,130 +2,95 @@
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************
-*       BEGAN ATLAS3.10.2 INSTALL OF SECTION 2-1-7 ON 06/24/2015 AT 16:07     *
+*       BEGAN ATLAS3.10.2 INSTALL OF SECTION 2-1-7 ON 06/24/2015 AT 22:38     *
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************
 
 
 
-make[2]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin'
-cd /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv ; make res/dMVTK.sum pre=d
-make[3]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-/usr/bin/gcc-4.6 -c -DL2SIZE=4194304 -I/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/include -I/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//include -I/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//include/contrib -DAdd_ -DF77_INTEGER=int -DStringSunStyle -DATL_OS_Linux -DATL_ARCH_Corei2 -DATL_CPUMHZ=3301 -DATL_AVX -DATL_SSE3 -DATL_SSE2 -DATL_SSE1 -DATL_USE64BITS -DATL_GAS_x8664 -m64 -DATL_FULL_LAPACK -DATL_NCPU=8 -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -m64 -o mvtksearch.o /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/mvtksearch.c
-/usr/bin/gcc-4.6 -DL2SIZE=4194304 -I/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/include -I/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//include -I/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//include/contrib -DAdd_ -DF77_INTEGER=int -DStringSunStyle -DATL_OS_Linux -DATL_ARCH_Corei2 -DATL_CPUMHZ=3301 -DATL_AVX -DATL_SSE3 -DATL_SSE2 -DATL_SSE1 -DATL_USE64BITS -DATL_GAS_x8664 -m64 -DATL_FULL_LAPACK -DATL_NCPU=8 -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -m64 -o xmvtksearch mvtksearch.o
+make[2]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin'
+cd /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv ; make res/dMVTK.sum pre=d
+make[3]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+/usr/bin/gcc-4.8 -c -DL2SIZE=4194304 -I/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/include -I/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//include -I/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//include/contrib -DAdd_ -DF77_INTEGER=int -DStringSunStyle -DATL_OS_Linux -DATL_ARCH_Corei3 -DATL_CPUMHZ=3936 -DATL_AVXMAC -DATL_AVX -DATL_SSE3 -DATL_SSE2 -DATL_SSE1 -DATL_USE64BITS -DATL_GAS_x8664 -m64 -DATL_FULL_LAPACK -DATL_NCPU=8 -fomit-frame-pointer -mfpmath=sse -O2 -m64 -o mvtksearch.o /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/mvtksearch.c
+/usr/bin/gcc-4.8 -DL2SIZE=4194304 -I/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/include -I/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//include -I/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//include/contrib -DAdd_ -DF77_INTEGER=int -DStringSunStyle -DATL_OS_Linux -DATL_ARCH_Corei3 -DATL_CPUMHZ=3936 -DATL_AVXMAC -DATL_AVX -DATL_SSE3 -DATL_SSE2 -DATL_SSE1 -DATL_USE64BITS -DATL_GAS_x8664 -m64 -DATL_FULL_LAPACK -DATL_NCPU=8 -fomit-frame-pointer -mfpmath=sse -O2 -m64 -o xmvtksearch mvtksearch.o
+mvtksearch.o: In function `TimeMVKernel':
+mvtksearch.c:(.text+0x1b48): warning: the use of `tmpnam' is dangerous, better use `mkstemp'
 ./xmvtksearch -p d
 
-      Read in L1 Cache size as = 32KB.
-   900002:dmvt_sse.c (M=2300, N=2000, lda=2303) gets 2300.57 MFLOPS
-   900006:dmvt_sse.c (M=1024, N=16, lda=1032) gets 8245.25 MFLOPS
-   900008:dmvt_sse.c (M=910, N=18, lda=918) gets 8215.48 MFLOPS
-   900007:dmvt_sse.c (M=910, N=18, lda=917) gets 8215.48 MFLOPS
-   900008:dmvt_sse.c (M=290, N=12, lda=298) gets 8192.50 MFLOPS
-   900005:dmvt_sse.c (M=435, N=8, lda=441) gets 8193.66 MFLOPS
-   900002:dmvt_sse.c (M=2300, N=2000, lda=2303) gets 2300.57 MFLOPS
+      Read in L1 Cache size as = 128KB.
+   900002:dmvt_sse.c (M=2300, N=2000, lda=2303) gets 4001.00 MFLOPS
+   900005:dmvt_sse.c (M=1024, N=16, lda=1029) gets 7509.33 MFLOPS
+   900005:dmvt_sse.c (M=1740, N=8, lda=1743) gets 8195.09 MFLOPS
+   900002:dmvt_sse.c (M=2300, N=2000, lda=2303) gets 4001.00 MFLOPS
 ID=900002 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900002' \
-   rankR=0 CacheElts=26624 SSE=3 alignA=0 alignY=16 alignX=16 minM=16 minN=2  \
-   NU=2 MU=16 LDAMUL=0 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
+   rankR=0 CacheElts=16384 SSE=3 alignA=0 alignY=16 alignX=16 minM=8 minN=2  \
+   NU=2 MU=8 LDAMUL=0 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
    ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
-   MFLOP=2.300575e+03,-4.056393e+03  ASM=GAS_x8664 \
-     CFLAGS='-x assembler-with-cpp -DPFIA=prefetcht0 -DPFIY=prefetcht2 -DPFADIST=512 -DPFXDIST=128 -DPFYDIST=192' \
+   MFLOP=4.001000e+03,-4.158825e+03  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -DPFIA=prefetchnta -DPFIX=prefetcht1 -DPFADIST=0 -DPFXDIST=0 -DPFYDIST=320' \
      COMP='gcc'
-ID=900006 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900006' \
-   rankR=2 CacheElts=26624 SSE=3 alignA=16 alignY=16 alignX=16 minM=8 minN=8  \
-   NU=8 MU=8 LDAMUL=16 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
-   ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
-   MFLOP=-2.731358e+03,-3.449179e+03,0.000000e+00,8.245248e+03,-1.312265e+04 \
-     ASM=GAS_x8664 \
-     CFLAGS='-x assembler-with-cpp -DPFIA=prefetcht0 -DPFIX=prefetcht1 -DPFIY=prefetcht2 -DPFADIST=0 -DPFXDIST=0 -DPFYDIST=128' \
-     COMP='gcc'
-ID=900008 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900008' \
-   rankR=1 CacheElts=26624 SSE=3 alignA=16 alignY=16 alignX=16 minM=8 minN=6  \
-   NU=6 MU=8 LDAMUL=16 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
-   ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
-   MFLOP=-2.921023e+03,-3.431037e+03,0.000000e+00,8.215480e+03,-1.311170e+04 \
-     ASM=GAS_x8664  CFLAGS='-x assembler-with-cpp'  COMP='gcc'
-ID=900007 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900007' \
-   rankR=0 CacheElts=26624 SSE=3 alignA=0 alignY=16 alignX=16 minM=8 minN=6  \
-   NU=6 MU=8 LDAMUL=0 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
-   ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
-   MFLOP=0.000000e+00,0.000000e+00,0.000000e+00,8.215480e+03,-9.089233e+03 \
-     ASM=GAS_x8664 \
-     CFLAGS='-x assembler-with-cpp -DPFIX=prefetcht0 -DPFIY=prefetchnta -DPFADIST=0 -DPFXDIST=704 -DPFYDIST=192' \
-     COMP='gcc'
-ID=900008 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900008' \
-   rankR=1 CacheElts=3850 SSE=3 alignA=16 alignY=16 alignX=16 minM=8 minN=6  \
-   NU=6 MU=8 LDAMUL=16 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
-   ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
-   MFLOP=-2.921023e+03,-3.431037e+03,0.000000e+00,-9.616767e+03,8.192500e+03 \
-     ASM=GAS_x8664  CFLAGS='-x assembler-with-cpp'  COMP='gcc'
 ID=900005 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900005' \
-   rankR=0 CacheElts=3850 SSE=3 alignA=0 alignY=16 alignX=16 minM=8 minN=8  \
+   rankR=0 CacheElts=98304 SSE=3 alignA=0 alignY=16 alignX=16 minM=8 minN=8  \
    NU=8 MU=8 LDAMUL=0 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
    ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
-   MFLOP=0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,8.193660e+03 \
+   MFLOP=0.000000e+00,0.000000e+00,0.000000e+00,7.509333e+03,-1.152895e+04 \
      ASM=GAS_x8664 \
-     CFLAGS='-x assembler-with-cpp -DPFIX=prefetcht0 -DPFIY=prefetcht0 -DPFADIST=0 -DPFXDIST=128 -DPFYDIST=128' \
+     CFLAGS='-x assembler-with-cpp -DPFIA=prefetchnta -DPFIX=prefetcht0 -DPFIY=prefetcht1 -DPFADIST=0' \
+     COMP='gcc'
+ID=900005 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900005' \
+   rankR=0 CacheElts=16384 SSE=3 alignA=0 alignY=16 alignX=16 minM=8 minN=8  \
+   NU=8 MU=8 LDAMUL=0 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
+   ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
+   MFLOP=0.000000e+00,0.000000e+00,0.000000e+00,0.000000e+00,8.195093e+03 \
+     ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -DPFIA=prefetcht0 -DPFIX=prefetcht1 -DPFIY=prefetcht1 -DPFADIST=128 -DPFXDIST=128' \
      COMP='gcc'
 ID=900002 ROUT='dmvt_sse.c' AUTH='R. Clint Whaley' TA='T' KNAME='ATL_dmvtk__900002' \
-   rankR=0 CacheElts=3850 SSE=3 alignA=0 alignY=16 alignX=16 minM=16 minN=2  \
-   NU=2 MU=16 LDAMUL=0 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
+   rankR=0 CacheElts=16384 SSE=3 alignA=0 alignY=16 alignX=16 minM=8 minN=2  \
+   NU=2 MU=8 LDAMUL=0 PFTUNABLE=1 ALIGNX2A=0 ADDCFLAGS=0 GEMMBASED=0 AXPYBASED=0  \
    ALLALIGNXY=0 LDYTOP=0 FNU=1 X87=0  \
-   MFLOP=2.300575e+03,-3.876619e+03  ASM=GAS_x8664 \
-     CFLAGS='-x assembler-with-cpp -DPFIY=prefetcht2 -DPFADIST=128'  COMP='gcc'
+   MFLOP=4.001000e+03,-4.158825e+03  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -DPFIA=prefetchnta -DPFIX=prefetcht1 -DPFADIST=0 -DPFXDIST=0 -DPFYDIST=320' \
+     COMP='gcc'
 make dmvtinstall
-make[4]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+make[4]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
 mkdir dmvtoutd
 rm -f dmvtoutd/*
-if [ -s "/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/Make_dmvt" ]; then \
-           cd  /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv ; make -f Make_dmvt killall ; \
-           rm -f /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/Make_dmvt ; \
+if [ -s "/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/Make_dmvt" ]; then \
+           cd  /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv ; make -f Make_dmvt killall ; \
+           rm -f /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/Make_dmvt ; \
         fi
 ./xmvthgen -p d -F res/dMVTK.sum -d dmvtoutd
-make[5]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin/xextract -b /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/atlas-l2g.base order=clmajor \
-                           rout=mvt_sse nu=2 type=DREAL -def MU 2 \
+make[5]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin/xextract -b /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/atlas-l2g.base order=clmajor \
+                           rout=mvt_sse nu=2 type=DREAL -def MU 1 \
                             -o EXTDIR/dmvt_sse.c
-make[5]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-make[5]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin/xextract -b /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/atlas-l2g.base order=clmajor \
-                           rout=mvt_sse nu=8 type=DREAL -def MU 1 \
-                           -def ALIGNED 1 -o EXTDIR/dmvt_sse.c
-make[5]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-make[5]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin/xextract -b /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/atlas-l2g.base order=clmajor \
-                           rout=mvt_sse nu=6 type=DREAL -def MU 1 \
-                           -def ALIGNED 1 -o EXTDIR/dmvt_sse.c
-make[5]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-make[5]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin/xextract -b /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/atlas-l2g.base order=clmajor \
-                           rout=mvt_sse nu=6 type=DREAL -def MU 1 \
-                            -o EXTDIR/dmvt_sse.c
-make[5]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-make[5]: Entering directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin/xextract -b /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/atlas-l2g.base order=clmajor \
+make[5]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+make[5]: Entering directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin/xextract -b /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//tune/blas/gemv/atlas-l2g.base order=clmajor \
                            rout=mvt_sse nu=8 type=DREAL -def MU 1 \
                             -o EXTDIR/dmvt_sse.c
-make[5]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-cp -f dmvtoutd/Make_dmvt /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/.
-cp dmvtoutd/*.c /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/.
-cp -f dmvtoutd/*.h /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/include/.
+make[5]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+cp -f dmvtoutd/Make_dmvt /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/.
+cp dmvtoutd/*.c /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/.
+cp -f dmvtoutd/*.h /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/include/.
 if [ -s "xccobj.exe" ] ; then \
-	   cp -f xccobj.exe /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/. ; \
+	   cp -f xccobj.exe /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/. ; \
 	elif [ -s "xccobj" ]; then \
-           cp -f xccobj /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/. ; \
+           cp -f xccobj /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/src/blas/gemv/. ; \
         fi
-touch /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/../src//include/atlas_mv.h
+touch /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/../src//include/atlas_mv.h
 rm -f dmvtoutd/* ; rmdir dmvtoutd
-make[4]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-make[3]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
-cp /home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv/res/dMVTK.sum INSTALL_LOG/.
-make[2]: Leaving directory `/home/jmb/Codes/bem_ax/install/atlas-3.10.2/bld/bin'
+make[4]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+make[3]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv'
+cp /home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/tune/blas/gemv/res/dMVTK.sum INSTALL_LOG/.
+make[2]: Leaving directory `/home/jmb/Documents/codes/bem_ax/install/atlas-3.10.2/bld/bin'
 
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************
-*      FINISHED ATLAS3.10.2 INSTALL OF SECTION 2-1-7 ON 06/24/2015 AT 16:07   *
+*      FINISHED ATLAS3.10.2 INSTALL OF SECTION 2-1-7 ON 06/24/2015 AT 22:38   *
 *******************************************************************************
 *******************************************************************************
 *******************************************************************************

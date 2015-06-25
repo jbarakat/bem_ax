@@ -6,47 +6,47 @@
 #define BETAX
 #define DREAL
 
-#define MB 52
+#define MB 56
 #define NB 0
-#define KB 52
+#define KB 56
 
-#define MBMB 2704
+#define MBMB 3136
 #define NBNB 0
-#define KBKB 2704
+#define KBKB 3136
 
-#define MB2 104
+#define MB2 112
 #define NB2 0
-#define KB2 104
+#define KB2 112
 
 
-#define MB3 156
+#define MB3 168
 #define NB3 0
-#define KB3 156
+#define KB3 168
 
 
-#define MB4 208
+#define MB4 224
 #define NB4 0
-#define KB4 208
+#define KB4 224
 
 
-#define MB5 260
+#define MB5 280
 #define NB5 0
-#define KB5 260
+#define KB5 280
 
 
-#define MB6 312
+#define MB6 336
 #define NB6 0
-#define KB6 312
+#define KB6 336
 
 
-#define MB7 364
+#define MB7 392
 #define NB7 0
-#define KB7 364
+#define KB7 392
 
 
-#define MB8 416
+#define MB8 448
 #define NB8 0
-#define KB8 416
+#define KB8 448
 
 /*
  *             Automatically Tuned Linear Algebra Software v3.10.2

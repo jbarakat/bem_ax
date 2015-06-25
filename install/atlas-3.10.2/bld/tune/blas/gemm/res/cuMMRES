@@ -1,2 +1,2 @@
 CASE  NB    MFLOP  ROUTINE
- 225  72 42640.92  "ATL_smm4x2x256_avx.c" "R. Clint Whaley"
+ 225  80 51835.55  "ATL_smm4x2x256_avx.c" "R. Clint Whaley"

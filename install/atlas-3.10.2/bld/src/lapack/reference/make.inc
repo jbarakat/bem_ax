@@ -12,12 +12,12 @@ SHELL = /bin/sh
 #  selected.  Define LOADER and LOADOPTS to refer to the loader and 
 #  desired load options for your machine.
 #
-FORTRAN = /usr/bin/x86_64-linux-gnu-gfortran
-OPTS = -O -mavx -m64
+FORTRAN = /usr/bin/gfortran
+OPTS = -O -mavx2 -mfma -m64
 DRVOPTS  = $(OPTS)
-NOOPT = -O -mavx -m64 -O -mavx -m64 -O0   
-LOADER = /usr/bin/x86_64-linux-gnu-gfortran
-LOADOPTS = -O -mavx -m64
+NOOPT = -O -mavx2 -mfma -m64 -O -mavx2 -mfma -m64 -O0   
+LOADER = /usr/bin/gfortran
+LOADOPTS = -O -mavx2 -mfma -m64
 #
 # Timer for the SECOND and DSECND routines
 #

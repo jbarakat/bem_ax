@@ -14,6 +14,6 @@ daxpy.grd : $(obj)
 ATL_daxpy.o : ATL_daxpy.c
 	$(ICC) $(ICCFLAGS) -DDREAL -o $@ -c ATL_daxpy.c
 ATL_daxpy_xp1yp1aXbX.o : ATL_daxpy_xp1yp1aXbX.c
-	gcc -fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64 -m64 -x assembler-with-cpp $(CDEFS) -DDREAL -o $@ -c ATL_daxpy_xp1yp1aXbX.c
+	$(DKC) $(DKCFLAGS) $(CDEFS) -DDREAL -o $@ -c ATL_daxpy_xp1yp1aXbX.c
 ATL_daxpy_xp0yp0aXbX.o : ATL_daxpy_xp0yp0aXbX.c
 	$(DKC) $(DKCFLAGS) $(CDEFS) -DDREAL -o $@ -c ATL_daxpy_xp0yp0aXbX.c

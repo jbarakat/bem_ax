@@ -15,15 +15,15 @@ static ATL_r2kern_t ATL_GetR2Kern
     int *mu, int *nu, int *minM, int *minN, int *alignX, int *ALIGNX2A,
     int *alignY, int *FNU, ATL_INT *CacheElts) 
 {
-   *minM = 24;   *minN = 1;
-   *mu = 24;     *nu = 1;
+   *minM = 4;   *minN = 2;
+   *mu = 4;     *nu = 2;
    *alignX = 8;  *alignY = 8;
    *ALIGNX2A = 0;
    *FNU = 1;
-   *CacheElts = 1986;
+   *CacheElts = 7290;
    return(ATL_UGER2K);
 }
 
-#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 480; (nb_) = 1; }
+#define ATL_GetPartR2(A_, lda_, mb_, nb_) { (mb_) = 1212; (nb_) = 2; }
 
 #endif  /* end protection around header file contents */

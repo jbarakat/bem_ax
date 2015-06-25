@@ -1,22 +1,10 @@
 #define SREAL
 #include "atlas_misc.h"
-void ATL_supMBmm0_14_0_b0
-   (const int M, const int N, const int K, const float alpha,
-    const float *A, const int lda, const float *B, const int ldb,
-    const float beta, float *C, const int ldc);
-void ATL_supMBmm0_10_0_b0
-   (const int M, const int N, const int K, const float alpha,
-    const float *A, const int lda, const float *B, const int ldb,
-    const float beta, float *C, const int ldc);
-void ATL_supMBmm0_6_0_b0
+void ATL_supMBmm0_2_0_b0
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
 void ATL_supMBmm0_4_0_b0
-   (const int M, const int N, const int K, const float alpha,
-    const float *A, const int lda, const float *B, const int ldb,
-    const float beta, float *C, const int ldc);
-void ATL_supMBmm0_2_0_b0
    (const int M, const int N, const int K, const float alpha,
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
@@ -25,91 +13,19 @@ void ATL_sgpMBmm_b0
     const float *A, const int lda, const float *B, const int ldb,
     const float beta, float *C, const int ldc);
 
-typedef void (*MMfunc)(const int, const int, const int, const TYPE,
-                       const TYPE *, const int, const TYPE *, const int,
-                       const TYPE, TYPE *, const int);
-
 void ATL_spMBmm_b0
-   (const int M, const int N, const int K, const TYPE alpha,
-    const TYPE *A, const int lda, const TYPE *B, const int ldb,
-    const TYPE beta, TYPE *C, const int ldc)
+   (const int M, const int N, const int K, const float alpha,
+    const float *A, const int lda, const float *B, const int ldb,
+    const float beta, float *C, const int ldc)
 {
 
-   static MMfunc mmfunc[72] = 
+   if (M == (((((M) >> 2)) << 2)))
    {
-      NULL,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_10_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_14_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_10_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_14_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_10_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_10_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_14_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_10_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_14_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_10_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_2_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_6_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_4_0_b0,
-      ATL_sgpMBmm_b0,
-      ATL_supMBmm0_14_0_b0,
-      ATL_sgpMBmm_b0
-   };
-
-   mmfunc[M](M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
+      ATL_supMBmm0_4_0_b0(M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
+   }
+   else if (M == (((((M) >> 1)) << 1)))
+   {
+      ATL_supMBmm0_2_0_b0(M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
+   }
+   else ATL_sgpMBmm_b0(M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
 }

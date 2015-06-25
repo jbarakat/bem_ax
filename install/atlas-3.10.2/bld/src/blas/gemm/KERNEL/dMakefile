@@ -38,17 +38,17 @@ obj = \
       ATL_dNCmmTT_a1_bX.o \
       ATL_dNCmmTT_aX_bX.o \
       ATL_dupMBmm_b0.o \
+      ATL_dupMBmm0_1_0_b0.o \
       ATL_dupMBmm0_2_0_b0.o \
       ATL_dupMBmm0_4_0_b0.o \
-      ATL_dupMBmm0_6_0_b0.o \
       ATL_dupMBmm_b1.o \
+      ATL_dupMBmm0_1_0_b1.o \
       ATL_dupMBmm0_2_0_b1.o \
       ATL_dupMBmm0_4_0_b1.o \
-      ATL_dupMBmm0_6_0_b1.o \
       ATL_dupMBmm_bX.o \
+      ATL_dupMBmm0_1_0_bX.o \
       ATL_dupMBmm0_2_0_bX.o \
       ATL_dupMBmm0_4_0_bX.o \
-      ATL_dupMBmm0_6_0_bX.o \
       ATL_dupNBmm_b0.o \
       ATL_dupNBmm0_1_0_b0.o \
       ATL_dupNBmm0_2_0_b0.o \
@@ -59,19 +59,48 @@ obj = \
       ATL_dupNBmm0_1_0_bX.o \
       ATL_dupNBmm0_2_0_bX.o \
       ATL_dupKBmm_b0.o \
-      ATL_dupKBmm2_2_1_b0.o \
-      ATL_dupKBmm6_2_1_b0.o \
-      ATL_dupKBmm10_2_1_b0.o \
-      ATL_dupKBmm14_2_1_b0.o \
-      ATL_dupKBmm18_2_1_b0.o \
-      ATL_dupKBmm22_2_1_b0.o \
-      ATL_dupKBmm26_2_1_b0.o \
-      ATL_dupKBmm30_2_1_b0.o \
-      ATL_dupKBmm34_2_1_b0.o \
-      ATL_dupKBmm38_2_1_b0.o \
-      ATL_dupKBmm42_2_1_b0.o \
-      ATL_dupKBmm46_2_1_b0.o \
-      ATL_dupKBmm50_2_1_b0.o \
+      ATL_dupKBmm1_1_1_b0.o \
+      ATL_dupKBmm2_1_1_b0.o \
+      ATL_dupKBmm3_1_1_b0.o \
+      ATL_dupKBmm5_1_1_b0.o \
+      ATL_dupKBmm6_1_1_b0.o \
+      ATL_dupKBmm7_1_1_b0.o \
+      ATL_dupKBmm9_1_1_b0.o \
+      ATL_dupKBmm10_1_1_b0.o \
+      ATL_dupKBmm11_1_1_b0.o \
+      ATL_dupKBmm13_1_1_b0.o \
+      ATL_dupKBmm14_1_1_b0.o \
+      ATL_dupKBmm15_1_1_b0.o \
+      ATL_dupKBmm17_1_1_b0.o \
+      ATL_dupKBmm18_1_1_b0.o \
+      ATL_dupKBmm19_1_1_b0.o \
+      ATL_dupKBmm21_1_1_b0.o \
+      ATL_dupKBmm22_1_1_b0.o \
+      ATL_dupKBmm23_1_1_b0.o \
+      ATL_dupKBmm25_1_1_b0.o \
+      ATL_dupKBmm26_1_1_b0.o \
+      ATL_dupKBmm27_1_1_b0.o \
+      ATL_dupKBmm29_1_1_b0.o \
+      ATL_dupKBmm30_1_1_b0.o \
+      ATL_dupKBmm31_1_1_b0.o \
+      ATL_dupKBmm33_1_1_b0.o \
+      ATL_dupKBmm34_1_1_b0.o \
+      ATL_dupKBmm35_1_1_b0.o \
+      ATL_dupKBmm37_1_1_b0.o \
+      ATL_dupKBmm38_1_1_b0.o \
+      ATL_dupKBmm39_1_1_b0.o \
+      ATL_dupKBmm41_1_1_b0.o \
+      ATL_dupKBmm42_1_1_b0.o \
+      ATL_dupKBmm43_1_1_b0.o \
+      ATL_dupKBmm45_1_1_b0.o \
+      ATL_dupKBmm46_1_1_b0.o \
+      ATL_dupKBmm47_1_1_b0.o \
+      ATL_dupKBmm49_1_1_b0.o \
+      ATL_dupKBmm50_1_1_b0.o \
+      ATL_dupKBmm51_1_1_b0.o \
+      ATL_dupKBmm53_1_1_b0.o \
+      ATL_dupKBmm54_1_1_b0.o \
+      ATL_dupKBmm55_1_1_b0.o \
       ATL_dupKBmm4_4_1_b0.o \
       ATL_dupKBmm8_4_1_b0.o \
       ATL_dupKBmm12_4_1_b0.o \
@@ -84,20 +113,50 @@ obj = \
       ATL_dupKBmm40_4_1_b0.o \
       ATL_dupKBmm44_4_1_b0.o \
       ATL_dupKBmm48_4_1_b0.o \
+      ATL_dupKBmm52_4_1_b0.o \
       ATL_dupKBmm_b1.o \
-      ATL_dupKBmm2_2_1_b1.o \
-      ATL_dupKBmm6_2_1_b1.o \
-      ATL_dupKBmm10_2_1_b1.o \
-      ATL_dupKBmm14_2_1_b1.o \
-      ATL_dupKBmm18_2_1_b1.o \
-      ATL_dupKBmm22_2_1_b1.o \
-      ATL_dupKBmm26_2_1_b1.o \
-      ATL_dupKBmm30_2_1_b1.o \
-      ATL_dupKBmm34_2_1_b1.o \
-      ATL_dupKBmm38_2_1_b1.o \
-      ATL_dupKBmm42_2_1_b1.o \
-      ATL_dupKBmm46_2_1_b1.o \
-      ATL_dupKBmm50_2_1_b1.o \
+      ATL_dupKBmm1_1_1_b1.o \
+      ATL_dupKBmm2_1_1_b1.o \
+      ATL_dupKBmm3_1_1_b1.o \
+      ATL_dupKBmm5_1_1_b1.o \
+      ATL_dupKBmm6_1_1_b1.o \
+      ATL_dupKBmm7_1_1_b1.o \
+      ATL_dupKBmm9_1_1_b1.o \
+      ATL_dupKBmm10_1_1_b1.o \
+      ATL_dupKBmm11_1_1_b1.o \
+      ATL_dupKBmm13_1_1_b1.o \
+      ATL_dupKBmm14_1_1_b1.o \
+      ATL_dupKBmm15_1_1_b1.o \
+      ATL_dupKBmm17_1_1_b1.o \
+      ATL_dupKBmm18_1_1_b1.o \
+      ATL_dupKBmm19_1_1_b1.o \
+      ATL_dupKBmm21_1_1_b1.o \
+      ATL_dupKBmm22_1_1_b1.o \
+      ATL_dupKBmm23_1_1_b1.o \
+      ATL_dupKBmm25_1_1_b1.o \
+      ATL_dupKBmm26_1_1_b1.o \
+      ATL_dupKBmm27_1_1_b1.o \
+      ATL_dupKBmm29_1_1_b1.o \
+      ATL_dupKBmm30_1_1_b1.o \
+      ATL_dupKBmm31_1_1_b1.o \
+      ATL_dupKBmm33_1_1_b1.o \
+      ATL_dupKBmm34_1_1_b1.o \
+      ATL_dupKBmm35_1_1_b1.o \
+      ATL_dupKBmm37_1_1_b1.o \
+      ATL_dupKBmm38_1_1_b1.o \
+      ATL_dupKBmm39_1_1_b1.o \
+      ATL_dupKBmm41_1_1_b1.o \
+      ATL_dupKBmm42_1_1_b1.o \
+      ATL_dupKBmm43_1_1_b1.o \
+      ATL_dupKBmm45_1_1_b1.o \
+      ATL_dupKBmm46_1_1_b1.o \
+      ATL_dupKBmm47_1_1_b1.o \
+      ATL_dupKBmm49_1_1_b1.o \
+      ATL_dupKBmm50_1_1_b1.o \
+      ATL_dupKBmm51_1_1_b1.o \
+      ATL_dupKBmm53_1_1_b1.o \
+      ATL_dupKBmm54_1_1_b1.o \
+      ATL_dupKBmm55_1_1_b1.o \
       ATL_dupKBmm4_4_1_b1.o \
       ATL_dupKBmm8_4_1_b1.o \
       ATL_dupKBmm12_4_1_b1.o \
@@ -110,20 +169,50 @@ obj = \
       ATL_dupKBmm40_4_1_b1.o \
       ATL_dupKBmm44_4_1_b1.o \
       ATL_dupKBmm48_4_1_b1.o \
+      ATL_dupKBmm52_4_1_b1.o \
       ATL_dupKBmm_bX.o \
-      ATL_dupKBmm2_2_1_bX.o \
-      ATL_dupKBmm6_2_1_bX.o \
-      ATL_dupKBmm10_2_1_bX.o \
-      ATL_dupKBmm14_2_1_bX.o \
-      ATL_dupKBmm18_2_1_bX.o \
-      ATL_dupKBmm22_2_1_bX.o \
-      ATL_dupKBmm26_2_1_bX.o \
-      ATL_dupKBmm30_2_1_bX.o \
-      ATL_dupKBmm34_2_1_bX.o \
-      ATL_dupKBmm38_2_1_bX.o \
-      ATL_dupKBmm42_2_1_bX.o \
-      ATL_dupKBmm46_2_1_bX.o \
-      ATL_dupKBmm50_2_1_bX.o \
+      ATL_dupKBmm1_1_1_bX.o \
+      ATL_dupKBmm2_1_1_bX.o \
+      ATL_dupKBmm3_1_1_bX.o \
+      ATL_dupKBmm5_1_1_bX.o \
+      ATL_dupKBmm6_1_1_bX.o \
+      ATL_dupKBmm7_1_1_bX.o \
+      ATL_dupKBmm9_1_1_bX.o \
+      ATL_dupKBmm10_1_1_bX.o \
+      ATL_dupKBmm11_1_1_bX.o \
+      ATL_dupKBmm13_1_1_bX.o \
+      ATL_dupKBmm14_1_1_bX.o \
+      ATL_dupKBmm15_1_1_bX.o \
+      ATL_dupKBmm17_1_1_bX.o \
+      ATL_dupKBmm18_1_1_bX.o \
+      ATL_dupKBmm19_1_1_bX.o \
+      ATL_dupKBmm21_1_1_bX.o \
+      ATL_dupKBmm22_1_1_bX.o \
+      ATL_dupKBmm23_1_1_bX.o \
+      ATL_dupKBmm25_1_1_bX.o \
+      ATL_dupKBmm26_1_1_bX.o \
+      ATL_dupKBmm27_1_1_bX.o \
+      ATL_dupKBmm29_1_1_bX.o \
+      ATL_dupKBmm30_1_1_bX.o \
+      ATL_dupKBmm31_1_1_bX.o \
+      ATL_dupKBmm33_1_1_bX.o \
+      ATL_dupKBmm34_1_1_bX.o \
+      ATL_dupKBmm35_1_1_bX.o \
+      ATL_dupKBmm37_1_1_bX.o \
+      ATL_dupKBmm38_1_1_bX.o \
+      ATL_dupKBmm39_1_1_bX.o \
+      ATL_dupKBmm41_1_1_bX.o \
+      ATL_dupKBmm42_1_1_bX.o \
+      ATL_dupKBmm43_1_1_bX.o \
+      ATL_dupKBmm45_1_1_bX.o \
+      ATL_dupKBmm46_1_1_bX.o \
+      ATL_dupKBmm47_1_1_bX.o \
+      ATL_dupKBmm49_1_1_bX.o \
+      ATL_dupKBmm50_1_1_bX.o \
+      ATL_dupKBmm51_1_1_bX.o \
+      ATL_dupKBmm53_1_1_bX.o \
+      ATL_dupKBmm54_1_1_bX.o \
+      ATL_dupKBmm55_1_1_bX.o \
       ATL_dupKBmm4_4_1_bX.o \
       ATL_dupKBmm8_4_1_bX.o \
       ATL_dupKBmm12_4_1_bX.o \
@@ -136,6 +225,7 @@ obj = \
       ATL_dupKBmm40_4_1_bX.o \
       ATL_dupKBmm44_4_1_bX.o \
       ATL_dupKBmm48_4_1_bX.o \
+      ATL_dupKBmm52_4_1_bX.o \
       ATL_dgpMBmm_b0.o \
       ATL_dgpNBmm_b0.o \
       ATL_dgpMBmm_b1.o \
@@ -143,6 +233,60 @@ obj = \
       ATL_dgpMBmm_bX.o \
       ATL_dgpNBmm_bX.o \
       ATL_dgpKBmm0.o \
+      ATL_dgpKBmm3.o \
+      ATL_dgpKBmm4.o \
+      ATL_dgpKBmm5.o \
+      ATL_dgpKBmm6.o \
+      ATL_dgpKBmm7.o \
+      ATL_dgpKBmm8.o \
+      ATL_dgpKBmm9.o \
+      ATL_dgpKBmm10.o \
+      ATL_dgpKBmm11.o \
+      ATL_dgpKBmm12.o \
+      ATL_dgpKBmm13.o \
+      ATL_dgpKBmm14.o \
+      ATL_dgpKBmm15.o \
+      ATL_dgpKBmm16.o \
+      ATL_dgpKBmm17.o \
+      ATL_dgpKBmm18.o \
+      ATL_dgpKBmm19.o \
+      ATL_dgpKBmm20.o \
+      ATL_dgpKBmm21.o \
+      ATL_dgpKBmm22.o \
+      ATL_dgpKBmm23.o \
+      ATL_dgpKBmm24.o \
+      ATL_dgpKBmm25.o \
+      ATL_dgpKBmm26.o \
+      ATL_dgpKBmm27.o \
+      ATL_dgpKBmm28.o \
+      ATL_dgpKBmm29.o \
+      ATL_dgpKBmm30.o \
+      ATL_dgpKBmm31.o \
+      ATL_dgpKBmm32.o \
+      ATL_dgpKBmm33.o \
+      ATL_dgpKBmm34.o \
+      ATL_dgpKBmm35.o \
+      ATL_dgpKBmm36.o \
+      ATL_dgpKBmm37.o \
+      ATL_dgpKBmm38.o \
+      ATL_dgpKBmm39.o \
+      ATL_dgpKBmm40.o \
+      ATL_dgpKBmm41.o \
+      ATL_dgpKBmm42.o \
+      ATL_dgpKBmm43.o \
+      ATL_dgpKBmm44.o \
+      ATL_dgpKBmm45.o \
+      ATL_dgpKBmm46.o \
+      ATL_dgpKBmm47.o \
+      ATL_dgpKBmm48.o \
+      ATL_dgpKBmm49.o \
+      ATL_dgpKBmm50.o \
+      ATL_dgpKBmm51.o \
+      ATL_dgpKBmm52.o \
+      ATL_dgpKBmm53.o \
+      ATL_dgpKBmm54.o \
+      ATL_dgpKBmm55.o \
+      ATL_dgpKBmm56.o \
       ATL_dgpKBmm.o 
 
 dclean : clean
@@ -156,6 +300,12 @@ dlib.grd : $(obj)
 	 $(ARCHIVER) $(ARFLAGS) $(ATLASlib) $(obj)
 	 $(RANLIB) $(ATLASlib)
 	 touch dlib.grd
+ATL_dupMBmm0_1_0_b0.o : ATL_dupMBmm0_1_0_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupMBmm0_1_0_b0.c
+ATL_dupMBmm0_1_0_b1.o : ATL_dupMBmm0_1_0_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupMBmm0_1_0_b1.c
+ATL_dupMBmm0_1_0_bX.o : ATL_dupMBmm0_1_0_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupMBmm0_1_0_bX.c
 ATL_dupMBmm0_2_0_b0.o : ATL_dupMBmm0_2_0_b0.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp ATL_dupMBmm0_2_0_b0.c
 ATL_dupMBmm0_2_0_b1.o : ATL_dupMBmm0_2_0_b1.c 
@@ -168,12 +318,6 @@ ATL_dupMBmm0_4_0_b1.o : ATL_dupMBmm0_4_0_b1.c
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -mavx ATL_dupMBmm0_4_0_b1.c
 ATL_dupMBmm0_4_0_bX.o : ATL_dupMBmm0_4_0_bX.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -mavx ATL_dupMBmm0_4_0_bX.c
-ATL_dupMBmm0_6_0_b0.o : ATL_dupMBmm0_6_0_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp ATL_dupMBmm0_6_0_b0.c
-ATL_dupMBmm0_6_0_b1.o : ATL_dupMBmm0_6_0_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp ATL_dupMBmm0_6_0_b1.c
-ATL_dupMBmm0_6_0_bX.o : ATL_dupMBmm0_6_0_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp ATL_dupMBmm0_6_0_bX.c
 ATL_dupNBmm0_1_0_b0.o : ATL_dupNBmm0_1_0_b0.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp ATL_dupNBmm0_1_0_b0.c
 ATL_dupNBmm0_1_0_b1.o : ATL_dupNBmm0_1_0_b1.c 
@@ -186,84 +330,258 @@ ATL_dupNBmm0_2_0_b1.o : ATL_dupNBmm0_2_0_b1.c
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -mavx ATL_dupNBmm0_2_0_b1.c
 ATL_dupNBmm0_2_0_bX.o : ATL_dupNBmm0_2_0_bX.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -mavx ATL_dupNBmm0_2_0_bX.c
-ATL_dupKBmm2_2_1_b0.o : ATL_dupKBmm2_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm2_2_1_b0.c
-ATL_dupKBmm6_2_1_b0.o : ATL_dupKBmm6_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm6_2_1_b0.c
-ATL_dupKBmm10_2_1_b0.o : ATL_dupKBmm10_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm10_2_1_b0.c
-ATL_dupKBmm14_2_1_b0.o : ATL_dupKBmm14_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm14_2_1_b0.c
-ATL_dupKBmm18_2_1_b0.o : ATL_dupKBmm18_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm18_2_1_b0.c
-ATL_dupKBmm22_2_1_b0.o : ATL_dupKBmm22_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm22_2_1_b0.c
-ATL_dupKBmm26_2_1_b0.o : ATL_dupKBmm26_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm26_2_1_b0.c
-ATL_dupKBmm30_2_1_b0.o : ATL_dupKBmm30_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm30_2_1_b0.c
-ATL_dupKBmm34_2_1_b0.o : ATL_dupKBmm34_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm34_2_1_b0.c
-ATL_dupKBmm38_2_1_b0.o : ATL_dupKBmm38_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm38_2_1_b0.c
-ATL_dupKBmm42_2_1_b0.o : ATL_dupKBmm42_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm42_2_1_b0.c
-ATL_dupKBmm46_2_1_b0.o : ATL_dupKBmm46_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm46_2_1_b0.c
-ATL_dupKBmm50_2_1_b0.o : ATL_dupKBmm50_2_1_b0.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -m64 ATL_dupKBmm50_2_1_b0.c
-ATL_dupKBmm2_2_1_b1.o : ATL_dupKBmm2_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm2_2_1_b1.c
-ATL_dupKBmm6_2_1_b1.o : ATL_dupKBmm6_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm6_2_1_b1.c
-ATL_dupKBmm10_2_1_b1.o : ATL_dupKBmm10_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm10_2_1_b1.c
-ATL_dupKBmm14_2_1_b1.o : ATL_dupKBmm14_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm14_2_1_b1.c
-ATL_dupKBmm18_2_1_b1.o : ATL_dupKBmm18_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm18_2_1_b1.c
-ATL_dupKBmm22_2_1_b1.o : ATL_dupKBmm22_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm22_2_1_b1.c
-ATL_dupKBmm26_2_1_b1.o : ATL_dupKBmm26_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm26_2_1_b1.c
-ATL_dupKBmm30_2_1_b1.o : ATL_dupKBmm30_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm30_2_1_b1.c
-ATL_dupKBmm34_2_1_b1.o : ATL_dupKBmm34_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm34_2_1_b1.c
-ATL_dupKBmm38_2_1_b1.o : ATL_dupKBmm38_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm38_2_1_b1.c
-ATL_dupKBmm42_2_1_b1.o : ATL_dupKBmm42_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm42_2_1_b1.c
-ATL_dupKBmm46_2_1_b1.o : ATL_dupKBmm46_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm46_2_1_b1.c
-ATL_dupKBmm50_2_1_b1.o : ATL_dupKBmm50_2_1_b1.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -m64 ATL_dupKBmm50_2_1_b1.c
-ATL_dupKBmm2_2_1_bX.o : ATL_dupKBmm2_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm2_2_1_bX.c
-ATL_dupKBmm6_2_1_bX.o : ATL_dupKBmm6_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm6_2_1_bX.c
-ATL_dupKBmm10_2_1_bX.o : ATL_dupKBmm10_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm10_2_1_bX.c
-ATL_dupKBmm14_2_1_bX.o : ATL_dupKBmm14_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm14_2_1_bX.c
-ATL_dupKBmm18_2_1_bX.o : ATL_dupKBmm18_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm18_2_1_bX.c
-ATL_dupKBmm22_2_1_bX.o : ATL_dupKBmm22_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm22_2_1_bX.c
-ATL_dupKBmm26_2_1_bX.o : ATL_dupKBmm26_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm26_2_1_bX.c
-ATL_dupKBmm30_2_1_bX.o : ATL_dupKBmm30_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm30_2_1_bX.c
-ATL_dupKBmm34_2_1_bX.o : ATL_dupKBmm34_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm34_2_1_bX.c
-ATL_dupKBmm38_2_1_bX.o : ATL_dupKBmm38_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm38_2_1_bX.c
-ATL_dupKBmm42_2_1_bX.o : ATL_dupKBmm42_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm42_2_1_bX.c
-ATL_dupKBmm46_2_1_bX.o : ATL_dupKBmm46_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm46_2_1_bX.c
-ATL_dupKBmm50_2_1_bX.o : ATL_dupKBmm50_2_1_bX.c 
-	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -m64 ATL_dupKBmm50_2_1_bX.c
+ATL_dupKBmm1_1_1_b0.o : ATL_dupKBmm1_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm1_1_1_b0.c
+ATL_dupKBmm2_1_1_b0.o : ATL_dupKBmm2_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm2_1_1_b0.c
+ATL_dupKBmm3_1_1_b0.o : ATL_dupKBmm3_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm3_1_1_b0.c
+ATL_dupKBmm5_1_1_b0.o : ATL_dupKBmm5_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm5_1_1_b0.c
+ATL_dupKBmm6_1_1_b0.o : ATL_dupKBmm6_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm6_1_1_b0.c
+ATL_dupKBmm7_1_1_b0.o : ATL_dupKBmm7_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm7_1_1_b0.c
+ATL_dupKBmm9_1_1_b0.o : ATL_dupKBmm9_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm9_1_1_b0.c
+ATL_dupKBmm10_1_1_b0.o : ATL_dupKBmm10_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm10_1_1_b0.c
+ATL_dupKBmm11_1_1_b0.o : ATL_dupKBmm11_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm11_1_1_b0.c
+ATL_dupKBmm13_1_1_b0.o : ATL_dupKBmm13_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm13_1_1_b0.c
+ATL_dupKBmm14_1_1_b0.o : ATL_dupKBmm14_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm14_1_1_b0.c
+ATL_dupKBmm15_1_1_b0.o : ATL_dupKBmm15_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm15_1_1_b0.c
+ATL_dupKBmm17_1_1_b0.o : ATL_dupKBmm17_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm17_1_1_b0.c
+ATL_dupKBmm18_1_1_b0.o : ATL_dupKBmm18_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm18_1_1_b0.c
+ATL_dupKBmm19_1_1_b0.o : ATL_dupKBmm19_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm19_1_1_b0.c
+ATL_dupKBmm21_1_1_b0.o : ATL_dupKBmm21_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm21_1_1_b0.c
+ATL_dupKBmm22_1_1_b0.o : ATL_dupKBmm22_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm22_1_1_b0.c
+ATL_dupKBmm23_1_1_b0.o : ATL_dupKBmm23_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm23_1_1_b0.c
+ATL_dupKBmm25_1_1_b0.o : ATL_dupKBmm25_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm25_1_1_b0.c
+ATL_dupKBmm26_1_1_b0.o : ATL_dupKBmm26_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm26_1_1_b0.c
+ATL_dupKBmm27_1_1_b0.o : ATL_dupKBmm27_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm27_1_1_b0.c
+ATL_dupKBmm29_1_1_b0.o : ATL_dupKBmm29_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm29_1_1_b0.c
+ATL_dupKBmm30_1_1_b0.o : ATL_dupKBmm30_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm30_1_1_b0.c
+ATL_dupKBmm31_1_1_b0.o : ATL_dupKBmm31_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm31_1_1_b0.c
+ATL_dupKBmm33_1_1_b0.o : ATL_dupKBmm33_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm33_1_1_b0.c
+ATL_dupKBmm34_1_1_b0.o : ATL_dupKBmm34_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm34_1_1_b0.c
+ATL_dupKBmm35_1_1_b0.o : ATL_dupKBmm35_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm35_1_1_b0.c
+ATL_dupKBmm37_1_1_b0.o : ATL_dupKBmm37_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm37_1_1_b0.c
+ATL_dupKBmm38_1_1_b0.o : ATL_dupKBmm38_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm38_1_1_b0.c
+ATL_dupKBmm39_1_1_b0.o : ATL_dupKBmm39_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm39_1_1_b0.c
+ATL_dupKBmm41_1_1_b0.o : ATL_dupKBmm41_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm41_1_1_b0.c
+ATL_dupKBmm42_1_1_b0.o : ATL_dupKBmm42_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm42_1_1_b0.c
+ATL_dupKBmm43_1_1_b0.o : ATL_dupKBmm43_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm43_1_1_b0.c
+ATL_dupKBmm45_1_1_b0.o : ATL_dupKBmm45_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm45_1_1_b0.c
+ATL_dupKBmm46_1_1_b0.o : ATL_dupKBmm46_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm46_1_1_b0.c
+ATL_dupKBmm47_1_1_b0.o : ATL_dupKBmm47_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm47_1_1_b0.c
+ATL_dupKBmm49_1_1_b0.o : ATL_dupKBmm49_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm49_1_1_b0.c
+ATL_dupKBmm50_1_1_b0.o : ATL_dupKBmm50_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm50_1_1_b0.c
+ATL_dupKBmm51_1_1_b0.o : ATL_dupKBmm51_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm51_1_1_b0.c
+ATL_dupKBmm53_1_1_b0.o : ATL_dupKBmm53_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm53_1_1_b0.c
+ATL_dupKBmm54_1_1_b0.o : ATL_dupKBmm54_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm54_1_1_b0.c
+ATL_dupKBmm55_1_1_b0.o : ATL_dupKBmm55_1_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -m64 -x assembler-with-cpp ATL_dupKBmm55_1_1_b0.c
+ATL_dupKBmm1_1_1_b1.o : ATL_dupKBmm1_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm1_1_1_b1.c
+ATL_dupKBmm2_1_1_b1.o : ATL_dupKBmm2_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm2_1_1_b1.c
+ATL_dupKBmm3_1_1_b1.o : ATL_dupKBmm3_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm3_1_1_b1.c
+ATL_dupKBmm5_1_1_b1.o : ATL_dupKBmm5_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm5_1_1_b1.c
+ATL_dupKBmm6_1_1_b1.o : ATL_dupKBmm6_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm6_1_1_b1.c
+ATL_dupKBmm7_1_1_b1.o : ATL_dupKBmm7_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm7_1_1_b1.c
+ATL_dupKBmm9_1_1_b1.o : ATL_dupKBmm9_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm9_1_1_b1.c
+ATL_dupKBmm10_1_1_b1.o : ATL_dupKBmm10_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm10_1_1_b1.c
+ATL_dupKBmm11_1_1_b1.o : ATL_dupKBmm11_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm11_1_1_b1.c
+ATL_dupKBmm13_1_1_b1.o : ATL_dupKBmm13_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm13_1_1_b1.c
+ATL_dupKBmm14_1_1_b1.o : ATL_dupKBmm14_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm14_1_1_b1.c
+ATL_dupKBmm15_1_1_b1.o : ATL_dupKBmm15_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm15_1_1_b1.c
+ATL_dupKBmm17_1_1_b1.o : ATL_dupKBmm17_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm17_1_1_b1.c
+ATL_dupKBmm18_1_1_b1.o : ATL_dupKBmm18_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm18_1_1_b1.c
+ATL_dupKBmm19_1_1_b1.o : ATL_dupKBmm19_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm19_1_1_b1.c
+ATL_dupKBmm21_1_1_b1.o : ATL_dupKBmm21_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm21_1_1_b1.c
+ATL_dupKBmm22_1_1_b1.o : ATL_dupKBmm22_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm22_1_1_b1.c
+ATL_dupKBmm23_1_1_b1.o : ATL_dupKBmm23_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm23_1_1_b1.c
+ATL_dupKBmm25_1_1_b1.o : ATL_dupKBmm25_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm25_1_1_b1.c
+ATL_dupKBmm26_1_1_b1.o : ATL_dupKBmm26_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm26_1_1_b1.c
+ATL_dupKBmm27_1_1_b1.o : ATL_dupKBmm27_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm27_1_1_b1.c
+ATL_dupKBmm29_1_1_b1.o : ATL_dupKBmm29_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm29_1_1_b1.c
+ATL_dupKBmm30_1_1_b1.o : ATL_dupKBmm30_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm30_1_1_b1.c
+ATL_dupKBmm31_1_1_b1.o : ATL_dupKBmm31_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm31_1_1_b1.c
+ATL_dupKBmm33_1_1_b1.o : ATL_dupKBmm33_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm33_1_1_b1.c
+ATL_dupKBmm34_1_1_b1.o : ATL_dupKBmm34_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm34_1_1_b1.c
+ATL_dupKBmm35_1_1_b1.o : ATL_dupKBmm35_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm35_1_1_b1.c
+ATL_dupKBmm37_1_1_b1.o : ATL_dupKBmm37_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm37_1_1_b1.c
+ATL_dupKBmm38_1_1_b1.o : ATL_dupKBmm38_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm38_1_1_b1.c
+ATL_dupKBmm39_1_1_b1.o : ATL_dupKBmm39_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm39_1_1_b1.c
+ATL_dupKBmm41_1_1_b1.o : ATL_dupKBmm41_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm41_1_1_b1.c
+ATL_dupKBmm42_1_1_b1.o : ATL_dupKBmm42_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm42_1_1_b1.c
+ATL_dupKBmm43_1_1_b1.o : ATL_dupKBmm43_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm43_1_1_b1.c
+ATL_dupKBmm45_1_1_b1.o : ATL_dupKBmm45_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm45_1_1_b1.c
+ATL_dupKBmm46_1_1_b1.o : ATL_dupKBmm46_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm46_1_1_b1.c
+ATL_dupKBmm47_1_1_b1.o : ATL_dupKBmm47_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm47_1_1_b1.c
+ATL_dupKBmm49_1_1_b1.o : ATL_dupKBmm49_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm49_1_1_b1.c
+ATL_dupKBmm50_1_1_b1.o : ATL_dupKBmm50_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm50_1_1_b1.c
+ATL_dupKBmm51_1_1_b1.o : ATL_dupKBmm51_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm51_1_1_b1.c
+ATL_dupKBmm53_1_1_b1.o : ATL_dupKBmm53_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm53_1_1_b1.c
+ATL_dupKBmm54_1_1_b1.o : ATL_dupKBmm54_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm54_1_1_b1.c
+ATL_dupKBmm55_1_1_b1.o : ATL_dupKBmm55_1_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -m64 -x assembler-with-cpp ATL_dupKBmm55_1_1_b1.c
+ATL_dupKBmm1_1_1_bX.o : ATL_dupKBmm1_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm1_1_1_bX.c
+ATL_dupKBmm2_1_1_bX.o : ATL_dupKBmm2_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm2_1_1_bX.c
+ATL_dupKBmm3_1_1_bX.o : ATL_dupKBmm3_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm3_1_1_bX.c
+ATL_dupKBmm5_1_1_bX.o : ATL_dupKBmm5_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm5_1_1_bX.c
+ATL_dupKBmm6_1_1_bX.o : ATL_dupKBmm6_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm6_1_1_bX.c
+ATL_dupKBmm7_1_1_bX.o : ATL_dupKBmm7_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm7_1_1_bX.c
+ATL_dupKBmm9_1_1_bX.o : ATL_dupKBmm9_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm9_1_1_bX.c
+ATL_dupKBmm10_1_1_bX.o : ATL_dupKBmm10_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm10_1_1_bX.c
+ATL_dupKBmm11_1_1_bX.o : ATL_dupKBmm11_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm11_1_1_bX.c
+ATL_dupKBmm13_1_1_bX.o : ATL_dupKBmm13_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm13_1_1_bX.c
+ATL_dupKBmm14_1_1_bX.o : ATL_dupKBmm14_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm14_1_1_bX.c
+ATL_dupKBmm15_1_1_bX.o : ATL_dupKBmm15_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm15_1_1_bX.c
+ATL_dupKBmm17_1_1_bX.o : ATL_dupKBmm17_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm17_1_1_bX.c
+ATL_dupKBmm18_1_1_bX.o : ATL_dupKBmm18_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm18_1_1_bX.c
+ATL_dupKBmm19_1_1_bX.o : ATL_dupKBmm19_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm19_1_1_bX.c
+ATL_dupKBmm21_1_1_bX.o : ATL_dupKBmm21_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm21_1_1_bX.c
+ATL_dupKBmm22_1_1_bX.o : ATL_dupKBmm22_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm22_1_1_bX.c
+ATL_dupKBmm23_1_1_bX.o : ATL_dupKBmm23_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm23_1_1_bX.c
+ATL_dupKBmm25_1_1_bX.o : ATL_dupKBmm25_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm25_1_1_bX.c
+ATL_dupKBmm26_1_1_bX.o : ATL_dupKBmm26_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm26_1_1_bX.c
+ATL_dupKBmm27_1_1_bX.o : ATL_dupKBmm27_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm27_1_1_bX.c
+ATL_dupKBmm29_1_1_bX.o : ATL_dupKBmm29_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm29_1_1_bX.c
+ATL_dupKBmm30_1_1_bX.o : ATL_dupKBmm30_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm30_1_1_bX.c
+ATL_dupKBmm31_1_1_bX.o : ATL_dupKBmm31_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm31_1_1_bX.c
+ATL_dupKBmm33_1_1_bX.o : ATL_dupKBmm33_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm33_1_1_bX.c
+ATL_dupKBmm34_1_1_bX.o : ATL_dupKBmm34_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm34_1_1_bX.c
+ATL_dupKBmm35_1_1_bX.o : ATL_dupKBmm35_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm35_1_1_bX.c
+ATL_dupKBmm37_1_1_bX.o : ATL_dupKBmm37_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm37_1_1_bX.c
+ATL_dupKBmm38_1_1_bX.o : ATL_dupKBmm38_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm38_1_1_bX.c
+ATL_dupKBmm39_1_1_bX.o : ATL_dupKBmm39_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm39_1_1_bX.c
+ATL_dupKBmm41_1_1_bX.o : ATL_dupKBmm41_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm41_1_1_bX.c
+ATL_dupKBmm42_1_1_bX.o : ATL_dupKBmm42_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm42_1_1_bX.c
+ATL_dupKBmm43_1_1_bX.o : ATL_dupKBmm43_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm43_1_1_bX.c
+ATL_dupKBmm45_1_1_bX.o : ATL_dupKBmm45_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm45_1_1_bX.c
+ATL_dupKBmm46_1_1_bX.o : ATL_dupKBmm46_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm46_1_1_bX.c
+ATL_dupKBmm47_1_1_bX.o : ATL_dupKBmm47_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm47_1_1_bX.c
+ATL_dupKBmm49_1_1_bX.o : ATL_dupKBmm49_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm49_1_1_bX.c
+ATL_dupKBmm50_1_1_bX.o : ATL_dupKBmm50_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm50_1_1_bX.c
+ATL_dupKBmm51_1_1_bX.o : ATL_dupKBmm51_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm51_1_1_bX.c
+ATL_dupKBmm53_1_1_bX.o : ATL_dupKBmm53_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm53_1_1_bX.c
+ATL_dupKBmm54_1_1_bX.o : ATL_dupKBmm54_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm54_1_1_bX.c
+ATL_dupKBmm55_1_1_bX.o : ATL_dupKBmm55_1_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -m64 -x assembler-with-cpp ATL_dupKBmm55_1_1_bX.c
 ATL_dupKBmm4_4_1_b0.o : ATL_dupKBmm4_4_1_b0.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -mavx ATL_dupKBmm4_4_1_b0.c
 ATL_dupKBmm8_4_1_b0.o : ATL_dupKBmm8_4_1_b0.c 
@@ -288,6 +606,8 @@ ATL_dupKBmm44_4_1_b0.o : ATL_dupKBmm44_4_1_b0.c
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -mavx ATL_dupKBmm44_4_1_b0.c
 ATL_dupKBmm48_4_1_b0.o : ATL_dupKBmm48_4_1_b0.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -mavx ATL_dupKBmm48_4_1_b0.c
+ATL_dupKBmm52_4_1_b0.o : ATL_dupKBmm52_4_1_b0.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -mavx ATL_dupKBmm52_4_1_b0.c
 ATL_dupKBmm4_4_1_b1.o : ATL_dupKBmm4_4_1_b1.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -mavx ATL_dupKBmm4_4_1_b1.c
 ATL_dupKBmm8_4_1_b1.o : ATL_dupKBmm8_4_1_b1.c 
@@ -312,6 +632,8 @@ ATL_dupKBmm44_4_1_b1.o : ATL_dupKBmm44_4_1_b1.c
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -mavx ATL_dupKBmm44_4_1_b1.c
 ATL_dupKBmm48_4_1_b1.o : ATL_dupKBmm48_4_1_b1.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -mavx ATL_dupKBmm48_4_1_b1.c
+ATL_dupKBmm52_4_1_b1.o : ATL_dupKBmm52_4_1_b1.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=1 -c -x assembler-with-cpp -mavx ATL_dupKBmm52_4_1_b1.c
 ATL_dupKBmm4_4_1_bX.o : ATL_dupKBmm4_4_1_bX.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -mavx ATL_dupKBmm4_4_1_bX.c
 ATL_dupKBmm8_4_1_bX.o : ATL_dupKBmm8_4_1_bX.c 
@@ -336,6 +658,8 @@ ATL_dupKBmm44_4_1_bX.o : ATL_dupKBmm44_4_1_bX.c
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -mavx ATL_dupKBmm44_4_1_bX.c
 ATL_dupKBmm48_4_1_bX.o : ATL_dupKBmm48_4_1_bX.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -mavx ATL_dupKBmm48_4_1_bX.c
+ATL_dupKBmm52_4_1_bX.o : ATL_dupKBmm52_4_1_bX.c 
+	$(GOODGCC) $(CDEFS2) -DATL_BETA=X -c -x assembler-with-cpp -mavx ATL_dupKBmm52_4_1_bX.c
 ATL_dNBmm_b0.o : ATL_dNBmm_b0.c 
 	$(GOODGCC) $(CDEFS2) -DATL_BETA=0 -c -x assembler-with-cpp -mavx ATL_dNBmm_b0.c
 ATL_dNBmm_b1.o : ATL_dNBmm_b1.c 

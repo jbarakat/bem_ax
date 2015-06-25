@@ -1,6 +1,6 @@
 #include "atlas_asm.h"
 /*
- * This file does a 1x4 unrolled mvn_sse with these params:
+ * This file does a 1x5 unrolled mvn_sse with these params:
  *    CL=4, ORDER=clmajor
  */
 #ifndef ATL_GAS_x8664
@@ -37,6 +37,8 @@
 #define iX2     %xmm9
 #define rX3     %xmm10
 #define iX3     %xmm11
+#define rX4     %xmm12
+#define iX4     %xmm13
 #define NONEPONEOFF -72
 #define NONEPONE %xmm15
 /*
@@ -144,7 +146,7 @@ ATL_asmdecor(ATL_UGEMV):
    mov pY, pY0          /* save for restore after M loops */
    mov $-64, incAYm     /* code comp: use reg rather than constant */
    lea (lda, lda,2), lda3       /* lda3 = 3*lda */
-   lea (incAn, lda3), incAn     /* incAn = (4*lda-M)*sizeof */
+   lea (incAn, lda,4), incAn    /* incAn = (5*lda-M)*sizeof */
    mov $4*1, incII      /* code comp: use reg rather than constant */
    mov M, II
 /*
@@ -176,6 +178,9 @@ ATL_asmdecor(ATL_UGEMV):
       movddup 48(pX), rX3
       movddup 56(pX), iX3
       mulpd NONEPONE, iX3
+      movddup 64(pX), rX4
+      movddup 72(pX), iX4
+      mulpd NONEPONE, iX4
 
       LOOPM:
          MOVA   0-128(pA0), rY         /* rY = {iA0, rA0} */
@@ -206,6 +211,13 @@ ATL_asmdecor(ATL_UGEMV):
          prefA(PFADIST+0(pA0,lda3))
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
+         MOVA   0-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         prefA(PFADIST+0(pA0,lda,4))
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
          addpd ry, rY
          movapd rY, 0-128(pY)
 
@@ -232,6 +244,12 @@ ATL_asmdecor(ATL_UGEMV):
          mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
          addpd rA, rY
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   16-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
          addpd ry, rY
          movapd rY, 16-128(pY)
@@ -260,6 +278,12 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA, rY
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
+         MOVA   32-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
          addpd ry, rY
          movapd rY, 32-128(pY)
 
@@ -286,6 +310,12 @@ ATL_asmdecor(ATL_UGEMV):
          mulpd rX3, rA               /* rA = {rX*iA, rX*rA} */
          addpd rA, rY
          mulpd iX3, ra               /* ra = {iX*rA, -iX*iA} */
+         addpd ra, ry
+         MOVA   48-128(pA0,lda,4), rA    /* rA = {iA, rA} */
+         pshufd $0x4E, rA, ra           /* ra = {rA, iA} */
+         mulpd rX4, rA               /* rA = {rX*iA, rX*rA} */
+         addpd rA, rY
+         mulpd iX4, ra               /* ra = {iX*rA, -iX*iA} */
          addpd ra, ry
          addpd ry, rY
          movapd rY, 48-128(pY)
@@ -323,6 +353,12 @@ ATL_asmdecor(ATL_UGEMV):
          addpd rA, rY
          mulpd iX3, ra
          addpd ra, ry
+         MOVA -128(pA0,lda,4), rA
+         pshufd $0x4E, rA, ra
+         mulpd rX4, rA
+         addpd rA, rY
+         mulpd iX4, ra
+         addpd ra, ry
          addpd ry, rY
          movapd rY, -128(pY)
          add $16, pY
@@ -331,12 +367,12 @@ ATL_asmdecor(ATL_UGEMV):
       jnz LOOPMCU
 
 MCLEANED:
-      prefX(4*16+PFXDIST(pX))
-      add $4*16, pX
+      prefX(5*16+PFXDIST(pX))
+      add $5*16, pX
       add incAn, pA0
       mov pY0, pY
       mov M, II
-   sub $4, N
+   sub $5, N
    jnz LOOPN
 /*
  * EPILOGUE: restore registers and return

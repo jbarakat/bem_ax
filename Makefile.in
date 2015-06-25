@@ -21,9 +21,10 @@ LIBRARIES= $(LAPACKE_LIB) $(LAPACK_LIB) $(BLAS_LIB) $(CBLAS_LIB) $(ATLAS_LIB)
 #==============================================================================
 # includes
 LAPACKE_INC = -I $(LAPACK_DIR)/lapacke/include
-ATLAS_INC = -I $(ATLAS_DIR)/include -I $(ATLAS_DIR)/include/atlas
+#ATLAS_INC = -I $(ATLAS_DIR)/include -I $(ATLAS_DIR)/include/atlas
+# NOTE: linking ATLAS header files seems to cause linker errors w/LAPACKE header files...
 
-INCLUDES = $(LAPACKE_INC) $(ATLAS_INC)
+INCLUDES = $(LAPACKE_INC)
 
 #==============================================================================
 # loader

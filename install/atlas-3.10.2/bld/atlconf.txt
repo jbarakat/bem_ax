@@ -1,9 +1,0 @@
-0 '/usr/bin/gcc-4.6' '-fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64'
-1 '/usr/bin/gcc-4.6' '-fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64'
-2 '/usr/bin/gcc-4.6' '-fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64'
-3 '/usr/bin/gcc-4.6' '-fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64'
-4 '/usr/bin/gcc-4.6' '-fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64'
-5 '/usr/bin/gcc-4.6' '-fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -m64'
-6 '/usr/bin/gcc-4.6' '-fomit-frame-pointer -mfpmath=sse -O2 -fno-schedule-insns2 -mavx -m64'
-7 '/usr/bin/x86_64-linux-gnu-gfortran' '-O -mavx -m64'
-F2CNAME,F2CINT,F2CSTRING=(1,1,1)

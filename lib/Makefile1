@@ -1,28 +1,32 @@
 include ../Makefile.in
 
 #==============================================================================
-# all object files that must be linked into final executable
-OBJS = 
-OBJS += main.o 
+# objects
+OBJS =
 OBJS += gauleg.o
 
 #==============================================================================
-# rule for compiling everything
-all : main
+# target
+all lib : libBIE.a
 
 #==============================================================================
-# rule for building executable from object files
-main : $(OBJS) $(LIBRARIES)
+# executable
+libBIE.a : $(OBJS) 
+	@echo OBJS = $(OBJS) \
+	$(LIBRARIES) \
 	$(LOADER) $(LOADOPTS) $(OBJS) \
 	$(LIBRARIES) -o $@
-	./$@
+	g++ gauleg.o
+	#./$@
 
 #==============================================================================
-# rule for compiling individual source files into object files
+# dependencies
 .cpp.o :
 	$(COMPILE) -o $@ $<
 
 #==============================================================================
-# rule to clean up all output files
-clean :
-	rm -f *.o main
+# clean
+clean:
+	rm -f *.o libBIE.a
+
+

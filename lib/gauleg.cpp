@@ -26,20 +26,16 @@ void gauleg(int n, double* X, double* W){
 	// declare variables
 	double *D, *E, *Z;
 	int ldz = n;
-	double beta;
 	int i, j, info;
 	
 	// allocate memory
-	X = (double*) calloc(n,sizeof(double));
-	W = (double*) calloc(n,sizeof(double));
 	D = (double*) calloc(n,sizeof(double));
 	E = (double*) calloc(n-1,sizeof(double));
 	Z = (double*) calloc(ldz*n,sizeof(double));
 
 	// generate subdiagonal elements of positive definite tridiagonal matrix
 	for (i = 0; i < n-1; i++){
-		beta = 0.5/sqrt(1.0 - pow(2.0*(i + 1.0), -2.0));
-		E[i] = beta;
+		E[i] = 0.5/sqrt(1.0 - pow(2.0*(i + 1.0), -2.0));
 	}
 		
 //	// print D and E
@@ -76,19 +72,51 @@ void gauleg(int n, double* X, double* W){
 //	}
 
 	// determine abscissas and associated weights on the interval [-1, 1]
-	X = D;
+	for (i = 0; i < n; i++){
+		X[i] = D[i];
+		W[i] = 2*pow(Z[i], 2);
+	}
 
-	
+//	// print X and W
+//	printf("\nX = ");
+//	for (i = 0; i < n; i++)
+//		printf("%.6f ",X[i]);
+//	printf("\n");
+//
+//	printf("\nW = ");
+//	for (i = 0; i < n; i++)
+//		printf("%.6f ",W[i]);
+//	printf("\n");
+
+	// release memory
+	free(D);
+	free(E);
+	free(Z);
 }
 
 int main(){
 	int n;
-	double * X;
-	double * W;
-	n = 10;
+	double *X, *W;
+	n = 5;
 
 	// note: have to make sure the range of integration is from -1 to 1, see Numerical Recipes p. 207 (p. 184 on pdf)
 
+	X = (double*) calloc(n,sizeof(double));
+	W = (double*) calloc(n,sizeof(double));
+	
 	gauleg(n, X, W);
+
+	// print abscissas and weights
+	int i;
+	printf("\nX = ");
+	for (i = 0; i < n; i++)
+		printf("%.6f ",X[i]);
+	printf("\n");
+
+	printf("\nW = ");
+	for (i = 0; i < n; i++)
+		printf("%.6f ",W[i]);
+	printf("\n");
+
 	return(0);
 }

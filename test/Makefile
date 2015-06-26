@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 include /home/jmb/Documents/install/lapack-3.5.0/make.inc
 
 all: main
@@ -16,20 +17,26 @@ ATLASLIB = $(ATLASDIR)/libatlas.a
 
 LIBRARIES= $(LAPACKELIB) $(LAPACKLIB) $(BLASLIB) $(CBLASLIB) $(ATLASLIB)
 
+=======
+include ../Makefile.in
+#include $(LAPACK_DIR)/make.inc
+
+all: main
+
+#==============================================================================
+>>>>>>> 75332938999b88e903b9f8b45d84adaa5fc0e707
 # executable
 main: main.o $(LIBRARIES)
-	$(LOADER) $(LOADOPTS)  main.o \
+	$(LOADER) $(LOADOPTS) main.o \
 	$(LIBRARIES) -o $@
 	./$@
 
-# addition by preyas: similar to his makefile
-#main: main.o
-#	$(CC) -o $@ main.o
-
+#==============================================================================
 # dependencies
 .cpp.o:
-	$(CC) -c $(CFLAGS) -I $(LAPACKDIR)/lapacke/include -o $@ $<
+	$(COMPILE) -o $@ $<
 
+#==============================================================================
 # clean
 clean:
 	rm -f *.o main

@@ -1,1 +1,0 @@
-/* Quadrature weights and abscissae */

@@ -1,12 +1,12 @@
 include ../Makefile.in
 #include $(LAPACK_DIR)/make.inc
 
-all: gaussleg
+all: gauleg
 
 #==============================================================================
 # executable
-gaussleg: gaussleg.o $(LIBRARIES)
-	$(LOADER) $(LOADOPTS) gaussleg.o \
+gauleg: gauleg.o $(LIBRARIES)
+	$(LOADER) $(LOADOPTS) gauleg.o \
 	$(LIBRARIES) -o $@
 	./$@
 
@@ -18,6 +18,6 @@ gaussleg: gaussleg.o $(LIBRARIES)
 #==============================================================================
 # clean
 clean:
-	rm -f *.o gaussleg
+	rm -f *.o gauleg
 
 

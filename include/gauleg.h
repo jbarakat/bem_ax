@@ -1,6 +1,6 @@
-/*GAUSS-LEGENDRE QUADRATURE
- * Generate the abscissas and weigts for Gauss-Legendre quadrature by
- * solving an eigenvalue proglem for a symmetric, tridiagonal matrix.
+/* GAUSS-LEGENDRE QUADRATURE
+ *  Generate the abscissas and weigts for Gauss-Legendre quadrature by
+ *  solving an eigenvalue proglem for a symmetric, tridiagonal matrix.
  *
  * REFERENCES
  *  Golub and Welsch, Mathematics of Computation 23-106 (1969)
@@ -14,11 +14,12 @@
 #ifndef GAUSSLEG_H
 #define GAUSSLEG_H
 
+/* HEADER FILES */
 #include <lapacke.h>
 #include <cblas.h>
 #include <math.h>
 
-// function prototypes
+/* PROTOTYPES */
 void gauleg(int, double*, double*);
 
 #endif

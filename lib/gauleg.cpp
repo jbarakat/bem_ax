@@ -1,6 +1,6 @@
 /* GAUSS-LEGENDRE QUADRATURE
- * Generate the abscissas and weigts for Gauss-Legendre quadrature by
- * solving an eigenvalue proglem for a symmetric, tridiagonal matrix.
+ *  Generate the abscissas and weigts for Gauss-Legendre quadrature by
+ *  solving an eigenvalue proglem for a symmetric, tridiagonal matrix.
  *
  * REFERENCES
  *  Golub and Welsch, Mathematics of Computation 23-106 (1969)
@@ -11,9 +11,10 @@
  *  W	[output]	weights
  */
 
+/* HEADER FILES */
 #include "gauleg.h"
 
-// function implementation
+/* IMPLEMENTATIONS */
 void gauleg(int n, double* X, double* W){
 	// declare variables
 	double *D, *E, *Z;
@@ -44,4 +45,3 @@ void gauleg(int n, double* X, double* W){
 	free(E);
 	free(Z);
 }
-

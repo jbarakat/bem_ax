@@ -5,6 +5,7 @@ include ../Makefile.in
 OBJS = 
 OBJS += main.o 
 OBJS += gauleg.o
+OBJS += bessel.o
 
 #==============================================================================
 # rule for compiling everything

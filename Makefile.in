@@ -16,7 +16,7 @@ LAPACKE_LIB = $(LAPACK_DIR)/liblapacke.a
 BLAS_LIB = $(LAPACK_DIR)/librefblas.a
 CBLAS_LIB = $(ATLAS_DIR)/lib/libcblas.a
 ATLAS_LIB = $(ATLAS_DIR)/lib/libatlas.a
-GSL_LIB = $(GSL_DIR)/libgsl.a
+GSL_LIB = $(GSL_DIR)/lib/lib/libgsl.a
 
 LIBRARIES = 
 LIBRARIES += $(LAPACKE_LIB) $(LAPACK_LIB) 

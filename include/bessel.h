@@ -23,16 +23,16 @@
 /* PROTOTYPES */
 double besselJ(int, double);
 double besselJ(double, double);
-double* besselJArray(int, int, double);
+void besselJArray(int, int, double, double*);
 
 double besselY(int, double);
 double besselY(double, double);
-double* besselYArray(int, int, double);
+void besselYArray(int, int, double, double*);
 
 double besselI(int, double);
 double besselI(double, double);
-double* besselIArray(int, int, double);
+void besselIArray(int, int, double, double*);
 
 double besselK(int, double);
 double besselK(double, double);
-double* besselKArray(int, int, double);
+void besselKArray(int, int, double, double*);

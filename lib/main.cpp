@@ -53,7 +53,7 @@ void testBessel(){
 	Yn = besselY(n,x);
 	In = besselI(n,x);
 	Kn = besselK(n,x);
-	printf("n = %d, x = %.4f, Jn = %.4f, Yn = %.4f, In = %.4f, Kn = %.4f\n", n, x, Jn, Yn, In, Kn);
+	printf("n = %.4f, x = %.4f, Jn = %.4f, Yn = %.4f, In = %.4f, Kn = %.4f\n", nu, x, Jn, Yn, In, Kn);
 
 	narray = (int*) calloc(nsize,sizeof(int));
 	Jnarray = (double*) calloc(nsize,sizeof(double));
@@ -67,10 +67,10 @@ void testBessel(){
 	nmin = narray[0];
 	nmax = narray[nsize-1];
 	
-	Jnarray = besselJArray(nmin, nmax, x);
-	Ynarray = besselYArray(nmin, nmax, x);
-	Inarray = besselIArray(nmin, nmax, x);
-	Knarray = besselKArray(nmin, nmax, x);
+	besselJArray(nmin, nmax, x, Jnarray);
+	besselYArray(nmin, nmax, x, Ynarray);
+	besselIArray(nmin, nmax, x, Inarray);
+	besselKArray(nmin, nmax, x, Knarray);
 	printf("n  Jn      Yn      In      Kn\n");
 	for (int i = 0; i < nsize; i++){
 		printf("%d  %.4f  %.4f  %.4f  %.4f\n", narray[i], Jnarray[i], Ynarray[i], Inarray[i], Knarray[i]);

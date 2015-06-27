@@ -40,13 +40,10 @@ double besselJ(double nu, double x){
 	return(Jnu);
 }
 
-double* besselJArray(int nmin, int nmax, double x){
-	double *Jn;
+void besselJArray(int nmin, int nmax, double x, double *Jn){
 	int info;
-	
-	info = gsl_sf_bessel_Jn_array(nmin, nmax, x, Jn);
 
-	return(Jn);	
+	info = gsl_sf_bessel_Jn_array(nmin, nmax, x, Jn);
 }
 
 // Bessel functions of the second kind
@@ -71,13 +68,10 @@ double besselY(double nu, double x){
 	return(Ynu);
 }
 
-double* besselYArray(int nmin, int nmax, double x){
-	double *Yn;
+void besselYArray(int nmin, int nmax, double x, double *Yn){
 	int info;
 	
 	info = gsl_sf_bessel_Yn_array(nmin, nmax, x, Yn);
-
-	return(Yn);	
 }
 
 // Modified Bessel functions of the first kind
@@ -102,13 +96,10 @@ double besselI(double nu, double x){
 	return(Inu);
 }
 
-double* besselIArray(int nmin, int nmax, double x){
-	double *In;
+void besselIArray(int nmin, int nmax, double x, double *In){
 	int info;
 	
 	info = gsl_sf_bessel_In_array(nmin, nmax, x, In);
-
-	return(In);	
 }
 
 // Modified bessel functions of the second kind
@@ -133,11 +124,7 @@ double besselK(double nu, double x){
 	return(Knu);
 }
 
-double* besselKArray(int nmin, int nmax, double x){
-	double *Kn;
+void besselKArray(int nmin, int nmax, double x, double *Kn){
 	int info;
-	
 	info = gsl_sf_bessel_Kn_array(nmin, nmax, x, Kn);
-
-	return(Kn);	
 }

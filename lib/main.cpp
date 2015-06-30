@@ -4,12 +4,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <complex.h>
 #include "gauleg.h"
 #include "bessel.h"
 //#include <boost/math/special_functions>
 //#include "grnfcn.h"
 
-typedef lapack_complex_double dcmplx;
+#ifndef lapack_complex_double
+#define lapack_complex_double double complex
+#endif
 
 void testGauleg();
 void testBessel();
@@ -20,13 +23,17 @@ int main(){
 	//testBessel();
 	//testGauleg();
 
+	double complex z;
+	z = lapack_make_complex_double(2.4, 1.1);
+	printf("%.4f\n",creal(z));
+
 	return(0);
 }
 
 void testGrnfcn(){
 	double Dk, dDkds;
 	int k;
-	dcmplx z;
+	double complex z;
 	z = lapack_make_complex_double(2.4, 1.1);
 	
 	// get k

@@ -6,15 +6,38 @@
 #include <stdlib.h>
 #include "gauleg.h"
 #include "bessel.h"
+#include "grnfcn.h"
 
 void testGauleg();
 void testBessel();
+void testGrnfcn();
 
 int main(){
-	testBessel();
+	testGrnfcn();
+	//testBessel();
 	//testGauleg();
 
 	return(0);
+}
+
+void testGrnfcn(){
+	double Dk, dDkds;
+	int k;
+	
+	// get k
+	printf("k = ");
+	scanf("%d",&k);
+
+	double s = 4;
+
+	calcDk(k, s, Dk, dDkds);
+	printf("%.16f\n%.16f\n", Dk, dDkds);
+
+	//int n = 1;
+	//double an, bn, cn;
+	//lapack_complex_double *xn, *yn;
+	//calcDkRoots(n, k, an, bn, cn, xn, yn);
+	//printf("an = %.16f\nbn = %.16f\ncn = %.16f\n", an, bn, cn);
 }
 
 void testBessel(){
@@ -23,6 +46,13 @@ void testBessel(){
 	double Jn, Yn, In, Kn;
 	double *Jnarray, *Ynarray, *Inarray, *Knarray;
 
+	// allocate memory
+	narray = (int*) calloc(nsize,sizeof(int));
+	Jnarray = (double*) calloc(nsize,sizeof(double));
+	Ynarray = (double*) calloc(nsize,sizeof(double));
+	Inarray = (double*) calloc(nsize,sizeof(double));
+	Knarray = (double*) calloc(nsize,sizeof(double));
+	
 	x = 4.0;
 	nsize = 10;
 	
@@ -55,12 +85,6 @@ void testBessel(){
 	Kn = besselK(n,x);
 	printf("n = %.4f, x = %.4f, Jn = %.4f, Yn = %.4f, In = %.4f, Kn = %.4f\n", nu, x, Jn, Yn, In, Kn);
 
-	narray = (int*) calloc(nsize,sizeof(int));
-	Jnarray = (double*) calloc(nsize,sizeof(double));
-	Ynarray = (double*) calloc(nsize,sizeof(double));
-	Inarray = (double*) calloc(nsize,sizeof(double));
-	Knarray = (double*) calloc(nsize,sizeof(double));
-	
 	for (int i = 0; i < nsize; i++){
 		narray[i] = i; 
 	}
@@ -75,6 +99,12 @@ void testBessel(){
 	for (int i = 0; i < nsize; i++){
 		printf("%d  %.4f  %.4f  %.4f  %.4f\n", narray[i], Jnarray[i], Ynarray[i], Inarray[i], Knarray[i]);
 	}
+	
+	free(narray);
+	free(Jnarray);
+	free(Ynarray);
+	free(Inarray);
+	free(Knarray);
 }
 
 void testGauleg(){

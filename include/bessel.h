@@ -2,7 +2,7 @@
  *  Evaluate Bessel functions and modified Bessel functions.
  *
  * REFERENCES
- *  Abramowitz & Stegun, Dover Publications (1964)
+ *  Abramowitz and Stegun, Dover Publications (1964)
  *
  * PARAMETERS
  *  x	[input]		field point
@@ -13,6 +13,9 @@
  *  I	[output]	modified Bessel function of the first kind
  *  K	[output]	modified Bessel function of the second kind
  */
+
+#ifndef BESSEL_H
+#define BESSEL_H
 
 /* HEADER FILES */
 #include <lapacke.h>
@@ -36,3 +39,5 @@ void besselIArray(int, int, double, double*);
 double besselK(int, double);
 double besselK(double, double);
 void besselKArray(int, int, double, double*);
+
+#endif

@@ -2,7 +2,7 @@
  *  Evaluate Bessel functions and modified Bessel functions.
  *
  * REFERENCES
- *  Abramowitz & Stegun, Dover Publications (1964)
+ *  Abramowitz and Stegun, Dover Publications (1964)
  *
  * PARAMETERS
  *  x	[input]		field point

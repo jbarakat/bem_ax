@@ -1,14 +1,20 @@
-/* FUNCTION DEFINITIONS
+/* TITLE
+ *  Description
  *
  * REFERENCES
+ *  Item #1
+ *  Item #2
  *  
  * PARAMETERS
+ *  x	[input/output]	description
+ *  y [input/output]	description
  */
 
-#ifndef NEWTON_H
-#define NEWTON_H
+#ifndef XYZ_H
+#define XYZ_H
 
 /* HEADER FILES */
+
 
 /* PROTOTYPES */
 
@@ -17,7 +23,6 @@
 /***********************************************************************/
 
 
-}
 
 
 /***********************************************************************/

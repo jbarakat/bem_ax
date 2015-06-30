@@ -15,6 +15,9 @@
 #include "bessel.h"
 #include <gsl/gsl_sf_log.h>
 
+typedef lapack_complex_float fcmplx;
+typedef lapack_complex_double dcmplx;
+
 /* PROTOTYPES */
 // Green's function for a Stokeslet in a circular tube
 
@@ -52,12 +55,12 @@ void gf_tube(){
  *            + 4*Ik(s)*{I(k-1)(s)*I(k+1)(s) - s*[I(k-1)(s)*Ik(s) 
  *                      + I(k-1)(s)*I(k+1)(s) + Ik(s)I(k+1)(s)]}
  */
-void calcDk(int k, double s, double &Dk, double &dDkds){
+void calcDk(int k, dcmplx s, dcmplx &Dk, dcmplx &dDkds){
 	// declare variables
 	double Ikm1, Ik, Ikp1;
-	double Dk1, Dk2;
-	double dDkds1, dDkds2, dDkds3, dDkds4;
-	double* Ikarray;
+	dcmplx Dk1, Dk2;
+	dcmplx dDkds1, dDkds2, dDkds3, dDkds4;
+	dcmplx* Ikarray;
 
 	// calculate modified Bessel functions of the first kind
 	if (k <= -1){
@@ -135,7 +138,7 @@ void calcDkArray(int kmin, int kmax, double s, double *Dk){
  *   yn ~ i*(0.25*PI + 0.5*k*PI + n*PI), n = 0, 1, ...
  */
 void calcDkRoots(int n, int k, double &an, double &bn, double &cn,
-	lapack_complex_double *xn, lapack_complex_double *yn){
+	double *xn, double *yn){
 	// declare variables
 	
 	// calculate estimates of an, bn, cn

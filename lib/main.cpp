@@ -10,22 +10,25 @@
 //#include <boost/math/special_functions>
 //#include "grnfcn.h"
 
+// not sure if these declarations are neceessary...
+#ifndef lapack_complex_float
+#define lapack_complex_float float complex
+#endif
+
 #ifndef lapack_complex_double
 #define lapack_complex_double double complex
 #endif
 
 void testGauleg();
 void testBessel();
+void testBesselComplex();
 void testGrnfcn();
 
 int main(){
 	//testGrnfcn();
 	//testBessel();
+	testBesselComplex();
 	//testGauleg();
-
-	double complex z;
-	z = lapack_make_complex_double(2.4, 1.1);
-	printf("%.4f\n",creal(z));
 
 	return(0);
 }
@@ -34,7 +37,7 @@ void testGrnfcn(){
 	double Dk, dDkds;
 	int k;
 	double complex z;
-	z = lapack_make_complex_double(2.4, 1.1);
+	z = 2.4 + 1.1*I;
 	
 	// get k
 	printf("k = ");
@@ -50,6 +53,62 @@ void testGrnfcn(){
 	//lapack_complex_double *xn, *yn;
 	//calcDkRoots(n, k, an, bn, cn, xn, yn);
 	//printf("an = %.16f\nbn = %.16f\ncn = %.16f\n", an, bn, cn);
+}
+
+void testBesselComplex(){
+	double complex z;
+	double complex Jn;
+	double complex Yn;
+	double complex In;
+	double complex Kn;
+
+	int n, nmin, nmax, nsize;
+	double complex *Jnarray;
+	double complex *Ynarray;
+	double complex *Inarray;
+	double complex *Knarray;
+
+	Jnarray = (double complex *) calloc(nsize, sizeof(double complex));
+	Ynarray = (double complex *) calloc(nsize, sizeof(double complex));
+	Inarray = (double complex *) calloc(nsize, sizeof(double complex));
+	Knarray = (double complex *) calloc(nsize, sizeof(double complex));
+
+	n = 2;
+	z = 2.4 + 1.1*I;
+	printf("n = %d\n",n);
+	printf("z = %.4f + %.4fi\n",creal(z), cimag(z));
+	
+	Jn = besselJ(n, z);
+	printf("Jn = %.4f + %.4fi\n",creal(Jn), cimag(Jn));
+
+/* RUNNING INTO SEG FAULTS W/ZBESY */
+//	Yn = besselY(n, z);
+//	printf("z = %.4f + %.4fi\n",creal(z), cimag(z));
+//	printf("Yn = %.4f + %.4fi\n",creal(Yn), cimag(Yn));
+	
+	In = besselI(n, z);
+	printf("In = %.4f + %.4fi\n",creal(In), cimag(In));
+	
+	Kn = besselK(n, z);
+	printf("Kn = %.4f + %.4fi\n",creal(Kn), cimag(Kn));
+	
+	nmin = n;
+	nmax = n + 4;
+	nsize = nmax - nmin + 1;
+	
+/* RUNNING INTO SEG FAULTS w/ARRAYS... */		
+//	besselJArray(nmin, nmax, z, Jnarray);
+//	besselYArray(nmin, nmax, z, Ynarray);
+//	besselIArray(nmin, nmax, z, Inarray);
+//	besselKArray(nmin, nmax, z, Knarray);
+//	
+//	printf("z = %.4f + %.4fi\n",creal(z), cimag(z));
+//	for (int i = 0; i < nsize; i++){
+//		printf("Jn = %.4f + %.4fi\n",creal(Jnarray[i]), cimag(Jnarray[i]));
+//		printf("Yn = %.4f + %.4fi\n",creal(Ynarray[i]), cimag(Ynarray[i]));
+//		printf("In = %.4f + %.4fi\n",creal(Inarray[i]), cimag(Inarray[i]));
+//		printf("Kn = %.4f + %.4fi\n",creal(Knarray[i]), cimag(Knarray[i]));
+	}
 }
 
 void testBessel(){

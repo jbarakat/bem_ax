@@ -23,6 +23,8 @@
 #define BESSEL_H
 
 /* HEADER FILES */
+#include <stdio.h>
+#include <stdlib.h>
 #include <lapacke.h>
 #include <cblas.h>
 #include <gsl/gsl_sf_bessel.h>

@@ -81,10 +81,8 @@ void testBesselComplex(){
 	Jn = besselJ(n, z);
 	printf("Jn = %.4f + %.4fi\n",creal(Jn), cimag(Jn));
 
-/* RUNNING INTO SEG FAULTS W/ZBESY */
-//	Yn = besselY(n, z);
-//	printf("z = %.4f + %.4fi\n",creal(z), cimag(z));
-//	printf("Yn = %.4f + %.4fi\n",creal(Yn), cimag(Yn));
+	Yn = besselY(n, z);
+	printf("Yn = %.4f + %.4fi\n",creal(Yn), cimag(Yn));
 	
 	In = besselI(n, z);
 	printf("In = %.4f + %.4fi\n",creal(In), cimag(In));
@@ -96,18 +94,17 @@ void testBesselComplex(){
 	nmax = n + 4;
 	nsize = nmax - nmin + 1;
 	
-/* RUNNING INTO SEG FAULTS w/ARRAYS... */		
-//	besselJArray(nmin, nmax, z, Jnarray);
-//	besselYArray(nmin, nmax, z, Ynarray);
-//	besselIArray(nmin, nmax, z, Inarray);
-//	besselKArray(nmin, nmax, z, Knarray);
-//	
-//	printf("z = %.4f + %.4fi\n",creal(z), cimag(z));
-//	for (int i = 0; i < nsize; i++){
-//		printf("Jn = %.4f + %.4fi\n",creal(Jnarray[i]), cimag(Jnarray[i]));
-//		printf("Yn = %.4f + %.4fi\n",creal(Ynarray[i]), cimag(Ynarray[i]));
-//		printf("In = %.4f + %.4fi\n",creal(Inarray[i]), cimag(Inarray[i]));
-//		printf("Kn = %.4f + %.4fi\n",creal(Knarray[i]), cimag(Knarray[i]));
+	besselJArray(nmin, nmax, z, Jnarray);
+	besselYArray(nmin, nmax, z, Ynarray);
+	besselIArray(nmin, nmax, z, Inarray);
+	besselKArray(nmin, nmax, z, Knarray);
+	
+	printf("z = %.4f + %.4fi\n",creal(z), cimag(z));
+	for (int i = 0; i < nsize; i++){
+		printf("Jn = %.4f + %.4fi\n",creal(Jnarray[i]), cimag(Jnarray[i]));
+		printf("Yn = %.4f + %.4fi\n",creal(Ynarray[i]), cimag(Ynarray[i]));
+		printf("In = %.4f + %.4fi\n",creal(Inarray[i]), cimag(Inarray[i]));
+		printf("Kn = %.4f + %.4fi\n",creal(Knarray[i]), cimag(Knarray[i]));
 	}
 }
 

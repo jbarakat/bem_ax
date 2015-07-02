@@ -40,7 +40,7 @@ extern "C" void dbesi_(double*, double*, int*, int*, double*, int*);
 extern "C" void dbesk_(double*, double*, int*, int*, double*, int*);
 
 extern "C" void zbesj_(double*, double*, double*, int*, int*, double*, double*, int*, int*);
-extern "C" void zbesy_(double*, double*, double*, int*, int*, double*, double*, int*, int*);
+extern "C" void zbesy_(double*, double*, double*, int*, int*, double*, double*, int*, double*, double*, int*);
 extern "C" void zbesi_(double*, double*, double*, int*, int*, double*, double*, int*, int*);
 extern "C" void zbesk_(double*, double*, double*, int*, int*, double*, double*, int*, int*);
 

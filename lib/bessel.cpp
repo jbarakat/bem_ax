@@ -139,8 +139,13 @@ double complex besselY(int m, double complex z){
 	double zi = cimag(z);
 	int nz, ierr;
 	double cyr[1], cyi[1];
+	double cwrkr[1], cwrki[1];
+	//double *cwrkr, *cwrki;
+
+	//cwrkr = (double*) calloc(1,sizeof(double));
+	//cwrki = (double*) calloc(1,sizeof(double));
 	
-	zbesy_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
+	zbesy_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
 
 	Ynu = cyr[0] + I*cyi[0];
 
@@ -155,16 +160,18 @@ double complex besselY(double nu, double complex z){
 	double zi = cimag(z);
 	int nz, ierr;
 	double cyr[1], cyi[1];
+	double cwrkr[1], cwrki[1];
+	//double *cwrkr, *cwrki;
+
+	//cwrkr = (double*) calloc(1,sizeof(double));
+	//cwrki = (double*) calloc(1,sizeof(double));
 	
-	zbesy_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
+	zbesy_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
 
 	Ynu = cyr[0] + I*cyi[0];
 
 	return(Ynu);
 }
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
 
 void besselYArray(int nmin, int nmax, double x, double *Yn){
 	int info;
@@ -184,11 +191,14 @@ void besselYArray(int nmin, int nmax, double complex z, double complex *Ynu){
 	double zi = cimag(z);
 	int nz, ierr;
 	double *cyr, *cyi;
+	double *cwrkr, *cwrki;
 
 	cyr = (double*) calloc(nsize, sizeof(double));
 	cyi = (double*) calloc(nsize, sizeof(double));
+	cwrkr = (double*) calloc(nsize,sizeof(double));
+	cwrki = (double*) calloc(nsize,sizeof(double));
 	
-	zbesy_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+	zbesy_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
 
 	for (i = 0; i < nsize; i++){
 		Ynu[i] = cyr[i] + I*cyi[i];

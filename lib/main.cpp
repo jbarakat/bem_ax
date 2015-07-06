@@ -30,8 +30,8 @@ int main(){
 //	testGrnfcn();
 //	testBessel();
 //	testBesselComplex();
-	testBesselNegativeOrder();
-//	testBesselComplexNegativeOrder();
+//	testBesselNegativeOrder();
+	testBesselComplexNegativeOrder();
 //	testGauleg();
 
 	return(0);
@@ -144,7 +144,7 @@ void testBesselComplexNegativeOrder(){
 
 	n = -4;
 	nmin = n;
-	nmax = n + 4;
+	nmax = n + 7;
 	nsize = nmax - nmin + 1;
 
 	Jnarray = (double complex *) calloc(nsize, sizeof(double complex));

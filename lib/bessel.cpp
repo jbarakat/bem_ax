@@ -6,17 +6,24 @@
  *
  * PARAMETERS
  *  x	[input]		field point
- *  n	[input]		integer order
+ *  n,m	[input]		integer order
  *  nu	[input]		fractional order
  *  J	[output]        Bessel function of the first kind
  *  Y	[output]        Bessel function of the second kind
  *  I	[output]        modified Bessel function of the first kind
  *  K	[output]        modified Bessel function of the second kind
  *
- * NOTE
+ * NOTES
  *  GSL provides a basic implementation of Bessel functions, but
  *  does not support Bessel functions with complex arguments. The
  *  latter is handled by SLATEC subroutines.
+ *
+ *  The current implementation cannot handle negative non-integer
+ *  orders. For negative integer orders, the following rules for
+ *  Bessel functions are used:
+ *   Jn(x) = -J(-n)(x)	if n is odd	[ditto for Yn(x)]
+ *   Jn(x) = J(-n)(x)	if n is even	[ditto for Yn(x)]
+ *   In(x) = I(-n)(x)	for all n	[ditto for Kn(x)]
  */
 
 /* HEADER FILES */
@@ -53,7 +60,7 @@ double besselJ(double nu, double x){
 
 double complex besselJ(int m, double complex z){
 	double nu = double(m);
-	double complex Jnu;
+	double complex Jm;
 	int kode = 1;
 	int n = 1;
 	double zr = creal(z);
@@ -65,22 +72,23 @@ double complex besselJ(int m, double complex z){
 		if (m % 2) {
 			nu = -nu;
 			zbesj_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
-			Jnu = -(cyr[0] + I*cyi[0]);
+			Jm = -(cyr[0] + I*cyi[0]);
 		}
 		else {
 			nu = -nu;
 			zbesj_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
-			Jnu = cyr[0] + I*cyi[0];
+			Jm = cyr[0] + I*cyi[0];
 		}
 	}
 	else {
 		zbesj_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
-		Jnu = cyr[0] + I*cyi[0];
+		Jm = cyr[0] + I*cyi[0];
 	}
+	
 	if (ierr != 0)
 		printf("Error! Zbesj did not return successfully.\n");
 
-	return(Jnu);
+	return(Jm);
 }
 
 double complex besselJ(double nu, double complex z){
@@ -159,10 +167,13 @@ void besselJArray(int nmin, int nmax, double x, double *Jn){
 		info = gsl_sf_bessel_Jn_array(nmin, nmax, x, Jn);
 }
 
-void besselJArray(int nmin, int nmax, double complex z, double complex *Jnu){
+void besselJArray(int nmin, int nmax, double complex z, double complex *Jn){
+	if (nmin > nmax)
+		printf("Error! nmin > nmax.\n");
+	
 	int i;
 	int nsize = nmax - nmin + 1;
-	double nu = double(nmin);
+	double nu;
 	int kode = 1;
 	double zr = creal(z);
 	double zi = cimag(z);
@@ -172,10 +183,53 @@ void besselJArray(int nmin, int nmax, double complex z, double complex *Jnu){
 	cyr = (double*) calloc(nsize, sizeof(double));
 	cyi = (double*) calloc(nsize, sizeof(double));
 	
-	zbesj_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+	if (nmin < 0 && nmax <= 0) {
+		nu = double(-nmax);
 
-	for (i = 0; i < nsize; i++){
-		Jnu[i] = cyr[i] + I*cyi[i];
+		zbesj_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+		
+		if ((-nmin) % 2) {
+			for (i = 0; i < nsize; i++){
+				Jn[i] = pow(-1, i + 1)*(cyr[nsize - i - 1] + I*cyi[nsize - i - 1]);
+			}
+		}
+		else {
+			for (i = 0; i < nsize; i++){
+				Jn[i] = pow(-1, i)*(cyr[nsize - i - 1] + I*cyi[nsize - i - 1]);
+			}
+		}
+	}
+	else if (nmin < 0 && nmax > 0) {
+		int nneg = -nmin;
+		int npos = nmax + 1;
+	
+		nu = 1.;
+		zbesj_(&zr, &zi, &nu, &kode, &nneg, cyr, cyi, &nz, &ierr);
+
+		if (nneg % 2) {
+			for (i = 0; i < nneg; i++){
+				Jn[i] = pow(-1, i + 1)*(cyr[nneg - i - 1] + I*cyi[nneg - i - 1]);
+			}
+		}
+		else {
+			for (i = 0; i < nneg; i++){
+				Jn[i] = pow(-1, i)*(cyr[nneg - i - 1] + I*cyi[nneg - i - 1]);
+			}
+		}
+
+		nu = 0.;
+		zbesj_(&zr, &zi, &nu, &kode, &npos, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < npos; i++){
+			Jn[nneg + i] = cyr[i] + I*cyi[i];
+		}
+
+	}
+	else {
+		nu = double(nmin);
+		zbesj_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nsize; i++){
+			Jn[i] = cyr[i] + I*cyi[i];
+		}
 	}
 
 	if (ierr != 0)
@@ -215,7 +269,7 @@ double besselY(double nu, double x){
 
 double complex besselY(int m, double complex z){
 	double nu = double(m);
-	double complex Ynu;
+	double complex Ym;
 	int kode = 1;
 	int n = 1;
 	double zr = creal(z);
@@ -228,23 +282,23 @@ double complex besselY(int m, double complex z){
 		if (m % 2) {
 			nu = -nu;
 			zbesy_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
-			Ynu = -(cyr[0] + I*cyi[0]);
+			Ym = -(cyr[0] + I*cyi[0]);
 		}
 		else {
 			nu = -nu;
 			zbesy_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
-			Ynu = cyr[0] + I*cyi[0];
+			Ym = cyr[0] + I*cyi[0];
 		}
 	}
 	else {
 		zbesy_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
-		Ynu = cyr[0] + I*cyi[0];
+		Ym = cyr[0] + I*cyi[0];
 	}
 
 	if (ierr != 0)
 		printf("Error! Zbesy did not return successfully.\n");
 
-	return(Ynu);
+	return(Ym);
 }
 
 double complex besselY(double nu, double complex z){
@@ -324,10 +378,13 @@ void besselYArray(int nmin, int nmax, double x, double *Yn){
 		info = gsl_sf_bessel_Yn_array(nmin, nmax, x, Yn);
 }
 
-void besselYArray(int nmin, int nmax, double complex z, double complex *Ynu){
+void besselYArray(int nmin, int nmax, double complex z, double complex *Yn){
+	if (nmin > nmax)
+		printf("Error! nmin > nmax.\n");
+	
 	int i;
 	int nsize = nmax - nmin + 1;
-	double nu = double(nmin);
+	double nu;
 	int kode = 1;
 	double zr = creal(z);
 	double zi = cimag(z);
@@ -340,14 +397,57 @@ void besselYArray(int nmin, int nmax, double complex z, double complex *Ynu){
 	cwrkr = (double*) calloc(nsize,sizeof(double));
 	cwrki = (double*) calloc(nsize,sizeof(double));
 	
-	zbesy_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
+	if (nmin < 0 && nmax <= 0) {
+		nu = double(-nmax);
+
+		zbesy_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
+		
+		if ((-nmin) % 2) {
+			for (i = 0; i < nsize; i++){
+				Yn[i] = pow(-1, i + 1)*(cyr[nsize - i - 1] + I*cyi[nsize - i - 1]);
+			}
+		}
+		else {
+			for (i = 0; i < nsize; i++){
+				Yn[i] = pow(-1, i)*(cyr[nsize - i - 1] + I*cyi[nsize - i - 1]);
+			}
+		}
+	}
+	else if (nmin < 0 && nmax > 0) {
+		int nneg = -nmin;
+		int npos = nmax + 1;
+	
+		nu = 1.;
+		zbesy_(&zr, &zi, &nu, &kode, &nneg, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
+
+		if (nneg % 2) {
+			for (i = 0; i < nneg; i++){
+				Yn[i] = pow(-1, i + 1)*(cyr[nneg - i - 1] + I*cyi[nneg - i - 1]);
+			}
+		}
+		else {
+			for (i = 0; i < nneg; i++){
+				Yn[i] = pow(-1, i)*(cyr[nneg - i - 1] + I*cyi[nneg - i - 1]);
+			}
+		}
+
+		nu = 0.;
+		zbesy_(&zr, &zi, &nu, &kode, &npos, cyr, cyi, &nz, cwrkr, cwrki, &ierr);
+		for (i = 0; i < npos; i++){
+			Yn[nneg + i] = cyr[i] + I*cyi[i];
+		}
+
+	}
+	else {
+		nu = double(nmin);
+		zbesj_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nsize; i++){
+			Yn[i] = cyr[i] + I*cyi[i];
+		}
+	}
 	
 	if (ierr != 0)
 		printf("Error! Zbesy did not return successfully.\n");
-
-	for (i = 0; i < nsize; i++){
-		Ynu[i] = cyr[i] + I*cyi[i];
-	}
 
 	free(cyr);
 	free(cyi);
@@ -381,7 +481,7 @@ double besselI(double nu, double x){
 
 double complex besselI(int m, double complex z){
 	double nu = double(m);
-	double complex Inu;
+	double complex Im;
 	int kode = 1;
 	int n = 1;
 	double zr = creal(z);
@@ -392,17 +492,17 @@ double complex besselI(int m, double complex z){
 	if (m < 0){
 		nu = -nu;
 		zbesi_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
-		Inu = cyr[0] + I*cyi[0];
+		Im = cyr[0] + I*cyi[0];
 	}
 	else {
 		zbesi_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
-		Inu = cyr[0] + I*cyi[0];
+		Im = cyr[0] + I*cyi[0];
 	}
 
 	if (ierr != 0)
 		printf("Error! Zbesi did not return successfully.\n");
 
-	return(Inu);
+	return(Im);
 }
 
 double complex besselI(double nu, double complex z){
@@ -467,7 +567,10 @@ void besselIArray(int nmin, int nmax, double x, double *In){
 		info = gsl_sf_bessel_In_array(nmin, nmax, x, In);
 }
 
-void besselIArray(int nmin, int nmax, double complex z, double complex *Inu){
+void besselIArray(int nmin, int nmax, double complex z, double complex *In){
+	if (nmin > nmax)
+		printf("Error! nmin > nmax.\n");
+	
 	int i;
 	int nsize = nmax - nmin + 1;
 	double nu = double(nmin);
@@ -480,15 +583,42 @@ void besselIArray(int nmin, int nmax, double complex z, double complex *Inu){
 	cyr = (double*) calloc(nsize, sizeof(double));
 	cyi = (double*) calloc(nsize, sizeof(double));
 	
-	zbesi_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
-	
-	if (ierr != 0)
-		printf("Error! Zbesi did not return successfully.\n");
+	if (nmin < 0 && nmax <= 0) {
+		nu = double(-nmax);
 
-	for (i = 0; i < nsize; i++){
-		Inu[i] = cyr[i] + I*cyi[i];
+		zbesi_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nsize; i++){
+			In[i] = cyr[nsize - i - 1] + I*cyi[nsize - i - 1];
+		}
+	}
+	else if (nmin < 0 && nmax > 0) {
+		int nneg = -nmin;
+		int npos = nmax + 1;
+	
+		nu = 1.;
+		zbesi_(&zr, &zi, &nu, &kode, &nneg, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nneg; i++){
+			In[i] = cyr[nneg - i - 1] + I*cyi[nneg - i - 1];
+		}
+
+		nu = 0.;
+		zbesi_(&zr, &zi, &nu, &kode, &npos, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < npos; i++){
+			In[nneg + i] = cyr[i] + I*cyi[i];
+		}
+
+	}
+	else {
+		nu = double(nmin);
+		zbesi_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nsize; i++){
+			In[i] = cyr[i] + I*cyi[i];
+		}
 	}
 
+	if (ierr != 0)
+		printf("Error! Zbesi did not return successfully.\n");
+	
 	free(cyr);
 	free(cyi);
 }
@@ -519,7 +649,7 @@ double besselK(double nu, double x){
 
 double complex besselK(int m, double complex z){
 	double nu = double(m);
-	double complex Knu;
+	double complex Km;
 	int kode = 1;
 	int n = 1;
 	double zr = creal(z);
@@ -530,17 +660,17 @@ double complex besselK(int m, double complex z){
 	if (m < 0){
 		nu = -nu;
 		zbesk_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
-		Knu = cyr[0] + I*cyi[0];
+		Km = cyr[0] + I*cyi[0];
 	}
 	else {
 		zbesk_(&zr, &zi, &nu, &kode, &n, cyr, cyi, &nz, &ierr);
-		Knu = cyr[0] + I*cyi[0];
+		Km = cyr[0] + I*cyi[0];
 	}
 	
 	if (ierr != 0)
 		printf("Error! Zbesk did not return successfully.\n");
 
-	return(Knu);
+	return(Km);
 }
 
 double complex besselK(double nu, double complex z){
@@ -604,7 +734,10 @@ void besselKArray(int nmin, int nmax, double x, double *Kn){
 		info = gsl_sf_bessel_Kn_array(nmin, nmax, x, Kn);
 }
 
-void besselKArray(int nmin, int nmax, double complex z, double complex *Knu){
+void besselKArray(int nmin, int nmax, double complex z, double complex *Kn){
+	if (nmin > nmax)
+		printf("Error! nmin > nmax.\n");
+	
 	int i;
 	int nsize = nmax - nmin + 1;
 	double nu = double(nmin);
@@ -617,15 +750,42 @@ void besselKArray(int nmin, int nmax, double complex z, double complex *Knu){
 	cyr = (double*) calloc(nsize, sizeof(double));
 	cyi = (double*) calloc(nsize, sizeof(double));
 	
-	zbesk_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
-	
-	if (ierr != 0)
-		printf("Error! Zbesk did not return successfully.\n");
+	if (nmin < 0 && nmax <= 0) {
+		nu = double(-nmax);
 
-	for (i = 0; i < nsize; i++){
-		Knu[i] = cyr[i] + I*cyi[i];
+		zbesk_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nsize; i++){
+			Kn[i] = cyr[nsize - i - 1] + I*cyi[nsize - i - 1];
+		}
+	}
+	else if (nmin < 0 && nmax > 0) {
+		int nneg = -nmin;
+		int npos = nmax + 1;
+	
+		nu = 1.;
+		zbesk_(&zr, &zi, &nu, &kode, &nneg, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nneg; i++){
+			Kn[i] = cyr[nneg - i - 1] + I*cyi[nneg - i - 1];
+		}
+
+		nu = 0.;
+		zbesk_(&zr, &zi, &nu, &kode, &npos, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < npos; i++){
+			Kn[nneg + i] = cyr[i] + I*cyi[i];
+		}
+
+	}
+	else {
+		nu = double(nmin);
+		zbesk_(&zr, &zi, &nu, &kode, &nsize, cyr, cyi, &nz, &ierr);
+		for (i = 0; i < nsize; i++){
+			Kn[i] = cyr[i] + I*cyi[i];
+		}
 	}
 
+	if (ierr != 0)
+		printf("Error! Zbesk did not return successfully.\n");
+	
 	free(cyr);
 	free(cyi);
 }

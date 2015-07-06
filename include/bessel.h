@@ -6,17 +6,24 @@
  *
  * PARAMETERS
  *  x	[input]		field point
- *  n	[input]		integer order
+ *  n,m	[input]		integer order
  *  nu	[input]		fractional order
  *  J	[output]	Bessel function of the first kind
  *  Y	[output]	Bessel function of the second kind
  *  I	[output]	modified Bessel function of the first kind
  *  K	[output]	modified Bessel function of the second kind
  *
- * NOTE
+ * NOTES
  *  GSL provides a basic implementation of Bessel functions, but
  *  does not support Bessel functions with complex arguments. The
  *  latter is handled by SLATEC subroutines.
+ *  
+ *  The current implementation cannot handle negative non-integer
+ *  orders. For negative integer orders, the following rules for
+ *  Bessel functions are used:
+ *   Jn(x) = -J(-n)(x)  if n is odd     [ditto for Yn(x)]
+ *   Jn(x) = J(-n)(x)   if n is even    [ditto for Yn(x)]
+ *   In(x) = I(-n)(x)   for all n       [ditto for Kn(x)]
  */
 
 #ifndef BESSEL_H

@@ -8,7 +8,7 @@
 #include "gauleg.h"
 #include "bessel.h"
 //#include <boost/math/special_functions>
-//#include "grnfcn.h"
+#include "grnfcn.h"
 
 // not sure if these declarations are neceessary...
 #ifndef lapack_complex_float
@@ -27,30 +27,31 @@ void testBesselComplexNegativeOrder();
 void testGrnfcn();
 
 int main(){
-//	testGrnfcn();
+	testGrnfcn();
 //	testBessel();
 //	testBesselComplex();
 //	testBesselNegativeOrder();
-	testBesselComplexNegativeOrder();
+//	testBesselComplexNegativeOrder();
 //	testGauleg();
 
 	return(0);
 }
 
 void testGrnfcn(){
-	double Dk, dDkds;
 	int k;
-	double complex z;
+	double complex z, s;
+	double complex Dk, dDkds;
 	z = 2.4 + 1.1*I;
 	
 	// get k
 	printf("k = ");
 	scanf("%d",&k);
 
-	double s = 4;
+	s = 4. + 1.*I;
 
-//	calcDk(k, s, Dk, dDkds);
-	printf("%.16f\n%.16f\n", Dk, dDkds);
+	calcDk(k, s, Dk, dDkds);
+	printf("Dk = %.4f + %.4fi\n", creal(Dk), cimag(Dk));
+	printf("dDk/ds = %.4f + %.4fi\n", creal(dDkds), cimag(dDkds));
 
 	//int n = 1;
 	//double an, bn, cn;

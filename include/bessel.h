@@ -38,8 +38,8 @@
 #include <math.h>
 
 /* COMPLEX DATAT TYPE */
-#ifndef lapack_double_complex
-#define lapack_double_complex double complex
+#ifndef lapack_complex_double
+#define lapack_complex_double double complex
 #endif
 
 /* SLATEC FORTRAN SUBROUTINES (NETLIB/AMOS LIBRARY) */

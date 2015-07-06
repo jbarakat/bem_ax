@@ -15,8 +15,15 @@
 #include "bessel.h"
 #include <gsl/gsl_sf_log.h>
 
-typedef lapack_complex_float fcmplx;
-typedef lapack_complex_double dcmplx;
+//typedef lapack_complex_float fcmplx;
+//typedef lapack_complex_double dcmplx;
+
+#ifndef lapack_complex_double
+#define lapack_complex_double double complex
+#endif
+
+/* TEMPLATE */
+template<class T> 
 
 /* PROTOTYPES */
 // Green's function for a Stokeslet in a circular tube
@@ -40,8 +47,8 @@ void gf_tube(){
  *  
  *   Dk(s) = s*Ik(s)*[I(k-1)(s)*I(k+1)(s)]' - 2*[s*Ik(s)]'*I(k-1)(s)*I(k+1)(s)
  *
- *  which can be rewritten, using derivative and recursion relations for
- *  modified Bessel functions, in the following form:
+ *  This expression can be rewritten, using derivative and recursion relations
+ *  for modified Bessel functions, in the following form:
  *
  *   Dk(s) = s*[Ik(s)^2 - I(k-1)(s)*I(k+1)(s)]*[I(k-1)(s) + I(k+1)(s)]
  *            - 4*I(k-1)(s)*Ik(s)*I(k+1)(s)
@@ -55,46 +62,32 @@ void gf_tube(){
  *            + 4*Ik(s)*{I(k-1)(s)*I(k+1)(s) - s*[I(k-1)(s)*Ik(s) 
  *                      + I(k-1)(s)*I(k+1)(s) + Ik(s)I(k+1)(s)]}
  */
-void calcDk(int k, dcmplx s, dcmplx &Dk, dcmplx &dDkds){
+void calcDk(int k, double complex s, double complex &Dk, double complex &dDkds){
 	// declare variables
-	double Ikm1, Ik, Ikp1;
-	dcmplx Dk1, Dk2;
-	dcmplx dDkds1, dDkds2, dDkds3, dDkds4;
-	dcmplx* Ikarray;
-
-	// calculate modified Bessel functions of the first kind
-	if (k <= -1){
-		Ikarray = (double*) calloc(3,sizeof(double));
-		besselIArray(-k-1, -k+1, s, Ikarray);
-		Ikp1 = Ikarray[0];
-		Ik   = Ikarray[1];
-		Ikm1 = Ikarray[2];
-	}
-	else if (k == 0){
-		Ikarray = (double*) calloc(2,sizeof(double));
-		besselIArray(k, k+1, s, Ikarray);
-		Ikp1 = Ikarray[1];
-		Ik   = Ikarray[0];
-		Ikm1 = Ikp1;
-	}
-	else {
-		Ikarray = (double*) calloc(3,sizeof(double));
-		besselIArray(k-1, k+1, s, Ikarray);
-		Ikp1 = Ikarray[2];
-		Ik   = Ikarray[1];
-		Ikm1 = Ikarray[0];
-	}
+	double complex Ikm1, Ik, Ikp1;
+	double complex Dk1, Dk2;
+	double complex dDkds1, dDkds2, dDkds3, dDkds4;
+	double complex* Ikarray;
+	
+	// allocate memory
+	Ikarray = (double complex*) calloc(3,sizeof(double complex));
+	
+	// evaluate modified Bessel functions
+	besselIArray(k-1, k+1, s, Ikarray);
+	Ikm1 = Ikarray[0];
+	Ik   = Ikarray[1];
+	Ikp1 = Ikarray[2];
 
 	// calculate Dk(s)
-	Dk1 = s*(pow(Ik, 2) - Ikm1*Ikp1)*(Ikm1 + Ikp1);
+	Dk1 = s*(Ik*Ik - Ikm1*Ikp1)*(Ikm1 + Ikp1);
 	Dk2 = -4*Ikm1*Ik*Ikp1;
 	Dk = Dk1 + Dk2;
 
 	// calculate the gradient of Dk(s) wrt s
 	dDkds1 = Ik*(Ik + s*(Ikm1 + Ikp1));
 	dDkds2 = Ikm1*Ikp1*((2 - k - 2*s)*Ikm1 + (2 + k - 2*s)*Ikp1);
-  dDkds3 = -s*Ik*(Ikp1*Ikp1 + Ikm1*Ikm1);
-  dDkds4 = 4*Ik*(Ikm1*Ikp1 - s*(Ikm1*Ik + Ikm1*Ikp1 + Ik*Ikp1));
+	dDkds3 = -s*Ik*(Ikp1*Ikp1 + Ikm1*Ikm1);
+	dDkds4 = 4*Ik*(Ikm1*Ikp1 - s*(Ikm1*Ik + Ikm1*Ikp1 + Ik*Ikp1));
 	dDkds = dDkds1 + dDkds2 + dDkds3 + dDkds4;
 
 	// release memory
@@ -102,40 +95,30 @@ void calcDk(int k, dcmplx s, dcmplx &Dk, dcmplx &dDkds){
 }
 
 
-void calcDkArray(int kmin, int kmax, double s, double *Dk){
+void calcDkArray(int kmin, int kmax, double complex s, double complex *Dk, double complex *dDkds){
 }
 
 /* calculate the roots of Dk(s)
- *  The roots of Dk(s) include zero,	s = 0
- *  a complex sequence,								xn = an +i*bn,	n = 0, 1, ...
- *  and a purely imaginary sequence,	yn = i*cn,			n = 0, 1, ...
- *
- *  From LS78-6.4,6.5, the estimates of xn, yn are
- *
- *   xn ~ 0.5*log[(2*n + k + 1)*PI] + (2*n + k + 1)*0.5*PI*i
- *   yn ~ i*(0.25*PI + 0.5*k*PI + n*PI), n = 0, 1
- *  
- *  The exact roots may be computed using the Newton-Raphson method by
- *  inputting the function Dk(s) and its gradient Dk'(s):
- *
- *
- *
  *  The roots of Dk(s) in the first quadrant are determined by solving the
  *  equation (LS78-6.1),
  *
  *   0 = t*[Jk^2(t) - J(k-1)(t)*J(k+1)(t)]*[J(k-1)(t) - J(k+1)(t)] 
  *        - 4*J(k-1)(t)*J(k+1)(t)
  *
- *  where t = i*s. Denote the two sets of roots by sn = xn and s = yn,
- *  n = 0, 1, ..., where
+ *  where t = i*s. Clearly, s = 0 is a root. Additionally, let s = x denote
+ *  a complex root and s = y denote a purely imaginary root. These additional
+ *  roots comprise an infinite sequence:
  *
- *   xn = an + i*bn	are the complex roots
- *   yn = i*cn			are the imaginary roots
+ *   xn = an + i*bn,   n = 0, 1, ...
+ *   yn = i*cn,        n = 0, 1, ...
  *
  *  From LS78-6.4,6.5, the estimates of xn, yn are
  *
- *   xn ~ 0.5*log[(2*n + k + 1)*PI] + (2*n + k + 1)*0.5*PI*i, n = 0, 1, ...
- *   yn ~ i*(0.25*PI + 0.5*k*PI + n*PI), n = 0, 1, ...
+ *   xn ~ 0.5*log[(2*n + k + 1)*PI] + (2*n + k + 1)*0.5*PI*i
+ *   yn ~ i*(0.25*PI + 0.5*k*PI + n*PI)
+ *
+ *  where n = 0, 1, ... The exact roots may be computed using the Newton-
+ *  Raphson method by inputting the function Dk(s) and its gradient Dk'(s).
  */
 void calcDkRoots(int n, int k, double &an, double &bn, double &cn,
 	double *xn, double *yn){

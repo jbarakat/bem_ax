@@ -49,15 +49,19 @@ void testGrnfcn(){
 
 	s = 4. + 1.*I;
 
-	calcDk(k, s, Dk, dDkds);
-	printf("Dk = %.4f + %.4fi\n", creal(Dk), cimag(Dk));
-	printf("dDk/ds = %.4f + %.4fi\n", creal(dDkds), cimag(dDkds));
-
-	//int n = 1;
-	//double an, bn, cn;
-	//lapack_complex_double *xn, *yn;
-	//calcDkRoots(n, k, an, bn, cn, xn, yn);
-	//printf("an = %.16f\nbn = %.16f\ncn = %.16f\n", an, bn, cn);
+//	calcDk(k, s, Dk, dDkds);
+//	printf("Dk = %.4f + %.4fi\n", creal(Dk), cimag(Dk));
+//	printf("dDk/ds = %.4f + %.4fi\n", creal(dDkds), cimag(dDkds));	
+//	
+//	calcDk1Q(k, s, Dk, dDkds);
+//	printf("Dk = %.4f + %.4fi\n", creal(Dk), cimag(Dk));
+//	printf("dDk/ds = %.4f + %.4fi\n", creal(dDkds), cimag(dDkds));
+	
+	int n = 1;
+	double an, bn, cn;
+	double complex xn[1], yn[1];
+	calcDkRoots(n, k, an, bn, cn, xn, yn);
+	printf("an = %.16f\nbn = %.16f\ncn = %.16f\n", an, bn, cn);
 }
 
 void testBesselNegativeOrder(){

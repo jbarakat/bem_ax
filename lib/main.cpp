@@ -7,6 +7,7 @@
 #include <complex.h>
 #include "gauleg.h"
 #include "bessel.h"
+#include "ellint.h"
 //#include <boost/math/special_functions>
 #include "grnfcn.h"
 
@@ -24,14 +25,16 @@ void testBessel();
 void testBesselComplex();
 void testBesselNegativeOrder();
 void testBesselComplexNegativeOrder();
+void testEllint();
 void testGrnfcn();
 
 int main(){
-	testGrnfcn();
+//	testGrnfcn();
 //	testBessel();
 //	testBesselComplex();
 //	testBesselNegativeOrder();
 //	testBesselComplexNegativeOrder();
+//	testEllint();
 //	testGauleg();
 
 	return(0);
@@ -62,6 +65,29 @@ void testGrnfcn(){
 	double complex xn[1], yn[1];
 	calcDkRoots(n, k, an, bn, cn, xn, yn);
 	printf("an = %.16f\nbn = %.16f\ncn = %.16f\n", an, bn, cn);
+}
+
+void testEllint(){
+	double phi, k, n;
+	double F, E, Pi, Kcomp, Ecomp, Picomp;
+	
+	phi = 1.2;
+	k = 0.8;
+	n = 0.3;
+
+	F = ellintF(phi, k);
+	E = ellintE(phi, k);
+//	Pi = ellintPi(phi, k, n);
+	Kcomp = ellintK(k);
+	Ecomp = ellintE(k);
+//	Picomp = ellintPi(k, n);
+
+	printf("F = %.6f\n", F);
+	printf("E = %.6f\n", E);
+//	printf("Pi = %.6f\n", Pi);
+	printf("Kcomp = %.6f\n", Kcomp);
+	printf("Ecomp = %.6f\n", Ecomp);
+//	printf("Picomp = %.6f\n", Picomp);
 }
 
 void testBesselNegativeOrder(){

@@ -179,8 +179,8 @@ void calcDkRoots(int n, int k, double &an, double &bn, double &cn, double comple
 	double tr, ti, dtr, dti, err, errr, erri; 
 	
 	// calculate estimates of an, bn, cn
-	an = 0.5*gsl_sf_log((2.0*n + k + 1.0)*M_PI);
-	bn = (2.0*n + k + 1.0)*0.5*M_PI;
+	an = 0.5*gsl_sf_log((2*n + k + 1)*M_PI);
+	bn = (2*n + k + 1)*0.5*M_PI;
 	cn = (0.25 + 0.5*k + n)*M_PI;
 	printf("an = %.8f\n",an);
 	printf("bn = %.8f\n",bn);

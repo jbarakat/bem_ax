@@ -29,7 +29,7 @@ void testEllint();
 void testGrnfcn();
 
 int main(){
-//	testGrnfcn();
+	testGrnfcn();
 //	testBessel();
 //	testBesselComplex();
 //	testBesselNegativeOrder();
@@ -41,17 +41,47 @@ int main(){
 }
 
 void testGrnfcn(){
-	int k;
-	double complex z, s;
-	double complex Dk, dDkds;
-	z = 2.4 + 1.1*I;
+	// declare variables
+	double *MR, *MC, MT;
+	double Mxx, Mxr, Mrx, Mrr;
+	double x = 2.;
+	double x0 = 1.;
+	double r = 2.;
+	double r0 = 1.;
+
+	/* Green's function for a ring of point forces in a tube */
+	// allocate memory
+	MR = (double*) calloc(2*2,sizeof(double));
+
+	// calculate Green's function
+	gf_axR(x, x0, r, r0, Mxx, Mxr, Mrx, Mrr);
+	MR[0] = Mxx;
+	MR[1] = Mxr;
+	MR[2] = Mrx;
+	MR[3] = Mrr;
+	printf("MR = \n");
+	for (int i = 0; i < 2; i++){
+		for (int j = 0; j < 2; j++){
+			printf("%.16f ", MR[i*2 + j]);
+		}
+		printf("\n");
+	}
+
+
 	
-	// get k
-	printf("k = ");
-	scanf("%d",&k);
-
-	s = 4. + 1.*I;
-
+	
+	
+//	int k;
+//	double complex z, s;
+//	double complex Dk, dDkds;
+//	z = 2.4 + 1.1*I;
+//	
+//	// get k
+//	printf("k = ");
+//	scanf("%d",&k);
+//
+//	s = 4. + 1.*I;
+//
 //	calcDk(k, s, Dk, dDkds);
 //	printf("Dk = %.4f + %.4fi\n", creal(Dk), cimag(Dk));
 //	printf("dDk/ds = %.4f + %.4fi\n", creal(dDkds), cimag(dDkds));	
@@ -60,11 +90,11 @@ void testGrnfcn(){
 //	printf("Dk = %.4f + %.4fi\n", creal(Dk), cimag(Dk));
 //	printf("dDk/ds = %.4f + %.4fi\n", creal(dDkds), cimag(dDkds));
 	
-	int n = 1;
-	double an, bn, cn;
-	double complex xn[1], yn[1];
-	calcDkRoots(n, k, an, bn, cn, xn, yn);
-	printf("an = %.16f\nbn = %.16f\ncn = %.16f\n", an, bn, cn);
+//	int n = 1;
+//	double an, bn, cn;
+//	double complex xn[1], yn[1];
+//	calcDkRoots(n, k, an, bn, cn, xn, yn);
+//	printf("an = %.16f\nbn = %.16f\ncn = %.16f\n", an, bn, cn);
 }
 
 void testEllint(){

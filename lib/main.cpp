@@ -26,10 +26,11 @@ void testBesselComplex();
 void testBesselNegativeOrder();
 void testBesselComplexNegativeOrder();
 void testEllint();
-void testGrnfcn();
+void testGrnfcnR();
+void testGrnfcnT();
 
 int main(){
-	testGrnfcn();
+	testGrnfcnR();
 //	testBessel();
 //	testBesselComplex();
 //	testBesselNegativeOrder();
@@ -40,7 +41,7 @@ int main(){
 	return(0);
 }
 
-void testGrnfcn(){
+void testGrnfcnR(){
 	// declare variables
 	int i, j, k;
 	double x, x0, r, r0;
@@ -67,10 +68,11 @@ void testGrnfcn(){
 	x0 = 1.;
 	r = 2.;
 	r0 = 1.;
-	fx = 0.;
-	fr = 1.;
 
-	/* Green's function for a ring of point forces in a tube */
+	fx = 0.; // axial point force
+	fr = 1.; // radial point force
+
+	/* Green's function for a ring of point forces in free space */
 	// allocate memory
 	MR = (double*) malloc(2 * 2 * sizeof(double));
 	uR = (double*) malloc(2 * sizeof(double));
@@ -119,15 +121,6 @@ void testGrnfcn(){
 				ystream[istr] = 0.10*(istr+1);
 			}
 			ystream[19] = 1.95;
-			
-		//	xstream = {0.01, 0.01, 0.01, 0.01, 0.01,
-		//	           0.01, 0.01, 0.01, 0.01, 0.01,
-    //             0.01, 0.01, 0.01, 0.01, 0.01,
-    //             0.01, 0.01, 0.01, 0.01, 0.01};
-		//	ystream = {0.10, 0.20, 0.30, 0.40, 0.50,
-		//	                      0.60, 0.70, 0.80, 0.90, 1.00,
-		//	                      1.10, 1.20, 1.30, 1.40, 1.50,
-		//	                      1.60, 1.70, 1.80, 1.90, 1.95};
 			
 		}
 		else if (fx == 0. && fr == 1.){

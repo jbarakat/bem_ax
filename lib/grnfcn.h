@@ -46,7 +46,7 @@ void gf_axT(){
  *  R	spherical radial coordinate
  *  M	Green's function tensor
  */
-void gf_axR(double x, double x0, double r, double r0,
+void gf_axR(double x, double r, double x0, double r0,
             double &Mxx, double &Mxr, double &Mrx, double &Mrr){
 	// declare variables
 	double K, E;
@@ -60,7 +60,6 @@ void gf_axR(double x, double x0, double r, double r0,
 	double R = pow(R2, 0.5);
 	double k2 = 4*r*r0/(X2 + (r + r0)*(r + r0));
 	double k = pow(k2, 0.5);
-	printf("%.16f\n",k);
 
 	// complete elliptic integrals
 	K = ellintK(k);
@@ -77,13 +76,13 @@ void gf_axR(double x, double x0, double r, double r0,
  *  f	point force
  *  u	velocity
  */
-void gf_axR_vel(double x, double x0, double r, double r0,
+void gf_axR_vel(double x, double r, double x0, double r0,
                 double fx, double fr, double &ux, double &ur){
 	// declare variables
 	double Mxx, Mxr, Mrx, Mrr;
 	
 	// calculate Green's function components
-	gf_axR(x, x0, r, r0, Mxx, Mxr, Mrx, Mrr);
+	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
 
 	// calculate velocity components
 	ux = (Mxx*fx + Mxr*fr)/(8*M_PI);

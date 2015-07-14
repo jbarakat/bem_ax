@@ -42,7 +42,7 @@ int main(){
 
 void testGrnfcn(){
 	// declare variables
-	int i, j;
+	int i, j, k;
 	double x, x0, r, r0;
 	double xmin, xmax, rmin, rmax;
 	int Nx, Nr;
@@ -62,12 +62,11 @@ void testGrnfcn(){
 
 	/* Green's function for a ring of point forces in a tube */
 	// allocate memory
-	MR = (double*) calloc(2*2,sizeof(double));
-	uR = (double*) calloc(2,sizeof(double));
-
+	MR = (double*) malloc(2 * 2 * sizeof(double));
+	uR = (double*) malloc(2 * sizeof(double));
 
 	// calculate Green's function
-	gf_axR(x, x0, r, r0, Mxx, Mxr, Mrx, Mrr);
+	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
 	MR[0] = Mxx;
 	MR[1] = Mxr;
 	MR[2] = Mrx;
@@ -81,7 +80,7 @@ void testGrnfcn(){
 	}
 
 	// calculate the velocity at x, r
-	gf_axR_vel(x, x0, r, r0, fx, fr, ux, ur);
+	gf_axR_vel(x, r, x0, r0, fx, fr, ux, ur);
 	uR[0] = ux;
 	uR[1] = ur;
 	printf("\n");
@@ -92,10 +91,87 @@ void testGrnfcn(){
 	}
 
 	// calculate velocity field and plot streamlines
-	
+	// (based on the sgf_ax_fs_str.f Fortran code from Pozrikidis)
+	double xring = 0.;
+	double yring = 1.;
+	int istr, istep;
+	double *xstr, *ystr;
+	double xvel, yvel;
+	double velx, velx1, vely, vely1;
+	int Nstr, Nstep;
+	double Dr, Dt;
+	if (fx == 1. && fr == 0. || fx == 0. && fr == 1.){
+		if (fx == 1. && fr == 0.){
+			
+			double xstream[20] = {0.01, 0.01, 0.01, 0.01, 0.01,
+			                      0.01, 0.01, 0.01, 0.01, 0.01,
+                            0.01, 0.01, 0.01, 0.01, 0.01,
+                            0.01, 0.01, 0.01, 0.01, 0.01};
+			double ystream[20] = {0.10, 0.20, 0.30, 0.40, 0.50,
+			                      0.60, 0.70, 0.80, 0.90, 1.00,
+			                      1.10, 1.20, 1.30, 1.40, 1.50,
+			                      1.60, 1.70, 1.80, 1.90, 1.95};
+			Nstr = 20;
+			Nstep = 2*128;
+			Dr = 0.02;
+			
+			for (istr = 0; istr < Nstr; istr++){
+				// allocate memory
+				xstr = (double*) malloc(1 * sizeof(double));
+				ystr = (double*) malloc(1 * sizeof(double));
+			
+				// initialize streamline
+				xstr[0] = xstream[istr];
+				ystr[0] = ystream[istr];
 
+				for (istep = 0; istep < Nstep; istep++){
+					// update field point
+					xvel = xstr[istep];
+					yvel = ystr[istep];
 
-	
+					// reallocate memory
+					xstr = (double*) realloc(xstr, (istep + 2) * sizeof(double));
+					ystr = (double*) realloc(ystr, (istep + 2) * sizeof(double));
+					
+					// calculate the velocity induced by a ring of point forces
+					gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx, vely);
+					Dt = Dr/sqrt(velx*velx + vely*vely);
+
+					//  update field point
+					xvel = xstr[istep] + velx*Dt;
+					yvel = ystr[istep] + vely*Dt;
+
+					// calculate the induced velocity at the new field point
+					gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx1, vely1);
+					
+					// update the streamline using a simple midpoint rule for integration
+					xstr[istep + 1] = xstr[istep] + 0.5*(velx + velx1)*Dt;
+					ystr[istep + 1] = ystr[istep] + 0.5*(vely + vely1)*Dt;
+
+					// condition for breaking for loop
+					if (xstr[istep + 1] > 2)
+						break;
+					if (xstr[istep + 1] < -2)
+						break;
+					if (ystr[istep + 1] > 2)
+						break;
+					if (ystr[istep + 1] < -2)
+						break;
+				}
+
+				// write to file
+
+				free(xstr);
+				free(ystr);
+			}
+		}
+		else if (fx == 0. && fr == 1.){
+			
+		}
+	}
+
+	free(MR);
+	free(uR);
 	
 	
 //	int k;

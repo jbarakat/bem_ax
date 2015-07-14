@@ -51,6 +51,15 @@ void testGrnfcn(){
 	double *uR, *uC, *uT;
 	double Mxx, Mxr, Mrx, Mrr;
 	double fx, fr, ux, ur;
+	
+	double xring = 0.;
+	double yring = 1.;
+	int istr, istep;
+	double *xstr, *ystr;
+	double xvel, yvel;
+	double velx, velx1, vely, vely1;
+	int Nstr, Nstep;
+	double Dr, Dt;
 
 	// assign variables
 	x = 2.;
@@ -90,16 +99,11 @@ void testGrnfcn(){
 		printf("\n");
 	}
 
-	// calculate velocity field and plot streamlines
-	// (based on the sgf_ax_fs_str.f Fortran code from Pozrikidis)
-	double xring = 0.;
-	double yring = 1.;
-	int istr, istep;
-	double *xstr, *ystr;
-	double xvel, yvel;
-	double velx, velx1, vely, vely1;
-	int Nstr, Nstep;
-	double Dr, Dt;
+	/* calculate velocity field and plot streamlines
+	 * (based on the sgf_ax_fs_str.f Fortran code from Pozrikidis) */
+	FILE *pFile;
+	pFile =  fopen("str.dat", "w+");
+	fprintf(pFile, "xstr ystr\n");
 	if (fx == 1. && fr == 0. || fx == 0. && fr == 1.){
 		if (fx == 1. && fr == 0.){
 			
@@ -125,6 +129,8 @@ void testGrnfcn(){
 				ystr[0] = ystream[istr];
 
 				for (istep = 0; istep < Nstep; istep++){
+					fprintf(pFile, "%.8f %.8f\n", xstr[istep], ystr[istep]);
+
 					// update field point
 					xvel = xstr[istep];
 					yvel = ystr[istep];
@@ -158,8 +164,15 @@ void testGrnfcn(){
 					if (ystr[istep + 1] < -2)
 						break;
 				}
+				fprintf(pFile, "\n");
 
 				// write to file
+				//for (i = 0; i < istep + 1; i++){
+				//	fprintf(pFile, "%.8f %.8f", xstr[i], ystr[i]);
+				//}
+				//fprintf(pFile, "\n");
+				//fprintf(pFile, "\n");
+
 
 				free(xstr);
 				free(ystr);
@@ -169,6 +182,7 @@ void testGrnfcn(){
 			
 		}
 	}
+	fclose(pFile);
 
 	free(MR);
 	free(uR);

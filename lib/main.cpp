@@ -104,20 +104,30 @@ void testGrnfcn(){
 	FILE *pFile;
 	pFile =  fopen("str.dat", "w+");
 	fprintf(pFile, "xstr ystr\n");
+	double *xstream, *ystream;
 	if (fx == 1. && fr == 0. || fx == 0. && fr == 1.){
 		if (fx == 1. && fr == 0.){
-			
-			double xstream[20] = {0.01, 0.01, 0.01, 0.01, 0.01,
-			                      0.01, 0.01, 0.01, 0.01, 0.01,
-                            0.01, 0.01, 0.01, 0.01, 0.01,
-                            0.01, 0.01, 0.01, 0.01, 0.01};
-			double ystream[20] = {0.10, 0.20, 0.30, 0.40, 0.50,
-			                      0.60, 0.70, 0.80, 0.90, 1.00,
-			                      1.10, 1.20, 1.30, 1.40, 1.50,
-			                      1.60, 1.70, 1.80, 1.90, 1.95};
 			Nstr = 20;
 			Nstep = 2*128;
 			Dr = 0.02;
+
+			xstream = (double*) malloc(Nstr * sizeof(double));
+			ystream = (double*) malloc(Nstr * sizeof(double));
+
+			for (istr = 0; istr < Nstr; istr++){
+				xstream[istr] = 0.01;
+				ystream[istr] = 0.10*(istr+1);
+			}
+			ystream[19] = 1.95;
+			
+		//	xstream = {0.01, 0.01, 0.01, 0.01, 0.01,
+		//	           0.01, 0.01, 0.01, 0.01, 0.01,
+    //             0.01, 0.01, 0.01, 0.01, 0.01,
+    //             0.01, 0.01, 0.01, 0.01, 0.01};
+		//	ystream = {0.10, 0.20, 0.30, 0.40, 0.50,
+		//	                      0.60, 0.70, 0.80, 0.90, 1.00,
+		//	                      1.10, 1.20, 1.30, 1.40, 1.50,
+		//	                      1.60, 1.70, 1.80, 1.90, 1.95};
 			
 			for (istr = 0; istr < Nstr; istr++){
 				// allocate memory

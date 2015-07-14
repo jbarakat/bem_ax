@@ -17,9 +17,6 @@
 #include <math.h>
 #include <gsl/gsl_sf_log.h>
 
-//typedef lapack_complex_float fcmplx;
-//typedef lapack_complex_double dcmplx;
-
 #ifndef lapack_complex_double
 #define lapack_complex_double double complex
 #endif

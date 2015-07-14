@@ -2,9 +2,8 @@
  *  Evaluate Green's functions for Stokes flow.
  *
  * REFERENCES
- *  -- Green's function for a Stokeslet in a circular tube --
+ *  Pozrikidis, Cambridge University Press (1992)
  *  Tozeren, Inter. J. Num. Meth. Fluids 4, 159-170 (1984) 
- *  Pozrikidis (1992)
  *  
  * PARAMETERS
  */
@@ -74,18 +73,21 @@ void gf_axR(double x, double x0, double r, double r0,
 	Mrr = (k/(r0*r))*pow(r0/r, 0.5)*((r02 + r2 + 2*X2)*K - (2*X2*X2 + 3*X2*(r02 + r2) + (r2 - r02)*(r2 - r02))*E/R2);
 }
 
-/* velocity field due to a ring of point forces
- *  f	point force vector
- *  u	velocity vector
+/* velocity field at (x,r) due to a ring of point forces at (x0,r0)
+ *  f	point force
+ *  u	velocity
  */
 void gf_axR_vel(double x, double x0, double r, double r0,
                 double fx, double fr, double &ux, double &ur){
 	// declare variables
 	double Mxx, Mxr, Mrx, Mrr;
 	
-	// Green's function due to a ring of point forces
+	// calculate Green's function components
 	gf_axR(x, x0, r, r0, Mxx, Mxr, Mrx, Mrr);
 
+	// calculate velocity components
+	ux = (Mxx*fx + Mxr*fr)/(8*M_PI);
+	ur = (Mrx*fx + Mrr*fr)/(8*M_PI);
 }
 
 

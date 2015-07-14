@@ -42,16 +42,29 @@ int main(){
 
 void testGrnfcn(){
 	// declare variables
-	double *MR, *MC, MT;
+	int i, j;
+	double x, x0, r, r0;
+	double xmin, xmax, rmin, rmax;
+	int Nx, Nr;
+	double *MR, *MC, *MT;
+	double *fR, *fC, *fT;
+	double *uR, *uC, *uT;
 	double Mxx, Mxr, Mrx, Mrr;
-	double x = 2.;
-	double x0 = 1.;
-	double r = 2.;
-	double r0 = 1.;
+	double fx, fr, ux, ur;
+
+	// assign variables
+	x = 2.;
+	x0 = 1.;
+	r = 2.;
+	r0 = 1.;
+	fx = 1.;
+	fr = 0.;
 
 	/* Green's function for a ring of point forces in a tube */
 	// allocate memory
 	MR = (double*) calloc(2*2,sizeof(double));
+	uR = (double*) calloc(2,sizeof(double));
+
 
 	// calculate Green's function
 	gf_axR(x, x0, r, r0, Mxx, Mxr, Mrx, Mrr);
@@ -60,12 +73,26 @@ void testGrnfcn(){
 	MR[2] = Mrx;
 	MR[3] = Mrr;
 	printf("MR = \n");
-	for (int i = 0; i < 2; i++){
-		for (int j = 0; j < 2; j++){
+	for (i = 0; i < 2; i++){
+		for (j = 0; j < 2; j++){
 			printf("%.16f ", MR[i*2 + j]);
 		}
 		printf("\n");
 	}
+
+	// calculate the velocity at x, r
+	gf_axR_vel(x, x0, r, r0, fx, fr, ux, ur);
+	uR[0] = ux;
+	uR[1] = ur;
+	printf("\n");
+	printf("uR = \n");
+	for (i = 0; i < 2; i++){
+		printf("%.16f ", uR[i]);
+		printf("\n");
+	}
+
+	// calculate velocity field and plot streamlines
+	
 
 
 	

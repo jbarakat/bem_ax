@@ -1,4 +1,6 @@
-clear all; close all; clc;
+clear all;
+close all;
+clc;
 T = load('str.dat');
 figure;
 hold all;

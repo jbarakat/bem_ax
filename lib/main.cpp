@@ -55,6 +55,7 @@ void testGrnfcn(){
 	double xring = 0.;
 	double yring = 1.;
 	int istr, istep;
+	double *xstream, *ystream;
 	double *xstr, *ystr;
 	double xvel, yvel;
 	double velx, velx1, vely, vely1;
@@ -66,8 +67,8 @@ void testGrnfcn(){
 	x0 = 1.;
 	r = 2.;
 	r0 = 1.;
-	fx = 1.;
-	fr = 0.;
+	fx = 0.;
+	fr = 1.;
 
 	/* Green's function for a ring of point forces in a tube */
 	// allocate memory
@@ -104,7 +105,6 @@ void testGrnfcn(){
 	FILE *pFile;
 	pFile =  fopen("str.dat", "w+");
 	fprintf(pFile, "xstr ystr\n");
-	double *xstream, *ystream;
 	if (fx == 1. && fr == 0. || fx == 0. && fr == 1.){
 		if (fx == 1. && fr == 0.){
 			Nstr = 20;
@@ -129,69 +129,76 @@ void testGrnfcn(){
 		//	                      1.10, 1.20, 1.30, 1.40, 1.50,
 		//	                      1.60, 1.70, 1.80, 1.90, 1.95};
 			
-			for (istr = 0; istr < Nstr; istr++){
-				// allocate memory
-				xstr = (double*) malloc(1 * sizeof(double));
-				ystr = (double*) malloc(1 * sizeof(double));
-			
-				// initialize streamline
-				xstr[0] = xstream[istr];
-				ystr[0] = ystream[istr];
-
-				for (istep = 0; istep < Nstep; istep++){
-					fprintf(pFile, "%.8f %.8f\n", xstr[istep], ystr[istep]);
-
-					// update field point
-					xvel = xstr[istep];
-					yvel = ystr[istep];
-
-					// reallocate memory
-					xstr = (double*) realloc(xstr, (istep + 2) * sizeof(double));
-					ystr = (double*) realloc(ystr, (istep + 2) * sizeof(double));
-					
-					// calculate the velocity induced by a ring of point forces
-					gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx, vely);
-					Dt = Dr/sqrt(velx*velx + vely*vely);
-
-					//  update field point
-					xvel = xstr[istep] + velx*Dt;
-					yvel = ystr[istep] + vely*Dt;
-
-					// calculate the induced velocity at the new field point
-					gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx1, vely1);
-					
-					// update the streamline using a simple midpoint rule for integration
-					xstr[istep + 1] = xstr[istep] + 0.5*(velx + velx1)*Dt;
-					ystr[istep + 1] = ystr[istep] + 0.5*(vely + vely1)*Dt;
-
-					// condition for breaking for loop
-					if (xstr[istep + 1] > 2)
-						break;
-					if (xstr[istep + 1] < -2)
-						break;
-					if (ystr[istep + 1] > 2)
-						break;
-					if (ystr[istep + 1] < -2)
-						break;
-				}
-				fprintf(pFile, "\n");
-
-				// write to file
-				//for (i = 0; i < istep + 1; i++){
-				//	fprintf(pFile, "%.8f %.8f", xstr[i], ystr[i]);
-				//}
-				//fprintf(pFile, "\n");
-				//fprintf(pFile, "\n");
-
-
-				free(xstr);
-				free(ystr);
-			}
 		}
 		else if (fx == 0. && fr == 1.){
+			Nstr = 13;
+			Nstep = 2*128;
+			Dr = -0.02;
+
+			xstream = (double*) malloc(Nstr * sizeof(double));
+			ystream = (double*) malloc(Nstr * sizeof(double));
+
+			for (istr = 0; istr < Nstr; istr++){
+				xstream[istr] = -0.1 + 0.1*istr;
+				ystream[istr] = 1.99;
+			}
+			xstream[0] = 0.01;
+			xstream[1] = 0.05;
 			
 		}
+
+		for (istr = 0; istr < Nstr; istr++){
+			// allocate memory
+			xstr = (double*) malloc(1 * sizeof(double));
+			ystr = (double*) malloc(1 * sizeof(double));
+		
+			// initialize streamline
+			xstr[0] = xstream[istr];
+			ystr[0] = ystream[istr];
+
+			for (istep = 0; istep < Nstep; istep++){
+				fprintf(pFile, "%.8f %.8f\n", xstr[istep], ystr[istep]);
+
+				// update field point
+				xvel = xstr[istep];
+				yvel = ystr[istep];
+
+				// reallocate memory
+				xstr = (double*) realloc(xstr, (istep + 2) * sizeof(double));
+				ystr = (double*) realloc(ystr, (istep + 2) * sizeof(double));
+				
+				// calculate the velocity induced by a ring of point forces
+				gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx, vely);
+				Dt = Dr/sqrt(velx*velx + vely*vely);
+
+				//  update field point
+				xvel = xstr[istep] + velx*Dt;
+				yvel = ystr[istep] + vely*Dt;
+
+				// calculate the induced velocity at the new field point
+				gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx1, vely1);
+				
+				// update the streamline using a simple midpoint rule for integration
+				xstr[istep + 1] = xstr[istep] + 0.5*(velx + velx1)*Dt;
+				ystr[istep + 1] = ystr[istep] + 0.5*(vely + vely1)*Dt;
+
+				// condition for breaking for loop
+				if (xstr[istep + 1] > 2)
+					break;
+				if (xstr[istep + 1] < -2)
+					break;
+				if (ystr[istep + 1] > 2)
+					break;
+				if (ystr[istep + 1] < -2)
+					break;
+			}
+			fprintf(pFile, "\n");
+
+			free(xstr);
+			free(ystr);
+		}
 	}
+
 	fclose(pFile);
 
 	free(MR);

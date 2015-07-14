@@ -68,7 +68,7 @@ void gf_axR(double x, double r, double x0, double r0,
 	// tensor components of the Green's function
 	Mxx = 2*k*pow(r0/r, 0.5)*(K + (X2/R2)*E);
 	Mxr = -k*(X/pow(r0*r, 0.5))*(K - (r2 - r02 + X2)*E/R2);
-	Mrx = k*(X/r)*pow(r0/r, 0.5)*(K + (r2 - r02 + X2)*E/R2);
+	Mrx = k*(X/r)*pow(r0/r, 0.5)*(K + (r2 - r02 - X2)*E/R2);
 	Mrr = (k/(r0*r))*pow(r0/r, 0.5)*((r02 + r2 + 2*X2)*K - (2*X2*X2 + 3*X2*(r02 + r2) + (r2 - r02)*(r2 - r02))*E/R2);
 }
 

@@ -31,6 +31,7 @@ void testGrnfcnT();
 
 int main(){
 	testGrnfcnR();
+	testGrnfcnT();
 //	testBessel();
 //	testBesselComplex();
 //	testBesselNegativeOrder();
@@ -41,15 +42,57 @@ int main(){
 	return(0);
 }
 
+void testGrnfcnT(){
+	// declare variables
+	int i, j, k;
+	double x, x0, r, r0, rc;
+	double xmin, xmax, rmin, rmax;
+	int Nx, Nr;
+	double *M, *u, *f;
+	double Mxx, Mxr, Mrx, Mrr;
+	double fx, fr, ux, ur;
+	
+	// assign variables
+	x = 2.;
+	x0 = 1.;
+	r = 2.;
+	r0 = 1.;
+	rc = 3.;
+
+	fx = 0.; // axial point force
+	fr = 1.; // radial point force
+	
+	/* complementary Green's function */
+	// allocate memory
+	M = (double*) malloc(2 * 2 * sizeof(double));
+	u = (double*) malloc(2 * sizeof(double));
+
+	// calculate Green's function
+	gf_axT(x, r, x0, r0, rc, Mxx, Mxr, Mrx, Mrr);
+	M[0] = Mxx;
+	M[1] = Mxr;
+	M[2] = Mrx;
+	M[3] = Mrr;
+	printf("M = \n");
+	for (i = 0; i < 2; i++){
+		for (j = 0; j < 2; j++){
+			printf("%.16f ", M[i*2 + j]);
+		}
+		printf("\n");
+	}
+
+	free(M);
+	free(u);
+}
+
+
 void testGrnfcnR(){
 	// declare variables
 	int i, j, k;
 	double x, x0, r, r0;
 	double xmin, xmax, rmin, rmax;
 	int Nx, Nr;
-	double *MR, *MC, *MT;
-	double *fR, *fC, *fT;
-	double *uR, *uC, *uT;
+	double *M, *f, *u;
 	double Mxx, Mxr, Mrx, Mrr;
 	double fx, fr, ux, ur;
 	
@@ -74,31 +117,31 @@ void testGrnfcnR(){
 
 	/* Green's function for a ring of point forces in free space */
 	// allocate memory
-	MR = (double*) malloc(2 * 2 * sizeof(double));
-	uR = (double*) malloc(2 * sizeof(double));
+	M = (double*) malloc(2 * 2 * sizeof(double));
+	u = (double*) malloc(2 * sizeof(double));
 
 	// calculate Green's function
 	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
-	MR[0] = Mxx;
-	MR[1] = Mxr;
-	MR[2] = Mrx;
-	MR[3] = Mrr;
-	printf("MR = \n");
+	M[0] = Mxx;
+	M[1] = Mxr;
+	M[2] = Mrx;
+	M[3] = Mrr;
+	printf("M = \n");
 	for (i = 0; i < 2; i++){
 		for (j = 0; j < 2; j++){
-			printf("%.16f ", MR[i*2 + j]);
+			printf("%.16f ", M[i*2 + j]);
 		}
 		printf("\n");
 	}
 
 	// calculate the velocity at x, r
 	gf_axR_vel(x, r, x0, r0, fx, fr, ux, ur);
-	uR[0] = ux;
-	uR[1] = ur;
+	u[0] = ux;
+	u[1] = ur;
 	printf("\n");
-	printf("uR = \n");
+	printf("u = \n");
 	for (i = 0; i < 2; i++){
-		printf("%.16f ", uR[i]);
+		printf("%.16f ", u[i]);
 		printf("\n");
 	}
 
@@ -194,8 +237,8 @@ void testGrnfcnR(){
 
 	fclose(pFile);
 
-	free(MR);
-	free(uR);
+	free(M);
+	free(u);
 	
 	
 //	int k;

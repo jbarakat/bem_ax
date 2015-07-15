@@ -2,7 +2,7 @@
  *  Evaluate Green's functions for Stokes flow.
  *
  * REFERENCES
- *  Pozrikidis, Cambridge University Press (1992)
+ *  Pozrikidis, Cambridge University Press (1992) [pp. 89-91]
  *  Tozeren, Inter. J. Num. Meth. Fluids 4, 159-170 (1984) 
  *  
  * PARAMETERS
@@ -15,14 +15,12 @@
 #include "bessel.h"
 #include "ellint.h"
 #include <math.h>
+#include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_sf_log.h>
 
 #ifndef lapack_complex_double
 #define lapack_complex_double double complex
 #endif
-
-/* TEMPLATE */
-template<class T> 
 
 /* PROTOTYPES */
 // Green's function for a Stokeslet in a circular tube
@@ -32,16 +30,8 @@ template<class T>
 /***********************************************************************/
 
 /* MAIN FUNCTIONS */
-// total Green's function for a ring of point forces in a tube
-void gf_axT(){
-
-}
-
-/* Green's function corresponding to a ring of point forces
- *  x 	axial coordinate
- *  r	cylindrical radial coordinate
- *  R	spherical radial coordinate
- *  M	Green's function tensor
+/* Green's function M evaluated at (x,r) due to a ring of point forces
+ * located at (x0,r0) in an unbound domain (free space).
  */
 void gf_axR(double x, double r, double x0, double r0,
             double &Mxx, double &Mxr, double &Mrx, double &Mrr){
@@ -58,67 +48,95 @@ void gf_axR(double x, double r, double x0, double r0,
 	double k2 = 4*r*r0/(X2 + (r + r0)*(r + r0));
 	double k = pow(k2, 0.5);
 
-	// complete elliptic integrals
+	// evaluate complete elliptic integrals
 	K = ellintK(k);
 	E = ellintE(k);
 	
-	// tensor components of the Green's function
+	// calculate components of the Green's function
 	Mxx = 2*k*pow(r0/r, 0.5)*(K + (X2/R2)*E);
 	Mxr = -k*(X/pow(r0*r, 0.5))*(K - (r2 - r02 + X2)*E/R2);
 	Mrx = k*(X/r)*pow(r0/r, 0.5)*(K + (r2 - r02 - X2)*E/R2);
 	Mrr = (k/(r0*r))*pow(r0/r, 0.5)*((r02 + r2 + 2*X2)*K - (2*X2*X2 + 3*X2*(r02 + r2) + (r2 - r02)*(r2 - r02))*E/R2);
+
 }
 
-/* velocity field at (x,r) due to a ring of point forces at (x0,r0)
- *  f	point force
- *  u	velocity
+/* velocity u evaluated at (x,r) due to a ring of point forces 
+ * of strength f located at (x0,r0) in an unbound domain (free space).
  */
 void gf_axR_vel(double x, double r, double x0, double r0,
                 double fx, double fr, double &ux, double &ur){
 	// declare variables
 	double Mxx, Mxr, Mrx, Mrr;
 	
-	// calculate Green's function components
+	// calculate components of the Green's function
 	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
 
 	// calculate velocity components
 	ux = (Mxx*fx + Mxr*fr)/(8*M_PI);
 	ur = (Mrx*fx + Mrr*fr)/(8*M_PI);
+
 }
 
-// complementary Green's function to satisfy the no-slip condition on tube walls
-void gf_axC(double x, double r, double x0, double r0, double rc,
+/* Green's function M = MC + MR evaluated at (x,r) due to a ring of 
+ * point forces located at (x0,r0), bounded externally by a cylindrical
+ * tube of radius rc.
+ */
+void gf_axT(double x, double r, double x0, double r0, double rc,
             double &Mxx, double &Mxr, double &Mrx, double &Mrr){
 	// declare variables
-	int it, Nt;
-	double t, dt;
+	int it;
+	double t;
 	double X = x - x0; 
 	double omeg, omeg0, omegc, omegn;
 	double I0, I1, I00, I10, I0c, I1c, I0n, I1n;
 	double K0, K1, K00, K10, K0c, K1c, K0n, K1n;
 	double Axx, Axr, Arx, Arr;
 	double Bxx, Bxr, Brx, Brr;
+	double Bxxc, Bxrc, Brxc, Brrc;
 	double Lxx, Lxr, Lrx, Lrr;
 	double Fxx, Fxr, Frx, Frr;
+	double MRxx, MRxr, MRrx, MRrr;
+	double MCxx, MCxr, MCrx, MCrr;
+	double mRxx, mRxr, mRrx, mRrr;
+	double mCxx, mCxr, mCrx, mCrr;
 	double detL, fc;
-	double cosXt, sinXt;
+	double Xt, cosXt, sinXt;
+	double modB, modF;
 	
-	// integration parameters (step size, upper bound)
-	dt = 0.01;
-	Nt = 1000;
+	// integration parameters
+	const int MAXIT = 100000;
+	const double TOL = 0.000001;
+	const double dt = 0.001;
 	
-	for (it = 0; it < Nt; it++){
+	// initialize
+	mRxx = 0.;
+	mRxr = 0.;
+	mRrx = 0.;
+	mRrr = 0.;
+
+	mCxx = 0.;
+	mCxr = 0.;
+	mCrx = 0.;
+	mCrr = 0.;
+	
+	for (it = 0; it < MAXIT; it++){
+		// update step size
 		t = it*dt;
 		if (t == 0)
 			t = 0.00001;
 		
-		// scaled radius
+		// scale radial coordinate
 		omeg = t*r;
 		omeg0 = t*r0;
 		omegc = t*rc;
 		omegn = 2*omegc - omeg - omeg0;
+
+		// evaluate trigonometric functions
+		Xt = X*t;
+		cosXt = gsl_sf_cos(Xt);
+		sinXt = gsl_sf_sin(Xt);
 		
-		// Bessel functions
+		// evaluate modified Bessel functions
 		I0 = besselI(0, omeg);
 		I1 = besselI(1, omeg);
 		I00 = besselI(0, omeg0);
@@ -137,7 +155,7 @@ void gf_axC(double x, double r, double x0, double r0, double rc,
 		K0n = besselK(0, omegn);
 		K1n = besselK(1, omegn);
 
-		// components of L matrix in La = 4b
+		// calculate components of L matrix in La = 4b
 		Lxx = t*I0c;
 		Lxr = omegc*I1c + 2*I0c;
 		Lrx = t*I1c;
@@ -147,33 +165,81 @@ void gf_axC(double x, double r, double x0, double r0, double rc,
 			printf("Error: matrix L is singular.\n");
 		fc = 4/detL; 
 
-		// components of B matrix
-		Bxx = (-2*K0c + omegc*K1c)*I00 - K0c*omeg0*I10;
-		Bxr =               -omegc*K0c + K1c*omeg0*I10;
-		Brx =           -omegc*K1c*I10 + K0c*omeg0*I00;
-		Brr = ( 2*K1c + omegc*K0c)*I10 - K1c*omeg0*I00;
+		// calculate components of B matrix
+		Bxx = (-2*K0c +  omegc*K1)*I00 - K0*omeg0*I10;
+		Bxr =           -omegc*K0 *I00 + K1*omeg0*I10;
+		Brx =           -omegc*K1 *I10 + K0*omeg0*I00;
+		Brr = ( 2*K1c +  omegc*K0)*I10 - K1*omeg0*I00;
 
-		// components of A matrix from inverting La = 4b
-		Axx = fc*( Lrr*Bxx - Lxr*Bxr);
-		Axr = fc*(-Lrx*Bxx + Lxx*Bxr);
-		Arx = fc*( Lrr*Brx - Lxr*Brr);
-		Arr = fc*(-Lrx*Brx + Lxx*Brr);
+		Bxxc = (-2*K0c +  omegc*K1c)*I00 - K0c*omeg0*I10;
+		Bxrc =           -omegc*K0c *I00 + K1c*omeg0*I10;
+		Brxc =           -omegc*K1c *I10 + K0c*omeg0*I00;
+		Brrc = ( 2*K1c +  omegc*K0c)*I10 - K1c*omeg0*I00;
 
-		// components of F matrix
+		// calculate components of A matrix from inverting La = 4b
+		Axx = fc*( Lrr*Bxxc - Lxr*Bxrc);
+		Axr = fc*(-Lrx*Bxxc + Lxx*Bxrc);
+		Arx = fc*( Lrr*Brxc - Lxr*Brrc);
+		Arr = fc*(-Lrx*Brxc + Lxx*Brrc);
+
+		// calculate components of F matrix
 		Fxx = t*I0*Axx + (omeg*I1 + 2*I0)*Axr;
 		Fxr = t*I0*Arx + (omeg*I1 + 2*I0)*Arr;
-		Frx = t*I1*Axr +  omeg*I0        *Axr;
+		Frx = t*I1*Axx +  omeg*I0        *Axr;
 		Frr = t*I1*Arx +  omeg*I0        *Arr;
 
 		// regularize the xx integrand
 		Fxx = Fxx + 8*K0n;
 
+		// assign weight for numerical integration (extended trapezoidal rule)
+		if (it == 0)
+			fc = 0.5;
+		else
+			fc = 1.0;
 
+		// increment the integrands
+		mRxx +=  fc*Bxx*cosXt;
+		mRxr +=  fc*Bxr*sinXt;
+		mRrx +=  fc*Brx*sinXt;
+		mRrr += -fc*Brr*cosXt;
+
+		mCxx +=  fc*Fxx*cosXt;
+		mCxr +=  fc*Fxr*sinXt;
+		mCrx +=  fc*Frx*sinXt;
+		mCrr += -fc*Frr*cosXt;
+
+		// evaluate maximum modulus of B and F
+		modB =            pow(pow(Bxx, 2), 0.5);
+		modB = fmax(modB, pow(pow(Bxr, 2), 0.5));
+		modB = fmax(modB, pow(pow(Brx, 2), 0.5));
+		modB = fmax(modB, pow(pow(Brr, 2), 0.5));
+
+		modF =            pow(pow(Fxx, 2), 0.5);
+		modF = fmax(modF, pow(pow(Fxr, 2), 0.5));
+		modF = fmax(modF, pow(pow(Frx, 2), 0.5));
+		modF = fmax(modF, pow(pow(Frr, 2), 0.5));
+
+		// break loop below tolerance
+		if (modB < TOL && modF < TOL)
+			break;
 	}
 
+	// calculate components of the Green's function
+	MRxx = -4*r0*mRxx*dt;
+	MRxr = -4*r0*mRxr*dt;
+	MRrx = -4*r0*mRrx*dt;
+	MRrr = -4*r0*mRrr*dt;
 
-	// evaluate components of B
-	
+	MCxx = r0*mCxx*dt - 4*M_PI*r0/pow(X*X + (2*rc - r - r0)*(2*rc - r - r0), 0.5);
+	MCxr = r0*mCxr*dt;
+	MCrx = r0*mCrx*dt;
+	MCrr = r0*mCrr*dt;
+
+	Mxx = MRxx + MCxx;
+	Mxr = MRxr + MCxr;
+	Mrx = MRrx + MCrx;
+	Mrr = MRrr + MCrr;
+
 }
 
 /* AUXILIARY FUNCTIONS */

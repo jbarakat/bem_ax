@@ -145,6 +145,8 @@ void testGrnfcnT(){
 		}
 
 		for (istr = 0; istr < Nstr; istr++){
+			printf("%d\n",istr);
+
 			// allocate memory
 			xstr = (double*) malloc(1 * sizeof(double));
 			ystr = (double*) malloc(1 * sizeof(double));
@@ -165,7 +167,7 @@ void testGrnfcnT(){
 				ystr = (double*) realloc(ystr, (istep + 2) * sizeof(double));
 				
 				// calculate the velocity induced by a ring of point forces
-				gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx, vely);
+				gf_axT_vel(xvel, yvel, xring, yring, 3., fx, fr, velx, vely);
 				Dt = Dr/sqrt(velx*velx + vely*vely);
 
 				//  update field point
@@ -173,7 +175,7 @@ void testGrnfcnT(){
 				yvel = ystr[istep] + vely*Dt;
 
 				// calculate the induced velocity at the new field point
-				gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx1, vely1);
+				gf_axT_vel(xvel, yvel, xring, yring, 3., fx, fr, velx1, vely1);
 				
 				// update the streamline using a simple midpoint rule for integration
 				xstr[istep + 1] = xstr[istep] + 0.5*(velx + velx1)*Dt;
@@ -303,6 +305,8 @@ void testGrnfcnR(){
 		}
 
 		for (istr = 0; istr < Nstr; istr++){
+			printf("%d\n",istr);
+
 			// allocate memory
 			xstr = (double*) malloc(1 * sizeof(double));
 			ystr = (double*) malloc(1 * sizeof(double));

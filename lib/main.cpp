@@ -65,7 +65,7 @@ void testGrnfcnT(){
 	// assign variables
 	x = 0.;
 	x0 = 0.1;
-	r = 1.;
+	r = 0.5;
 	r0 = 0.1;
 	rc = 1.;
 
@@ -79,10 +79,10 @@ void testGrnfcnT(){
 
 	// calculate Green's function
 	gf_axT(x, r, x0, r0, rc, Mxx, Mxr, Mrx, Mrr);
-	M[0] = Mxx;
-	M[1] = Mxr;
-	M[2] = Mrx;
-	M[3] = Mrr;
+	M[0] = Mxx/(8*M_PI);
+	M[1] = Mxr/(8*M_PI);
+	M[2] = Mrx/(8*M_PI);
+	M[3] = Mrr/(8*M_PI);
 	printf("M = \n");
 	for (i = 0; i < 2; i++){
 		for (j = 0; j < 2; j++){

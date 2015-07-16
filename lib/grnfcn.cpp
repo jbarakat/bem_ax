@@ -1,38 +1,21 @@
 /* GREEN'S FUNCTIONS
- *  Evaluate Green's functions for Stokes flow.
+ *  Evaluate axisymmetric Green's functions for Stokes flow.
  *
  * REFERENCES
  *  Pozrikidis, Cambridge University Press (1992) [pp. 89-91]
  *  Tozeren, Inter. J. Num. Meth. Fluids 4, 159-170 (1984) 
  *  
  * PARAMETERS
+ *  x,r   [input]   field point
+ *  x0,r0 [input]   source point
+ *  rc    [input]   cylindrical tube radius
+ *  f     [input]   force density
+ *  u     [output]  velocity
+ *  M 		[output]  Green's function
  */
 
-#ifndef GRNFCN_H
-#define GRNFCN_H
-
 /* HEADER FILES */
-#include "bessel.h"
-#include "ellint.h"
-#include <math.h>
-#include <gsl/gsl_sf_trig.h>
-#include <gsl/gsl_sf_log.h>
-
-#ifndef lapack_complex_double
-#define lapack_complex_double double complex
-#endif
-
-/* PROTOTYPES */
-void gf_axR(double, double, double, double,
-            double&, double&, double&, double&);
-void gf_axR_vel(double, double, double, double,
-                double, double, double&, double&);
-void gf_axT(double, double, double, double, double,
-            double&, double&, double&, double&);
-void gf_axT_ker(double, double, double, double, double, double,
-            double &, double &, double&, double &);
-void gf_axT_vel(double, double, double, double, double,
-                double, double, double&, double&);
+#include "grnfcn.h"
 
 /* IMPLEMENTATIONS */
 /* Green's function M evaluated at (x,r) due to a ring of point forces
@@ -88,16 +71,26 @@ void gf_axR_vel(double x, double r, double x0, double r0,
  */
 void gf_axT(double x, double r, double x0, double r0, double rc,
             double &Mxx, double &Mxr, double &Mrx, double &Mrr){
+	/* set maximum number of refinement stages
+	 * and tolerance for Fourier integrals */
+	const int MAXIT = 20;
+	const double TOL = 0.00001;
+
+	// evaluate Green's function
+	gf_axT(x, r, x0, r0, rc, Mxx, Mxr, Mrx, Mrr, MAXIT, TOL);
+}
+
+void gf_axT(double x, double r, double x0, double r0, double rc,
+            double &Mxx, double &Mxr, double &Mrx, double &Mrr,
+						const int MAXIT, const double TOL){
 	// declare variables
-	int i, j, k, m, n;
+	int i, j, k, n;
 	double MRxx, MRxr, MRrx, MRrr;
 	double MCxx, MCxr, MCrx, MCrr;
 	double mCxx, mCxr, mCrx, mCrr;
 	double dmCxx, dmCxr, dmCrx, dmCrr;
 	double fc, dev;
 	
-	const int MAXIT = 1000;
-	const double TOL = 0.00001;
 	int np, nt;
 	double s, ds;
 	double smin = 0.;
@@ -177,13 +170,15 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 		dev = fmax(dev, dmCrx);
 		dev = fmax(dev, dmCrr);
 
-		// break loop below tolerance
+		// break loop when deviation falls below tolerance
 		if (dev < TOL)
 			break;
 	}
-
-	//printf("%d stages of refinement\n", n);
-	//printf("%d total points\n", nt);
+	
+	// diagnose level of refinement [uncomment when required]
+//	printf("%d stages of refinement and %d total points\n", n, nt);
+//	printf("%d stages of refinement\n", n);
+//	printf("%d total points\n", nt);
 	
 	// calculate components of the free-space Green's function
 	gf_axR(x, r, x0, r0, MRxx, MRxr, MRrx, MRrr);
@@ -329,9 +324,3 @@ void gf_axT_vel(double x, double r, double x0, double r0, double rc,
 	ur = (Mrx*fx + Mrr*fr)/(8*M_PI);
 
 }
-
-/* AUXILIARY FUNCTIONS */
-
-/***********************************************************************/
-
-#endif

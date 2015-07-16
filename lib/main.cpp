@@ -31,7 +31,7 @@ void testGrnfcnT();
 
 int main(){
 //	testGrnfcnR();
-	testGrnfcnT();
+//	testGrnfcnT();
 //	testBessel();
 //	testBesselComplex();
 //	testBesselNegativeOrder();
@@ -65,12 +65,12 @@ void testGrnfcnT(){
 	// assign variables
 	x = 0.;
 	x0 = 0.1;
-	r = 0.5;
+	r = 1.;
 	r0 = 0.1;
 	rc = 1.;
 
-	fx = 0.; // axial point force
-	fr = 1.; // radial point force
+	fx = 1.; // axial point force
+	fr = 0.; // radial point force
 	
 	/* complementary Green's function */
 	// allocate memory

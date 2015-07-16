@@ -7,6 +7,7 @@ OBJS += main.o
 OBJS += gauleg.o
 OBJS += bessel.o
 OBJS += ellint.o
+OBJS += grnfcn.o
 
 #==============================================================================
 # rule for compiling everything

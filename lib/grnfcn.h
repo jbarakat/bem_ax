@@ -100,7 +100,7 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 	double fc, dev;
 	
 	const int MAXIT = 1000;
-	const double TOL = 0.0001;
+	const double TOL = 0.00001;
 	int np, nt;
 	double s, ds;
 	double smin = 0.;

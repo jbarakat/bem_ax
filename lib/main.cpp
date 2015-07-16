@@ -69,8 +69,8 @@ void testGrnfcnT(){
 	r0 = 0.1;
 	rc = 1.;
 
-	fx = 1.; // axial point force
-	fr = 0.; // radial point force
+	fx = 0.; // axial point force
+	fr = 1.; // radial point force
 	
 	/* complementary Green's function */
 	// allocate memory

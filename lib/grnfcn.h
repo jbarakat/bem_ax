@@ -85,9 +85,6 @@ void gf_axR_vel(double x, double r, double x0, double r0,
 /* Green's function M = MR + MC evaluated at (x,r) due to a ring of 
  * point forces located at (x0,r0), bounded externally by a cylindrical
  * tube of radius rc.
- *
- * The numerical integrals are evaluated using an extended midpoint rule
- * with n levels of refinement.
  */
 void gf_axT(double x, double r, double x0, double r0, double rc,
             double &Mxx, double &Mxr, double &Mrx, double &Mrr){
@@ -123,9 +120,9 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 	np = 1;  // number of points added
 	nt = 1;  // total number of points
 
-	/* perform integration using the extended midpoint rule,
-	 * tripling the number of integration points at each level
-	 * of refinement (incremented by n).
+	/* evaluate Fourier integrals using the extended midpoint rule,
+	 * tripling the number of integration points at each stage of
+	 * refinement (incremented by n).
 	 */
 	for (n = 0; n < MAXIT; n++){
 		if (n == 0){

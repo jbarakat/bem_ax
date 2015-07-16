@@ -27,9 +27,6 @@
 
 
 /* IMPLEMENTATIONS */
-/***********************************************************************/
-
-/* MAIN FUNCTIONS */
 /* Green's function M evaluated at (x,r) due to a ring of point forces
  * located at (x0,r0) in an unbound domain (free space).
  */
@@ -77,9 +74,16 @@ void gf_axR_vel(double x, double r, double x0, double r0,
 
 }
 
-/* Green's function M = MC + MR evaluated at (x,r) due to a ring of 
+/* Green's function M = MR + MC evaluated at (x,r) due to a ring of 
  * point forces located at (x0,r0), bounded externally by a cylindrical
  * tube of radius rc.
+ *
+ * NOTE: The lines commented out comprise the code for evaluating the
+ * free-space Green's function, MR, in terms of Fourier integrals.
+ * This method is not effective if r < r0, for which the components of
+ * B diverge like exp[(r0 - r)*t] and the Fourier integrals become
+ * improper. Instead, the closed-form expression for MR in terms of
+ * complete elliptic integrals is used (see gf_axR above).
  */
 void gf_axT(double x, double r, double x0, double r0, double rc,
             double &Mxx, double &Mxr, double &Mrx, double &Mrr){
@@ -91,28 +95,28 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 	double I0, I1, I00, I10, I0c, I1c, I0n, I1n;
 	double K0, K1, K00, K10, K0c, K1c, K0n, K1n;
 	double Axx, Axr, Arx, Arr;
-	double Bxx, Bxr, Brx, Brr;
+//	double Bxx, Bxr, Brx, Brr;
 	double Bxxc, Bxrc, Brxc, Brrc;
 	double Lxx, Lxr, Lrx, Lrr;
 	double Fxx, Fxr, Frx, Frr;
 	double MRxx, MRxr, MRrx, MRrr;
 	double MCxx, MCxr, MCrx, MCrr;
-	double mRxx, mRxr, mRrx, mRrr;
+//	double mRxx, mRxr, mRrx, mRrr;
 	double mCxx, mCxr, mCrx, mCrr;
 	double detL, fc;
 	double Xt, cosXt, sinXt;
 	double modB, modF;
 	
 	// integration parameters
-	const int MAXIT = 100000;
-	const double TOL = 0.000001;
-	const double dt = 0.001;
+	const int MAXIT = 1000000;
+	const double TOL = 0.00001;
+	const double dt = 0.0001;
 	
 	// initialize
-	mRxx = 0.;
-	mRxr = 0.;
-	mRrx = 0.;
-	mRrr = 0.;
+//	mRxx = 0.;
+//	mRxr = 0.;
+//	mRrx = 0.;
+//	mRrr = 0.;
 
 	mCxx = 0.;
 	mCxr = 0.;
@@ -137,8 +141,8 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 		sinXt = gsl_sf_sin(Xt);
 		
 		// evaluate modified Bessel functions
-		I0 = besselI(0, omeg);
-		I1 = besselI(1, omeg);
+		I0  = besselI(0, omeg);
+		I1  = besselI(1, omeg);
 		I00 = besselI(0, omeg0);
 		I10 = besselI(1, omeg0);
 		I0c = besselI(0, omegc);
@@ -146,8 +150,8 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 		I0n = besselI(0, omegn);
 		I1n = besselI(1, omegn);
 		
-		K0 = besselK(0, omeg);
-		K1 = besselK(1, omeg);
+		K0  = besselK(0, omeg);
+		K1  = besselK(1, omeg);
 		K00 = besselK(0, omeg0);
 		K10 = besselK(1, omeg0);
 		K0c = besselK(0, omegc);
@@ -166,16 +170,16 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 		fc = 4/detL; 
 
 		// calculate components of B matrix
-		Bxx = (-2*K0c +  omegc*K1)*I00 - K0*omeg0*I10;
-		Bxr =           -omegc*K0 *I00 + K1*omeg0*I10;
-		Brx =           -omegc*K1 *I10 + K0*omeg0*I00;
-		Brr = ( 2*K1c +  omegc*K0)*I10 - K1*omeg0*I00;
+//		Bxx  = (-2*K0  +  omeg *K1) *I00 - omeg0*K0 *I10;
+//		Bxr  =           -omeg *K0  *I00 + omeg0*K1 *I10;
+//		Brx  =           -omeg *K1  *I10 + omeg0*K0 *I00;
+//		Brr  = ( 2*K1  +  omeg *K0) *I10 - omeg0*K1 *I00;
 
-		Bxxc = (-2*K0c +  omegc*K1c)*I00 - K0c*omeg0*I10;
-		Bxrc =           -omegc*K0c *I00 + K1c*omeg0*I10;
-		Brxc =           -omegc*K1c *I10 + K0c*omeg0*I00;
-		Brrc = ( 2*K1c +  omegc*K0c)*I10 - K1c*omeg0*I00;
-
+		Bxxc = (-2*K0c +  omegc*K1c)*I00 - omeg0*K0c*I10;
+		Bxrc =           -omegc*K0c *I00 + omeg0*K1c*I10;
+		Brxc =           -omegc*K1c *I10 + omeg0*K0c*I00;
+		Brrc = ( 2*K1c +  omegc*K0c)*I10 - omeg0*K1c*I00;
+		
 		// calculate components of A matrix from inverting La = 4b
 		Axx = fc*( Lrr*Bxxc - Lxr*Bxrc);
 		Axr = fc*(-Lrx*Bxxc + Lxx*Bxrc);
@@ -198,10 +202,10 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 			fc = 1.0;
 
 		// increment the integrands
-		mRxx +=  fc*Bxx*cosXt;
-		mRxr +=  fc*Bxr*sinXt;
-		mRrx +=  fc*Brx*sinXt;
-		mRrr += -fc*Brr*cosXt;
+//		mRxx +=  fc*Bxx*cosXt;
+//		mRxr +=  fc*Brx*sinXt; // note that mRxr is related to Brx
+//		mRrx +=  fc*Bxr*sinXt; // and mRrx is related to Bxr
+//		mRrr += -fc*Brr*cosXt;
 
 		mCxx +=  fc*Fxx*cosXt;
 		mCxr +=  fc*Fxr*sinXt;
@@ -209,10 +213,11 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 		mCrr += -fc*Frr*cosXt;
 
 		// evaluate maximum modulus of B and F
-		modB =            pow(pow(Bxx, 2), 0.5);
-		modB = fmax(modB, pow(pow(Bxr, 2), 0.5));
-		modB = fmax(modB, pow(pow(Brx, 2), 0.5));
-		modB = fmax(modB, pow(pow(Brr, 2), 0.5));
+		modB = 0.;
+//		modB =            pow(pow(Bxx, 2), 0.5);
+//		modB = fmax(modB, pow(pow(Bxr, 2), 0.5));
+//		modB = fmax(modB, pow(pow(Brx, 2), 0.5));
+//		modB = fmax(modB, pow(pow(Brr, 2), 0.5));
 
 		modF =            pow(pow(Fxx, 2), 0.5);
 		modF = fmax(modF, pow(pow(Fxr, 2), 0.5));
@@ -223,22 +228,43 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 		if (modB < TOL && modF < TOL)
 			break;
 	}
+	
+	// calculate components of the free-space Green's function
+	gf_axR(x, r, x0, r0, MRxx, MRxr, MRrx, MRrr);
+//	MRxx = -4*r0*mRxx*dt;
+//	MRxr = -4*r0*mRxr*dt;
+//	MRrx = -4*r0*mRrx*dt;
+//	MRrr = -4*r0*mRrr*dt;
 
-	// calculate components of the Green's function
-	MRxx = -4*r0*mRxx*dt;
-	MRxr = -4*r0*mRxr*dt;
-	MRrx = -4*r0*mRrx*dt;
-	MRrr = -4*r0*mRrr*dt;
-
+	// calculate components of the complementary Green's function
 	MCxx = r0*mCxx*dt - 4*M_PI*r0/pow(X*X + (2*rc - r - r0)*(2*rc - r - r0), 0.5);
 	MCxr = r0*mCxr*dt;
 	MCrx = r0*mCrx*dt;
 	MCrr = r0*mCrr*dt;
-
+	
+	// calculate components of the total Green's function
 	Mxx = MRxx + MCxx;
 	Mxr = MRxr + MCxr;
 	Mrx = MRrx + MCrx;
 	Mrr = MRrr + MCrr;
+
+}
+
+/* velocity u evaluated at (x,r) due to a ring of point forces 
+ * of strength f located at (x0,r0), bounded externally by a
+ * cylindrical tube of radius rc.
+ */
+void gf_axT_vel(double x, double r, double x0, double r0, double rc,
+                double fx, double fr, double &ux, double &ur){
+	// declare variables
+	double Mxx, Mxr, Mrx, Mrr;
+	
+	// calculate components of the Green's function
+	gf_axT(x, r, x0, r0, rc, Mxx, Mxr, Mrx, Mrr);
+
+	// calculate velocity components
+	ux = (Mxx*fx + Mxr*fr)/(8*M_PI);
+	ur = (Mrx*fx + Mrr*fr)/(8*M_PI);
 
 }
 

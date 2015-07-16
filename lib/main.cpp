@@ -30,7 +30,7 @@ void testGrnfcnR();
 void testGrnfcnT();
 
 int main(){
-	testGrnfcnR();
+//	testGrnfcnR();
 	testGrnfcnT();
 //	testBessel();
 //	testBesselComplex();
@@ -52,15 +52,25 @@ void testGrnfcnT(){
 	double Mxx, Mxr, Mrx, Mrr;
 	double fx, fr, ux, ur;
 	
-	// assign variables
-	x = 2.;
-	x0 = 1.;
-	r = 2.;
-	r0 = 1.;
-	rc = 3.;
+	double xring = 0.;
+	double yring = 1.;
+	int istr, istep;
+	double *xstream, *ystream;
+	double *xstr, *ystr;
+	double xvel, yvel;
+	double velx, velx1, vely, vely1;
+	int Nstr, Nstep;
+	double Dr, Dt;
 
-	fx = 0.; // axial point force
-	fr = 1.; // radial point force
+	// assign variables
+	x = 0.;
+	x0 = 0.1;
+	r = 1.;
+	r0 = 0.1;
+	rc = 1.;
+
+	fx = 1.; // axial point force
+	fr = 0.; // radial point force
 	
 	/* complementary Green's function */
 	// allocate memory
@@ -80,62 +90,9 @@ void testGrnfcnT(){
 		}
 		printf("\n");
 	}
-
-	free(M);
-	free(u);
-}
-
-
-void testGrnfcnR(){
-	// declare variables
-	int i, j, k;
-	double x, x0, r, r0;
-	double xmin, xmax, rmin, rmax;
-	int Nx, Nr;
-	double *M, *f, *u;
-	double Mxx, Mxr, Mrx, Mrr;
-	double fx, fr, ux, ur;
 	
-	double xring = 0.;
-	double yring = 1.;
-	int istr, istep;
-	double *xstream, *ystream;
-	double *xstr, *ystr;
-	double xvel, yvel;
-	double velx, velx1, vely, vely1;
-	int Nstr, Nstep;
-	double Dr, Dt;
-
-	// assign variables
-	x = 2.;
-	x0 = 1.;
-	r = 2.;
-	r0 = 1.;
-
-	fx = 0.; // axial point force
-	fr = 1.; // radial point force
-
-	/* Green's function for a ring of point forces in free space */
-	// allocate memory
-	M = (double*) malloc(2 * 2 * sizeof(double));
-	u = (double*) malloc(2 * sizeof(double));
-
-	// calculate Green's function
-	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
-	M[0] = Mxx;
-	M[1] = Mxr;
-	M[2] = Mrx;
-	M[3] = Mrr;
-	printf("M = \n");
-	for (i = 0; i < 2; i++){
-		for (j = 0; j < 2; j++){
-			printf("%.16f ", M[i*2 + j]);
-		}
-		printf("\n");
-	}
-
 	// calculate the velocity at x, r
-	gf_axR_vel(x, r, x0, r0, fx, fr, ux, ur);
+	gf_axT_vel(x, r, x0, r0, rc, fx, fr, ux, ur);
 	u[0] = ux;
 	u[1] = ur;
 	printf("\n");
@@ -144,6 +101,10 @@ void testGrnfcnR(){
 		printf("%.16f ", u[i]);
 		printf("\n");
 	}
+
+	free(M);
+	free(u);
+
 
 	/* calculate velocity field and plot streamlines
 	 * (based on the sgf_ax_fs_str.f Fortran code from Pozrikidis) */
@@ -237,9 +198,164 @@ void testGrnfcnR(){
 
 	fclose(pFile);
 
+}
+
+
+void testGrnfcnR(){
+	// declare variables
+	int i, j, k;
+	double x, x0, r, r0;
+	double xmin, xmax, rmin, rmax;
+	int Nx, Nr;
+	double *M, *f, *u;
+	double Mxx, Mxr, Mrx, Mrr;
+	double fx, fr, ux, ur;
+	
+	double xring = 0.;
+	double yring = 1.;
+	int istr, istep;
+	double *xstream, *ystream;
+	double *xstr, *ystr;
+	double xvel, yvel;
+	double velx, velx1, vely, vely1;
+	int Nstr, Nstep;
+	double Dr, Dt;
+
+	// assign variables
+	x = 2.;
+	x0 = 1.;
+	r = 2.;
+	r0 = 1.;
+
+	fx = 0.; // axial point force
+	fr = 1.; // radial point force
+
+	/* Green's function for a ring of point forces in free space */
+	// allocate memory
+	M = (double*) malloc(2 * 2 * sizeof(double));
+	u = (double*) malloc(2 * sizeof(double));
+
+	// calculate Green's function
+	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
+	M[0] = Mxx;
+	M[1] = Mxr;
+	M[2] = Mrx;
+	M[3] = Mrr;
+	printf("M = \n");
+	for (i = 0; i < 2; i++){
+		for (j = 0; j < 2; j++){
+			printf("%.16f ", M[i*2 + j]);
+		}
+		printf("\n");
+	}
+
+	// calculate the velocity at x, r
+	gf_axR_vel(x, r, x0, r0, fx, fr, ux, ur);
+	u[0] = ux;
+	u[1] = ur;
+	printf("\n");
+	printf("u = \n");
+	for (i = 0; i < 2; i++){
+		printf("%.16f ", u[i]);
+		printf("\n");
+	}
+	
 	free(M);
 	free(u);
 	
+
+	/* calculate velocity field and plot streamlines
+	 * (based on the sgf_ax_fs_str.f Fortran code from Pozrikidis) */
+	FILE *pFile;
+	pFile =  fopen("str.dat", "w+");
+	fprintf(pFile, "xstr ystr\n");
+	if (fx == 1. && fr == 0. || fx == 0. && fr == 1.){
+		if (fx == 1. && fr == 0.){
+			Nstr = 20;
+			Nstep = 2*128;
+			Dr = 0.02;
+
+			xstream = (double*) malloc(Nstr * sizeof(double));
+			ystream = (double*) malloc(Nstr * sizeof(double));
+
+			for (istr = 0; istr < Nstr; istr++){
+				xstream[istr] = 0.01;
+				ystream[istr] = 0.10*(istr+1);
+			}
+			ystream[19] = 1.95;
+			
+		}
+		else if (fx == 0. && fr == 1.){
+			Nstr = 13;
+			Nstep = 2*128;
+			Dr = -0.02;
+
+			xstream = (double*) malloc(Nstr * sizeof(double));
+			ystream = (double*) malloc(Nstr * sizeof(double));
+
+			for (istr = 0; istr < Nstr; istr++){
+				xstream[istr] = -0.1 + 0.1*istr;
+				ystream[istr] = 1.99;
+			}
+			xstream[0] = 0.01;
+			xstream[1] = 0.05;
+			
+		}
+
+		for (istr = 0; istr < Nstr; istr++){
+			// allocate memory
+			xstr = (double*) malloc(1 * sizeof(double));
+			ystr = (double*) malloc(1 * sizeof(double));
+		
+			// initialize streamline
+			xstr[0] = xstream[istr];
+			ystr[0] = ystream[istr];
+
+			for (istep = 0; istep < Nstep; istep++){
+				fprintf(pFile, "%.8f %.8f\n", xstr[istep], ystr[istep]);
+
+				// update field point
+				xvel = xstr[istep];
+				yvel = ystr[istep];
+
+				// reallocate memory
+				xstr = (double*) realloc(xstr, (istep + 2) * sizeof(double));
+				ystr = (double*) realloc(ystr, (istep + 2) * sizeof(double));
+				
+				// calculate the velocity induced by a ring of point forces
+				gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx, vely);
+				Dt = Dr/sqrt(velx*velx + vely*vely);
+
+				//  update field point
+				xvel = xstr[istep] + velx*Dt;
+				yvel = ystr[istep] + vely*Dt;
+
+				// calculate the induced velocity at the new field point
+				gf_axR_vel(xvel, yvel, xring, yring, fx, fr, velx1, vely1);
+				
+				// update the streamline using a simple midpoint rule for integration
+				xstr[istep + 1] = xstr[istep] + 0.5*(velx + velx1)*Dt;
+				ystr[istep + 1] = ystr[istep] + 0.5*(vely + vely1)*Dt;
+
+				// condition for breaking for loop
+				if (xstr[istep + 1] > 2)
+					break;
+				if (xstr[istep + 1] < -2)
+					break;
+				if (ystr[istep + 1] > 2)
+					break;
+				if (ystr[istep + 1] < -2)
+					break;
+			}
+			fprintf(pFile, "\n");
+
+			free(xstr);
+			free(ystr);
+		}
+	}
+
+	fclose(pFile);
+
 	
 //	int k;
 //	double complex z, s;

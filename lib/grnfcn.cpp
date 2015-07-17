@@ -35,18 +35,78 @@ void gf_axR(double x, double r, double x0, double r0,
 	double R = pow(R2, 0.5);
 	double k2 = 4*r*r0/(X2 + (r + r0)*(r + r0));
 	double k = pow(k2, 0.5);
+	double k4 = k2*k2;
+  double fc = 0.5*k/pow(r*r0, 0.5);
+  double fc3 = fc*fc*fc;
+  double I10, I11, I30, I31, I32;
 
 	// evaluate complete elliptic integrals
 	K = ellintK(k);
 	E = ellintE(k);
 	
+	// reduce integrals in terms of complete elliptic integrals
+	I10 = 4*fc*K;
+	I11 = 8*fc/k2*(K - E) - I10;
+	I30 = 4*fc/R2*E;
+	I31 = 8*fc3/k2*(E/(1 - k2) - K) - I30; 
+	I32 = 16*fc3/k4*((2 - k2)/(1 - k2)*E - 2*K) - 2*I31 - I30;
+	
 	// calculate components of the Green's function
-	Mxx = 2*k*pow(r0/r, 0.5)*(K + (X2/R2)*E);
-	Mxr = -k*(X/pow(r0*r, 0.5))*(K - (r2 - r02 + X2)*E/R2);
-	Mrx = k*(X/r)*pow(r0/r, 0.5)*(K + (r2 - r02 - X2)*E/R2);
-	Mrr = (k/(r0*r))*pow(r0/r, 0.5)*((r02 + r2 + 2*X2)*K - (2*X2*X2 + 3*X2*(r02 + r2) + (r2 - r02)*(r2 - r02))*E/R2);
+	Mxx = r0*(I10 + X2*I30);
+	Mxr = -r0*X*(r0*I30 - r*I31);
+	Mrx = -r0*X*(r0*I31 - r*I30);
+	Mrr = r0*(I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
 
 }
+
+/* Green's functions M and Q evaluated at (x,r) due to a ring of point
+ * forces located at (x0,r0) in an unbound domain (free space).
+ */
+void gf_axR(double x, double r, double x0, double r0, 
+            double &Mxx, double &Mxr, double &Mrx, double &Mrr,
+            double &Qxxx, double &Qxxr, double &Qxrx, double &Qxrr,
+            double &Qrxx, double &Qrxr, double &Qrrx, double &Qrrr){
+  // declare variables
+  double K, E;
+  double x2 = x*x;
+  double x02 = x0*x0;
+  double r2 = r*r;
+  double r02 = r0*r0;
+  double X = x - x0; 
+  double X2 = X*X;
+  double R2 = X2 + (r - r0)*(r - r0);
+  double R = pow(R2, 0.5);
+  double k2 = 4*r*r0/(X2 + (r + r0)*(r + r0));
+  double k = pow(k2, 0.5);
+  double k4 = k2*k2;
+  double fc = 0.5*k/pow(r*r0, 0.5);
+  double fc3 = fc*fc*fc;
+	double fc5 = fc3*fc*fc;
+  double I10, I11, I30, I31, I32, I50, I51, I52, I53;
+
+  // evaluate complete elliptic integrals
+  K = ellintK(k);
+  E = ellintE(k);
+
+  // reduce integrals in terms of complete elliptic integrals
+  I10 = 4*fc*K;
+  I11 = 8*fc/k2*(K - E) - I10;
+  I30 = 4*fc/R2*E;
+  I31 = 8*fc3/k2*(E/(1 - k2) - K) - I30; 
+  I32 = 16*fc3/k4*((2 - k2)/(1 - k2)*E - 2*K) - 2*I31 - I30;
+//  I50 =
+//  I51 =
+//  I52 =
+//  I53 = 
+
+  // calculate components of the Green's function
+  Mxx = r0*(I10 + X2*I30);
+  Mxr = -r0*X*(r0*I30 - r*I31);
+  Mrx = -r0*X*(r0*I31 - r*I30);
+  Mrr = r0*(I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
+
+}
+
 
 /* velocity u evaluated at (x,r) due to a ring of point forces 
  * of strength f located at (x0,r0) in an unbound domain (free space).

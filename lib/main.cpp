@@ -30,7 +30,7 @@ void testGrnfcnR();
 void testGrnfcnT();
 
 int main(){
-//	testGrnfcnR();
+	testGrnfcnR();
 //	testGrnfcnT();
 //	testBessel();
 //	testBesselComplex();
@@ -69,7 +69,7 @@ void testGrnfcnT(){
 	r0 = 0.1;
 	rc = 1.;
 
-	fx = 1.; // axial point force
+	fx = 0.9; // axial point force
 	fr = 0.; // radial point force
 	
 	/* complementary Green's function */
@@ -229,8 +229,8 @@ void testGrnfcnR(){
 	r = 2.;
 	r0 = 1.;
 
-	fx = 0.; // axial point force
-	fr = 1.; // radial point force
+	fx = 0.9; // axial point force
+	fr = 0.; // radial point force
 
 	/* Green's function for a ring of point forces in free space */
 	// allocate memory

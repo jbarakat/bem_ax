@@ -209,8 +209,9 @@ void testGrnfcnR(){
 	double x, x0, r, r0;
 	double xmin, xmax, rmin, rmax;
 	int Nx, Nr;
-	double *M, *f, *u;
+	double *M, *Q, *f, *u;
 	double Mxx, Mxr, Mrx, Mrr;
+	double Qxxx, Qxxr, Qxrx, Qxrr, Qrxx, Qrxr, Qrrx, Qrrr;
 	double fx, fr, ux, ur;
 	
 	double xring = 0.;
@@ -235,9 +236,10 @@ void testGrnfcnR(){
 	/* Green's function for a ring of point forces in free space */
 	// allocate memory
 	M = (double*) malloc(2 * 2 * sizeof(double));
+	Q = (double*) malloc(2 * 2 * 2 * sizeof(double));
 	u = (double*) malloc(2 * sizeof(double));
 
-	// calculate Green's function
+	// calculate stokeslet
 	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
 	M[0] = Mxx;
 	M[1] = Mxr;
@@ -248,6 +250,27 @@ void testGrnfcnR(){
 		for (j = 0; j < 2; j++){
 			printf("%.16f ", M[i*2 + j]);
 		}
+		printf("\n");
+	}
+
+	// calculate stokeslet and stresslet
+	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr, Qxxx, Qxxr, Qxrx, Qxrr, Qrxx, Qrxr, Qrrx, Qrrr);
+	M[0] = Mxx;
+	M[1] = Mxr;
+	M[2] = Mrx;
+	M[3] = Mrr;
+
+	Q[0] = Qxxx;
+	Q[1] = Qxxr;
+	Q[2] = Qxrx;
+	Q[3] = Qxrr;
+	Q[4] = Qrxx;
+	Q[5] = Qrxr;
+	Q[6] = Qrrx;
+	Q[7] = Qrrr;
+	printf("Q = \n");
+	for (i = 0; i < 8; i++){
+		printf("%.16f ", Q[i]);
 		printf("\n");
 	}
 
@@ -263,6 +286,7 @@ void testGrnfcnR(){
 	}
 	
 	free(M);
+	free(Q);
 	free(u);
 	
 

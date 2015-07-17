@@ -268,6 +268,15 @@ void testGrnfcnR(){
 	Q[5] = Qrxr;
 	Q[6] = Qrrx;
 	Q[7] = Qrrr;
+
+	printf("M = \n");
+	for (i = 0; i < 2; i++){
+		for (j = 0; j < 2; j++){
+			printf("%.16f ", M[i*2 + j]);
+		}
+		printf("\n");
+	}
+
 	printf("Q = \n");
 	for (i = 0; i < 8; i++){
 		printf("%.16f ", Q[i]);

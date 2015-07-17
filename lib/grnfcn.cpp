@@ -39,24 +39,31 @@ void gf_axR(double x, double r, double x0, double r0,
 	double kp2 = 1 - k2;
   double fc = 0.5*k/pow(r*r0, 0.5);
   double fc3 = fc*fc*fc;
+	double fcM = r0;
   double I10, I11, I30, I31, I32;
+	
+	fc  *= 4;
+	fc3 *= (4/kp2);
 
 	// evaluate complete elliptic integrals
 	K = ellintK(k);
 	E = ellintE(k);
 	
-	// reduce integrals in terms of complete elliptic integrals
-	I10 = 4*fc*K;
-	I11 = 8*fc/k2*(K - E) - I10;
-	I30 = 4*fc/R2*E;
-	I31 = 8*fc3/k2*(E/kp2 - K) - I30; 
-	I32 = 16*fc3/k4*((1 + kp2)/kp2*E - 2*K) - 2*I31 - I30;
-	
-	// calculate components of the Green's function
-	Mxx = r0*(I10 + X2*I30);
-	Mxr = -r0*X*(r0*I30 - r*I31);
-	Mrx = -r0*X*(r0*I31 - r*I30);
-	Mrr = r0*(I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
+  // reduce integrals in terms of complete elliptic integrals
+  I10 = fc  *                                           K;
+	I11 = fc  * ((  2 -     k2                        ) * K
+					    -   2                                   * E) / k2;
+	I30 = fc3 *                                           E; 
+	I31 = fc3 * ((- 2 +   2*k2                        ) * K  
+	            +(  2 -     k2                        ) * E) / k2;
+	I32 = fc3 * ((- 8 +  12*k2 -   4*k4               ) * K  
+	            +(  8 -   8*k2 +     k4               ) * E) / k4; 
+
+  // calculate components of the Stokeslet M
+  Mxx =  fcM*  (     I10 + X2        *I30);
+  Mxr = -fcM*X*(r0  *I30 - r         *I31);
+  Mrx = -fcM*X*(r0  *I31 - r         *I30);
+  Mrr =  fcM*  (     I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
 
 }
 
@@ -81,45 +88,60 @@ void gf_axR(double x, double r, double x0, double r0,
   double k = pow(k2, 0.5);
   double k4 = k2*k2;
   double k6 = k4*k2;
+  double k8 = k6*k2;
 	double kp2 = 1 - k2;
+	double kp4 = kp2*kp2;
   double fc = 0.5*k/pow(r*r0, 0.5);
   double fc3 = fc*fc*fc;
 	double fc5 = fc3*fc*fc;
+	double fcM = r0;
+	double fcQ = 6*r0;
   double I10, I11, I30, I31, I32, I50, I51, I52, I53;
+
+	fc  *= 4;
+	fc3 *= (4/kp2);
+	fc5 *= (4/(3*kp4));
 
   // evaluate complete elliptic integrals
   K = ellintK(k);
   E = ellintE(k);
 
   // reduce integrals in terms of complete elliptic integrals
-  I10 = 4*fc*K;
-  I11 = 8*fc/k2*(K - E) - I10;
-  I30 = 4*fc/R2*E;
-  I31 = 8*fc3/k2*(E/kp2 - K) - I30; 
-  I32 = 16*fc3/k4*((1 + kp2)/kp2*E - 2*K) - 2*I31 - I30;
-  I50 = (4./3.)*fc5/kp2*((2*(1 + kp2)/kp2)*E - K);
-  I51 = (8./3.)*fc5/(k2*kp2)*((1 + k2)/kp2*E - K) - I50;
-  I52 = (16./3.)*fc5/(k4*kp2)*((2 - 3*k2)*K - 2*((1 - 2*k2)/kp2)*E);
-  I53 = (32./3.)*fc5/(k6*kp2)*((8 - 9*k2)*K - ((8 - 13*k2 + 3*k4)/kp2)*E) - 3*(I52 + I51) - I50;
+  I10 = fc  *                                           K;
+	I11 = fc  * ((  2 -     k2                        ) * K
+					    -   2                                   * E) / k2;
+	I30 = fc3 *                                           E; 
+	I31 = fc3 * ((- 2 +   2*k2                        ) * K  
+	            +(  2 -     k2                        ) * E) / k2;
+	I32 = fc3 * ((- 8 +  12*k2 -   4*k4               ) * K  
+	            +(  8 -   8*k2 +     k4               ) * E) / k4; 
+	I50 = fc5 * ((- 1 +     k2                        ) * K
+	            +(  4 -   2*k2                        ) * E);
+	I51 = fc5 * ((- 2 +   3*k2 -     k4               ) * K
+	            +(  2 -   2*k2 +   2*k4               ) * E) / k2;
+	I52 = fc5 * ((  8 -  16*k2 +   7*k4 +    k6       ) * K
+	            +(- 8 +  12*k2          -  2*k6       ) * E) / k4; 
+	I53 = fc5 * (( 64 - 160*k2 + 126*k4 - 29*k6 -   k8) * K
+	            +(-64 + 128*k2 -  66*k4 +  2*k6 + 2*k8) * E) / k6;
 
   // calculate components of the Stokeslet M
-  Mxx = r0*(I10 + X2*I30);
-  Mxr = -r0*X*(r0*I30 - r*I31);
-  Mrx = -r0*X*(r0*I31 - r*I30);
-  Mrr = r0*(I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
+  Mxx =  fcM*  (     I10 + X2        *I30);
+  Mxr = -fcM*X*(r0  *I30 - r         *I31);
+  Mrx = -fcM*X*(r0  *I31 - r         *I30);
+  Mrr =  fcM*  (     I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
 
 	// calculate components of the stresslet Q
-	Qxxx = 6*r0*X*X2*I50;
-	Qxxr = -6*r0*X*(r0*I50 - r*I51);
+	Qxxx =  fcQ*X*X2         *I50;
+	Qxxr = -fcQ*X*( r0       *I50 - r    * I51);
 	Qxrx = Qxxr;
-	Qxrr = 6*r0*X*(r2*I52 + r02*I50 - 2*r0*r*I51);
-	Qrxx = -6*r0*X2*(r0*I51 - r*I50);
-	Qrxr = 6*r0*X*((r02 + r2)*I51 - r0*r*(I50 + I52));
+	Qxrr =  fcQ*X*( r2       *I52 + r02  * I50 - 2*r0*r*I51);
+	Qrxx = -fcQ*X2*(r0       *I51 - r    * I50);
+	Qrxr =  fcQ*X*((r02 + r2)*I51 - r0*r *(I50 + I52));
 	Qrrx = Qrxr;
-	Qrrr = -6*r0*(r02*r0*I51 - r02*r*(I50 + 2*I52) + r0*r2*(I53 + 2*I51) - r*r2*I52);
+	Qrrr = -fcQ*  (r02*r0    *I51 - r02*r*(I50 + 2*I52) + r0*r2*(I53 + 2*I51) - r*r2*I52);
 
 	// DELETE LATER...
-	// AS OF NOW, THE COMPONENTS OF Q ARE UNVERIFIED (SOME OF THE COMPONENTS LOOK TOO BIG, BUT NO IDEA...) ALSO, I52 and I53 ARE QUITE CUMBERSOME AND HAD TO BE DETERMINED WITH THE HELP OF WOLFRAMALPHA
+	// AS OF NOW, THE COMPONENTS OF Q ARE UNVERIFIED
 	// WILL RETURN TO THESE LATER
 
 }

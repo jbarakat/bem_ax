@@ -282,6 +282,46 @@ void testGrnfcnR(){
 		printf("%.16f ", Q[i]);
 		printf("\n");
 	}
+	
+//	// compare stresslet to the symmetrized gradient of the stokeslet
+//	double xa = x + 0.001;
+//	double xb = x - 0.001;
+//	double rc = r + 0.001;
+//	double rd = r - 0.001;
+//	double dx = 0.002;
+//	double dr = 0.002; 
+//	double Mxxa, Mxxb, Mxra, Mxrb, Mrxa, Mrxb, Mrra, Mrrb;
+//	double Mxxc, Mxxd, Mxrc, Mxrd, Mrxc, Mrxd, Mrrc, Mrrd;
+//	
+//	gf_axR(xa, r, x0, r0, Mxxa, Mxra, Mrxa, Mrra);
+//	gf_axR(xb, r, x0, r0, Mxxb, Mxrb, Mrxb, Mrrb);
+//	gf_axR(x, rc, x0, r0, Mxxc, Mxrc, Mrxc, Mrrc);
+//	gf_axR(x, rd, x0, r0, Mxxd, Mxrd, Mrxd, Mrrd);
+//	
+//	Q[0] = Qxxx;
+//	Q[1] = Qxxr;
+//	Q[2] = Qxrx;
+//	Q[3] = Qxrr;
+//	Q[4] = Qrxx;
+//	Q[5] = Qrxr;
+//	Q[6] = Qrrx;
+//	Q[7] = Qrrr;
+//
+//	Q[0] = (Mxxa - Mxxb)/dx;
+//	Q[2] = (Mxra - Mxrb)/dx;
+//	Q[4] = (Mrxa - Mrxb)/dx;
+//	Q[6] = (Mrra - Mrrb)/dx;
+//
+//	Q[1] = (Mxxc - Mxxd)/dr;
+//	Q[3] = (Mxrc - Mxrd)/dr;
+//	Q[5] = (Mrxc - Mrxd)/dr;
+//	Q[7] = (Mrrc - Mrrd)/dr;
+//
+//	printf("Q = \n");
+//	for (i = 0; i < 8; i++){
+//		printf("%.16f ", Q[i]);
+//		printf("\n");
+//	}
 
 	// calculate the velocity at x, r
 	gf_axR_vel(x, r, x0, r0, fx, fr, ux, ur);

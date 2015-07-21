@@ -50,14 +50,14 @@ void gf_axR(double x, double r, double x0, double r0,
 	E = ellintE(k);
 	
   // reduce integrals in terms of complete elliptic integrals
-  I10 = fc  *                                           K;
-	I11 = fc  * ((  2 -     k2                        ) * K
-					    -   2                                   * E) / k2;
-	I30 = fc3 *                                           E; 
-	I31 = fc3 * ((- 2 +   2*k2                        ) * K  
-	            +(  2 -     k2                        ) * E) / k2;
-	I32 = fc3 * ((- 8 +  12*k2 -   4*k4               ) * K  
-	            +(  8 -   8*k2 +     k4               ) * E) / k4; 
+  I10 = fc  *                            K;
+	I11 = fc  * ((  2 -    k2          ) * K
+					    -   2                    * E) / k2;
+	I30 = fc3 *                            E; 
+	I31 = fc3 * ((- 2 +  2*k2          ) * K  
+	            +(  2 -    k2          ) * E) / k2;
+	I32 = fc3 * ((- 8 + 12*k2 -   4*k4 ) * K  
+	            +(  8 -  8*k2 +     k4 ) * E) / k4; 
 
   // calculate components of the Stokeslet M
   Mxx =  fcM*  (     I10 + X2        *I30);
@@ -131,18 +131,14 @@ void gf_axR(double x, double r, double x0, double r0,
   Mrr =  fcM*  (     I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
 
 	// calculate components of the stresslet Q
-	Qxxx =  fcQ*X*X2         *I50;
-	Qxxr = -fcQ*X*( r0       *I50 - r    * I51);
+	Qxxx =  fcQ*X *  X2       *I50;
+	Qxxr = -fcQ*X *( r0       *I50 - r    * I51);
+	Qxrr =  fcQ*X *( r2       *I52 + r02  * I50 - 2*r0*r*I51);
+	Qrxx = -fcQ*X2*( r0       *I51 - r    * I50);
+	Qrxr =  fcQ*X *((r02 + r2)*I51 - r0 *r*(I50 +   I52));
+	Qrrr = -fcQ*   ( r02*r0   *I51 - r02*r*(I50 + 2*I52) + r0*r2*(I53 + 2*I51) - r*r2*I52);
 	Qxrx = Qxxr;
-	Qxrr =  fcQ*X*( r2       *I52 + r02  * I50 - 2*r0*r*I51);
-	Qrxx = -fcQ*X2*(r0       *I51 - r    * I50);
-	Qrxr =  fcQ*X*((r02 + r2)*I51 - r0*r *(I50 + I52));
 	Qrrx = Qrxr;
-	Qrrr = -fcQ*  (r02*r0    *I51 - r02*r*(I50 + 2*I52) + r0*r2*(I53 + 2*I51) - r*r2*I52);
-
-	// DELETE LATER...
-	// AS OF NOW, THE COMPONENTS OF Q ARE UNVERIFIED
-	// WILL RETURN TO THESE LATER
 
 }
 

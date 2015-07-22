@@ -50,14 +50,14 @@ void gf_axR(double x, double r, double x0, double r0,
 	E = ellintE(k);
 	
   // reduce integrals in terms of complete elliptic integrals
-  I10 = fc  *                            K;
-	I11 = fc  * ((  2 -    k2          ) * K
-					    -   2                    * E) / k2;
-	I30 = fc3 *                            E; 
-	I31 = fc3 * ((- 2 +  2*k2          ) * K  
-	            +(  2 -    k2          ) * E) / k2;
-	I32 = fc3 * ((- 8 + 12*k2 -   4*k4 ) * K  
-	            +(  8 -  8*k2 +     k4 ) * E) / k4; 
+  I10 = fc  *                          K;
+	I11 = fc  * ((  2 -    k2        ) * K
+					    -   2                  * E) / k2;
+	I30 = fc3 *                          E; 
+	I31 = fc3 * ((- 2 +  2*k2        ) * K  
+	            +(  2 -    k2        ) * E) / k2;
+	I32 = fc3 * ((- 8 + 12*k2 - 4*k4 ) * K  
+	            +(  8 -  8*k2 +   k4 ) * E) / k4; 
 
   // calculate components of the Stokeslet M
   Mxx =  fcM*  (     I10 + X2        *I30);
@@ -380,9 +380,6 @@ void gf_axT_ker(double x, double r, double x0, double r0, double rc, double s,
 
 	// regularize the xx integrand
 	Fxx = Fxx + 8*K0n;
-
-//	// DELETE THIS LATER
-//	printf("%.6f, %.6f, %.6f, %.6f, %.6f, %.6f\n", t, s, Fxx, Fxr, Frx, Frr);
 
 	// increment the integrands
 //	mRxx +=  Bxx*cosXt;

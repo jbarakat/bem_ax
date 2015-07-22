@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include "gauleg.h"
 #include <math.h>
+#include <gsl/gsl_sf_trig.h>
 
 
 /* PROTOTYPES */
@@ -27,7 +28,7 @@ void be_straight();
 void be_straight(double, double, double, double,
                  double, double&, double&);
 void be_spline();
-void be_lagrange();
+void be_lagrange(int, double*, double*, double, double&);
 
 
 /* IMPLEMENTATIONS */
@@ -45,7 +46,10 @@ void be_straight(double x1, double y1, double x2, double y2,
 		y = 0.5*(y2 + y1) + 0.5*(y2 - y1)*xi;
 }
 
-/* Lagrange interpolation */
+/* Lagrange interpolation
+ *  Interpolate to point (x,y) based on a set of N nodes (i.e., N-1
+ *  elements) given by (X,Y).
+ */
 void be_lagrange(int N, double *X, double *Y, double x, double &y){
 	// declare variables
 	int i, j, k;
@@ -96,6 +100,35 @@ void be_lagrange(int N, double *X, double *Y, double x, double &y){
 	free(rho);
 }
 
+
+
+/* Determine native element nodes:
+ *  M = 0	- uniform elements
+ *  M = 1 - linear basis
+ *  M = 2 - quadratic basis
+ */
+void be_native(int M, int N, double *XG, double *YG, int n1, int n2){
+	// check value of M
+	if (M != 0 && M != 1 && M != 2){
+		printf("Error: M must equal 0, 1, or 2");
+		return;
+	}
+	
+	// uniform elements
+	if (M == 0){
+
+	}
+	
+	// linear basis in Lagrange polynomials
+	if (M == 1){
+
+	}
+
+	// quadratic basis in Lagrange polynomials
+	if (M == 2){
+
+	}
+}
 
 
 /***********************************************************************/

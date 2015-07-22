@@ -15,7 +15,9 @@
 #include "gauleg.h"
 
 /* IMPLEMENTATIONS */
-void gauleg(int n, double* X, double* W){
+/* Generate abscissas X and weights W for an nth order
+ * Gauss-Legendre quadrature on the interval [-1, 1] */
+void gauleg(int n, double * X, double * W){
 	// declare variables
 	double *D, *E, *Z;
 	int ldz = n;
@@ -45,3 +47,4 @@ void gauleg(int n, double* X, double* W){
 	free(E);
 	free(Z);
 }
+

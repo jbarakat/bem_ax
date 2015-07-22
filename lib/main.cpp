@@ -35,7 +35,7 @@ void testLagrange(){
 	double *X, *Y, *T;
 	double x, y;
 	double a, b;
-	int N = 100;
+	int N = 40;
 	
 	// allocate memory
 	X = (double*) malloc(N * sizeof(double));
@@ -53,7 +53,7 @@ void testLagrange(){
 	}
 
 	// interpolate 
-	x = 0.6;
+	x = 0.;
 	be_lagrange(N, X, Y, x, y);
 	printf("y = %.4f\n", y);
 

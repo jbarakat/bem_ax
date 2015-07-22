@@ -69,16 +69,16 @@ void be_lagrange(int N, double *X, double *Y, double x, double &y){
 
 	// construction step
 	for (i = 0; i < N; i++){
-		rho[i] = 1;
+		rho[i] = 1.;
 		for (j = 0; j < N; j++){
 			dx = X[i] - X[j];
-			if (j != 1)
+			if (j != i)
 				rho[i] *= dx;
 		}
 	}
 
 	// evaluation step
-	psi = 1;
+	psi = 1.;
 	L = 0;
 	P = 0;
 
@@ -86,7 +86,7 @@ void be_lagrange(int N, double *X, double *Y, double x, double &y){
 		dx = x - X[i];
 		psi *= dx;
 		L = 1/(dx*rho[i]);
-		P += Y[j]*L;
+		P += Y[i]*L;
 	}
 
 	P *= psi;

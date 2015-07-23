@@ -25,8 +25,12 @@
 #include <gsl/gsl_sf_trig.h>
 
 /* PROTOTYPES */
-void spline(const int, double*, double*, double, double,
-            double, double&);
+void spline(const int, double*, double*,
+            double, double, double, double,
+						double*, double*, double*,
+						double*, double*, double*);
+//void spline(const int, double*, double*, double, double,
+//            double, double&);
 void spline(const int, double*, double*, double, double,
             double*, double*, double*);
 void lagrange(const int, double*, double*, double, double&);
@@ -34,49 +38,87 @@ void lagrange(const int, double*, double*, double, double&);
 /* IMPLEMENTATIONS */
 /***********************************************************************/
 
-/* Interpolate to point (xi,yi) based on a set of N+1 nodes (x,y) using
- * cubic splines.
+/* Generate coefficients a, b, c for cubic spline interpolation of
+ * N+1 points (x,y), parametrized by the polygonal arc length s.
  */
-void spline(const int N, double *x, double *y, double slope1, double slope2,
-            double xi, double &yi){
+void spline(const int N, double *x, double *y,
+            double slopex1, double slopex2,
+            double slopey1, double slopey2,
+						double *ax, double *bx, double *cx,
+						double *ay, double *by, double *cy){
 	// declare variables
   int i, j, n;
-	double *a, *b, *c;
-	double dx;
+	double *s;
+	double dx, dy, ds;
 
 	// allocate memory
-	a = (double*) malloc( N    * sizeof(double));
-	b = (double*) malloc((N+1) * sizeof(double));
-	c = (double*) malloc( N    * sizeof(double));
+	s  = (double*) malloc((N+1) * sizeof(double));
+
+	// compute the polygonal arc length
+	s[0] = 0;
+	for (i = 1; i < N+1; i++){
+		dx = x[i] - x[i-1];
+		dy = y[i] - y[i-1];
+		ds = sqrt(dx*dx + dy*dy);
+		s[i] = s[i-1] + ds;
+	}
 
 	// compute cubic spline coefficients
-	spline(N, x, y, slope1, slope2, a, b, c);
+	spline(N, s, x, slopex1, slopex2, ax, bx, cx);
+	spline(N, s, y, slopey1, slopey2, ay, by, cy);
 
-	/* find where xi falls in the domain 
-	 *(assume x increases monotonically along the boundary) */
-	n = -1;
-	for (i = 0; i < N; i++){
-		if (xi > x[i]){
-			n = i;
-			break;
-		}
-	}
-	
-	if (n < 0){
-		printf("Error: xi not in x.");
-		return;
-	}
-
-	// compute yi
-	dx = xi - x[n];
-	yi = x[n] + ((a[n]*dx + b[n])*dx + c[n])*dx;
-	
 	// release memory
-	free(a);
-	free(b);
-	free(c);
-	
+	free(s);
+
 }
+
+///* Interpolate to point (xi,yi) based on a set of N+1 nodes (x,y) using
+// * cubic splines.
+// */
+//void spline(const int N, double *x, double *y, double slope1, double slope2,
+//            double xi, double &yi){
+//	// declare variables
+//  int i, j, n;
+//	double *a, *b, *c;
+//	double dx;
+//
+//	// allocate memory
+//	a = (double*) malloc( N    * sizeof(double));
+//	b = (double*) malloc((N+1) * sizeof(double));
+//	c = (double*) malloc( N    * sizeof(double));
+//
+//	// compute cubic spline coefficients
+//	spline(N, x, y, slope1, slope2, a, b, c);
+//
+//	// find where xi lies in the domain 
+//	n = -1;
+//	for (i = 0; i < N; i++){
+//		if (xi > x[i] && xi < x[i+1]){
+//			n = i;
+//			break;
+//		}
+//		
+//		if (xi < x[i] && xi > x[i+1]){
+//			n = i;
+//			break;
+//		}
+//	}
+//	
+//	if (n < 0){
+//		printf("Error: xi not in x.");
+//		return;
+//	}
+//
+//	// compute yi
+//	dx = xi - x[n];
+//	yi = x[n] + ((a[n]*dx + b[n])*dx + c[n])*dx;
+//	
+//	// release memory
+//	free(a);
+//	free(b);
+//	free(c);
+//	
+//}
 
 /* Generate coefficients a, b, c for cubic spline interpolation of
  * N+1 points (x,y) by solving a tridiagonal system of equations

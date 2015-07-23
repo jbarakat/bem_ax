@@ -37,15 +37,23 @@ void testInterp(){
 	double x, y;
 	double a, b;
 	double *A, *B, *C;
+	double *Ax, *Bx, *Cx;
+	double *Ay, *By, *Cy;
 	int N = 10;
 	
 	// allocate memory
-	X = (double*) malloc((N+1) * sizeof(double));
-	Y = (double*) malloc((N+1) * sizeof(double));
-	T = (double*) malloc((N+1) * sizeof(double));
-	A = (double*) malloc( N    * sizeof(double));
-	B = (double*) malloc((N+1) * sizeof(double));
-	C = (double*) malloc( N    * sizeof(double));
+	X  = (double*) malloc((N+1) * sizeof(double));
+	Y  = (double*) malloc((N+1) * sizeof(double));
+	T  = (double*) malloc((N+1) * sizeof(double));
+	A  = (double*) malloc( N    * sizeof(double));
+	B  = (double*) malloc((N+1) * sizeof(double));
+	C  = (double*) malloc( N    * sizeof(double));
+	Ax = (double*) malloc( N    * sizeof(double));
+	Bx = (double*) malloc((N+1) * sizeof(double));
+	Cx = (double*) malloc( N    * sizeof(double));
+	Ay = (double*) malloc( N    * sizeof(double));
+	By = (double*) malloc((N+1) * sizeof(double));
+	Cy = (double*) malloc( N    * sizeof(double));
 	
 	// define parameters of an ellipse
 	a = 1.;
@@ -58,20 +66,26 @@ void testInterp(){
 	}
 
 	// interpolate (Lagrange)
-	x = 0.1;
+	x = 0.6;
 	lagrange(N, X, Y, x, y);
 	printf("y = %.4f\n", y);
 
 	// interpolate (cubic spline)
-	double slope1 = 0;
-	double slope2 = 0;
-//	spline(N, X, Y, slope1, slope2, A, B, C);
-//	printf("A        B        C\n");
-//	for (i = 0; i < N+1; i++){
-//		printf("%.4f %.4f %.4f\n", A[i], B[i], C[i]);
-//	}
-	spline(N, X, Y, slope1, slope2, x, y);
-	printf("y = %.4f\n", y);
+//	spline(N, X, Y, slope1, slope2, x, y);
+
+	double slopex1 = 0;
+	double slopex2 = 0;
+	double slopey1 = 1.;
+	double slopey2 = -1.;
+	spline(N, X, Y, slopex1, slopex2, slopey1, slopey2, Ax, Bx, Cx, Ay, By, Cy);
+	printf("Ax        Bx        Cx\n");
+	for (i = 0; i < N+1; i++){
+		printf("%.4f %.4f %.4f\n", Ax[i], Bx[i], Cx[i]);
+	}
+	printf("Ay        By        Cy\n");
+	for (i = 0; i < N+1; i++){
+		printf("%.4f %.4f %.4f\n", Ay[i], By[i], Cy[i]);
+	}
 	
 	free(X);
 	free(Y);
@@ -79,4 +93,10 @@ void testInterp(){
 	free(A);
 	free(B);
 	free(C);
+	free(Ax);
+	free(Bx);
+	free(Cx);
+	free(Ay);
+	free(By);
+	free(Cy);
 }

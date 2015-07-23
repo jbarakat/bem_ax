@@ -58,18 +58,20 @@ void testInterp(){
 	}
 
 	// interpolate (Lagrange)
-	x = 0.9;
+	x = 0.1;
 	lagrange(N, X, Y, x, y);
 	printf("y = %.4f\n", y);
 
 	// interpolate (cubic spline)
 	double slope1 = 0;
 	double slope2 = 0;
-	spline_clamped(N, X, Y, slope1, slope2, A, B, C);
-	printf("A        B        C\n");
-	for (i = 0; i < N+1; i++){
-		printf("%.4f %.4f %.4f\n", A[i], B[i], C[i]);
-	}
+//	spline(N, X, Y, slope1, slope2, A, B, C);
+//	printf("A        B        C\n");
+//	for (i = 0; i < N+1; i++){
+//		printf("%.4f %.4f %.4f\n", A[i], B[i], C[i]);
+//	}
+	spline(N, X, Y, slope1, slope2, x, y);
+	printf("y = %.4f\n", y);
 	
 	free(X);
 	free(Y);

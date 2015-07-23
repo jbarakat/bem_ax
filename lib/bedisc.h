@@ -27,8 +27,6 @@
 void be_straight();
 void be_straight(double, double, double, double,
                  double, double&, double&);
-void be_spline();
-void be_lagrange(int, double*, double*, double, double&);
 
 
 /* IMPLEMENTATIONS */
@@ -46,61 +44,6 @@ void be_straight(double x1, double y1, double x2, double y2,
 		y = 0.5*(y2 + y1) + 0.5*(y2 - y1)*xi;
 }
 
-/* Lagrange interpolation
- *  Interpolate to point (x,y) based on a set of N nodes (i.e., N-1
- *  elements) given by (X,Y).
- */
-void be_lagrange(int N, double *X, double *Y, double x, double &y){
-	// declare variables
-	int i, j, k;
-	double *rho, psi, L, P, dx;
-	double idx;
-	const double TOL = 1e-12;
-	
-	// check if X contains x
-	idx = 1.;
-	for (i = 0; i < N; i++){
-		dx = fabs(x - X[i]);
-		idx = fmin(idx, dx);
-		if (idx < TOL){
-			y = Y[i];
-			return;
-		}
-	}
-
-	// allocate memory
-	rho = (double*) malloc(N * sizeof(double));
-
-	// construction step
-	for (i = 0; i < N; i++){
-		rho[i] = 1.;
-		for (j = 0; j < N; j++){
-			dx = X[i] - X[j];
-			if (j != i)
-				rho[i] *= dx;
-		}
-	}
-
-	// evaluation step
-	psi = 1.;
-	L = 0;
-	P = 0;
-
-	for (i = 0; i < N; i++){
-		dx = x - X[i];
-		psi *= dx;
-		L = 1/(dx*rho[i]);
-		P += Y[i]*L;
-	}
-
-	P *= psi;
-	y = P;
-	
-	// free memory
-	free(rho);
-}
-
-
 
 /* Determine native element nodes:
  *  M = 0	- uniform elements
@@ -116,7 +59,7 @@ void be_native(int M, int N, double *XG, double *YG, int n1, int n2){
 	
 	// uniform elements
 	if (M == 0){
-
+		
 	}
 	
 	// linear basis in Lagrange polynomials

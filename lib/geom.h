@@ -78,8 +78,8 @@ public:
 		// set integration tolerances
 		dl = l[N] - l[0];
 		stol = 0.000001*dl;
-		Atol = 0.00001*dl;
-		Vtol = 0.0001*dl;
+		Atol = 0.000001*dl*dl;
+		Vtol = 0.000001*dl*dl*dl;
 
 		// calculate cubic spline coefficients
 		spline(N, l, x, 0.,  0., ax, bx, cx);

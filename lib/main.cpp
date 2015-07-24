@@ -41,7 +41,7 @@ void testGeom(){
 	double V, A;
 	double V0, A0;
 	double a, b;
-	int N = 10;
+	int N = 100;
 	
 	// allocate memory
 	x     = (double*) malloc((N+1) * sizeof(double));
@@ -50,7 +50,7 @@ void testGeom(){
 	s     = (double*) malloc((N+1) * sizeof(double));
 	
 	// define coordinates on an ellipse
-	a = 1.2;
+	a = 1.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
 		thet[i] = i*M_PI/N;

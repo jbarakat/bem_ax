@@ -54,7 +54,7 @@ public:
 		double dx, dr, ds, dA, dV, dl;
 		double dxdl, drdl, dsdl, dAdl, dVdl;
 		double ssum, Asum, Vsum;
-		const int MAXIT = 40;
+		const int MAXIT = 20;
 		double stol, Atol, Vtol;
 
 		// allocate memory

@@ -186,7 +186,7 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 	double dmCxx, dmCxr, dmCrx, dmCrr;
 	double fc, dev;
 	
-	int np, nt;
+	int na, nt;
 	double s, ds;
 	double smin = 0.;
 	double smax = 1.;
@@ -205,7 +205,7 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 	
 	s = 0.5*Ds;
 	ds = Ds;
-	np = 1;  // number of points added
+	na = 1;  // number of points added
 	nt = 1;  // total number of points
 
 	/* evaluate Fourier integrals using the extended midpoint rule,
@@ -224,13 +224,13 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 			dmCrr -= mCrr*ds; dmCrr = fabs(dmCrr);
 
 			// prepare for next stage of refinement
-			np = 2;
+			na = 2;
 			nt = 3;
 		}
 		else {
 			// add 2 * 3^(n-1) additional points
 			if (n != 1){
-				np *= 3;
+				na *= 3;
 				nt *= 3;
 			}
 			
@@ -265,15 +265,13 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 		dev = fmax(dev, dmCrx);
 		dev = fmax(dev, dmCrr);
 
-		// break loop when deviation falls below tolerance
+		// break loop when integral converges
 		if (dev < TOL)
 			break;
 	}
 	
 	// diagnose level of refinement [uncomment when required]
 //	printf("%d stages of refinement and %d total points\n", n, nt);
-//	printf("%d stages of refinement\n", n);
-//	printf("%d total points\n", nt);
 	
 	// calculate components of the free-space Green's function
 	gf_axR(x, r, x0, r0, MRxx, MRxr, MRrx, MRrr);

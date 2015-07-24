@@ -30,7 +30,6 @@ void be_straight(double, double, double, double,
 
 
 /* IMPLEMENTATIONS */
-/***********************************************************************/
 // straight line segments
 void be_straight(double x1, double y1, double x2, double y2,
                  double xi, double &x, double &y){
@@ -73,7 +72,5 @@ void be_native(int M, int N, double *XG, double *YG, int n1, int n2){
 	}
 }
 
-
-/***********************************************************************/
 
 #endif

@@ -12,6 +12,7 @@
 #include "grnfcn.h"
 #include "bedisc.h"
 #include "interp.h"
+#include "geom.h"
 #include <gsl/gsl_sf_trig.h>
 
 // not sure if these declarations are neceessary...
@@ -23,12 +24,48 @@
 #define lapack_complex_double double complex
 #endif
 
+void testGeom();
 void testInterp();
 
 int main(){
-	testInterp();
+	testGeom();
+//	testInterp();
 
 	return(0);
+}
+
+void testGeom(){
+	int i, j, k;
+	double *x, *r, *thet;
+	double *s;
+	double V, A;
+	double a, b;
+	int N = 100;
+	
+	// allocate memory
+	x  = (double*) malloc((N+1) * sizeof(double));
+	r  = (double*) malloc((N+1) * sizeof(double));
+	thet  = (double*) malloc((N+1) * sizeof(double));
+	s  = (double*) malloc((N+1) * sizeof(double));
+	
+	// define coordinates on an ellipse
+	a = 1.;
+	b = 1.;
+	for (i = 0; i < N+1; i++){
+		thet[i] = i*M_PI/N;
+		x[i] = a*gsl_sf_cos(thet[i]);
+		r[i] = b*gsl_sf_sin(thet[i]);
+		//printf("%.4f %.4f %.4f\n", T[i], X[i], Y[i]);
+	}
+
+	// create geometric shape
+	geom ellipse;
+	ellipse.calcParams(N, x, r,	s, V, A);
+	
+	printf("theta  s \n");
+	for (i = 0; i < N+1; i++)
+		printf("%.4f %.4f\n", thet[i], s[i]);
+	
 }
 
 void testInterp(){
@@ -55,7 +92,7 @@ void testInterp(){
 	By = (double*) malloc((N+1) * sizeof(double));
 	Cy = (double*) malloc( N    * sizeof(double));
 	
-	// define parameters of an ellipse
+	// define coordinates on an ellipse
 	a = 1.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){

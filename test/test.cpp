@@ -12,7 +12,7 @@ int main(){
 //	}
 //	printf("add %d points for m = %d\n", n, m);
 	
-	int m = 6 % 3;
+	int m = 4 % 2;
 	printf("%d \n", m);
 
 	return 0;

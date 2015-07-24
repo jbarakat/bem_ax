@@ -36,10 +36,12 @@ void spline(const int, double*, double*, double, double,
 void lagrange(const int, double*, double*, double, double&);
 
 /* IMPLEMENTATIONS */
-/***********************************************************************/
 
 /* Generate coefficients a, b, c for cubic spline interpolation of
  * N+1 points (x,y), parametrized by the polygonal arc length s.
+ * Note that
+ *  a,c  contain N elements, and
+ *  b    contains N+1 elements.
  */
 void spline(const int N, double *x, double *y,
             double slopex1, double slopex2,
@@ -248,9 +250,5 @@ void lagrange(const int N, double *x, double *y, double xi, double &yi){
   // free memory
   free(rho);
 }
-
-
-
-/***********************************************************************/
 
 #endif

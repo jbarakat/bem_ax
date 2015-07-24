@@ -13,7 +13,10 @@
 #include "bedisc.h"
 #include "interp.h"
 #include "geom.h"
+#include <math.h>
 #include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_complex.h>
+#include <gsl/gsl_complex_math.h>
 
 // not sure if these declarations are neceessary...
 #ifndef lapack_complex_float
@@ -23,6 +26,7 @@
 #ifndef lapack_complex_double
 #define lapack_complex_double double complex
 #endif
+
 
 void testGeom();
 void testInterp();
@@ -35,7 +39,7 @@ int main(){
 }
 
 void testGeom(){
-	int i, j, k;
+	int i, j;
 	double *x, *r, *thet;
 	double *s;
 	double V, A;
@@ -50,7 +54,7 @@ void testGeom(){
 	s     = (double*) malloc((N+1) * sizeof(double));
 	
 	// define coordinates on an ellipse
-	a = 1.;
+	a = 4.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
 		thet[i] = i*M_PI/N;
@@ -60,19 +64,45 @@ void testGeom(){
 	}
 
 	// calculate analytical area and volume
-	A0 = 0.;
-	V0 = 0.;
+	double e2, e1;
+	double asine, atanhe;
+	A0 = 1.;
+	if (a < b){ // oblate
+		e2 = 1. - a*a/(b*b);
+		e1 = sqrt(e2);
+		atanhe = gsl_complex_abs(gsl_complex_arctanh_real(e1));
+		A0 += ((1 - e2)/e1)*atanhe;
+		A0 *= 2*M_PI*b*b;
+	}
+
+	if (a > b){ // prolate
+		e2 = 1. - b*b/(a*a);
+		e1 = sqrt(e2);
+		asine = gsl_complex_abs(gsl_complex_arcsin_real(e1));
+		A0 += (a/(b*e1))*asine;
+		A0 *= 2*M_PI*b*b;
+
+	}
+	
+	if (a == b){
+		A0 = 4*M_PI*a*a;
+	}
+
+	V0 = 4*M_PI*a*b*b/3;
 
 	// create geometric shape
 	geom ellipse;
 	ellipse.calcParams(N, x, r,	s, A, V);
 	
-	printf("theta  s \n");
-	for (i = 0; i < N+1; i++)
-		printf("%.4f %.4f\n", thet[i], s[i]);
+	//printf("theta  s \n");
+	//for (i = 0; i < N+1; i++)
+	//	printf("%.4f %.4f\n", thet[i], s[i]);
 	
-	printf("\n A = %.4f, A0 = %.4f\n", A, A0);
-	printf("\n V = %.4f\n", V);
+	double relerrA = (A-A0)/A0*100;
+	double relerrV = (V-V0)/V0*100;
+	
+	printf("\n A = %.4f, A0 = %.4f, relerr = %.4f%\n", A, A0, relerrA);
+	printf("\n V = %.4f, V0 = %.4f, relerr = %.4f%\n", V, V0, relerrV);
 	
 }
 
@@ -101,7 +131,7 @@ void testInterp(){
 	Cy = (double*) malloc( N    * sizeof(double));
 	
 	// define coordinates on an ellipse
-	a = 1.;
+	a = 10.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
 		T[i] = i*M_PI/N;

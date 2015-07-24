@@ -161,6 +161,7 @@ public:
 						ssum += dsdl;
 						Asum += dAdl;
 						Vsum += dVdl;
+						
 					}
 				}
 				

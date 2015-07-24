@@ -11,8 +11,8 @@
  *  x,r [input]			nodal coordinates
  *  N		[input]			number of boundary elements
  *  s   [output]		meridional arc length
- *  V   [output]		volume
  *  A   [output]		area
+ *  V   [output]		volume
  *  g   [output]		metric tensor
  *  h   [output]		curvature tensor
  *  H   [output]		mean curvature
@@ -35,26 +35,27 @@ public:
 	
 	/* IMPLEMENTATIONS */
 //	void geom(const int N, double *x, double *r,
-//						double *s, double &V, double &A,
+//						double *s, double &A, double &V,
 //						double *gss, double *gpp,
 //						double *hss, double *hpp,
 //	          double *tx, double *tr,
 //	          double *nx, double *nr){
 	void calcParams(const int N, double *x, double *r,
-						double *s, double &V, double &A){
+						double *s, double &A, double &V){
 		// declare variables
 		int i, j, n;
 		int na, nt;
-		double step;
-		double *l, l0, l1, lj;
+		double *l, lj;
 		double *ax, *bx, *cx;
 		double *ar, *br, *cr;
 		double axi, bxi, cxi;
 		double ari, bri, cri;
-		double dx, dr, ds, dl;
+		double xi, ri, xx, rr, ss;
+		double dx, dr, ds, dA, dV, dl;
 		double dxdl, drdl, dsdl, dAdl, dVdl;
+		double ssum, Asum, Vsum;
 		const int MAXIT = 40;
-		const double TOL = 0.00001;
+		double stol, Atol, Vtol;
 
 		// allocate memory
 		l  = (double*) malloc((N+1) * sizeof(double));
@@ -74,6 +75,12 @@ public:
 			l[i] = l[i-1] + dl;
 		}
 
+		// set integration tolerances
+		dl = l[N] - l[0];
+		stol = 0.000001*dl;
+		Atol = 0.00001*dl;
+		Vtol = 0.0001*dl;
+
 		// calculate cubic spline coefficients
 		spline(N, l, x, 0.,  0., ax, bx, cx);
 		spline(N, l, r, 1., -1., ar, br, cr);
@@ -81,10 +88,12 @@ public:
 		/* calculate the meridional arc length, area, and volume 
 		 * using the extended trapezoidal rule */
 		s[0] = 0.;
+		A    = 0.;
+		V    = 0.;
 		for (i = 0; i < N; i++){
 			// update current step
-			l0 = l[i];
-			l1 = l[i+1];
+			 xi =  x[i];
+			 ri =  r[i];
 			axi = ax[i];
 			bxi = bx[i];
 			cxi = cx[i];
@@ -93,16 +102,26 @@ public:
 			cri = cr[i];
 
 			// initialize;
-			dsdl = 0.;
-			dl  = l1 - l0;
+			ssum = 0.;
+			Asum = 0.;
+			Vsum = 0.;
+			dl   = l[i+1] - l[i];
 			
 			// evaluate integrand at l[i], l[i+1]
 			for (j = i; j < i+2; j++){
 				lj = l[i];
-				dxdl  = (3.*axi*lj + 2.*bxi)*lj + cxi;
-				drdl  = (3.*ari*lj + 2.*bri)*lj + cri;
-				step   = sqrt(dxdl*dxdl + drdl*drdl);
-				dsdl += 0.5*step;
+
+				xx    =  ((axi*lj + bxi)*lj + cxi)*lj + xi;
+				rr    =  ((ari*lj + bri)*lj + cri)*lj + ri;
+				dxdl  =  (3.*axi*lj + 2.*bxi)*lj + cxi;
+				drdl  =  (3.*ari*lj + 2.*bri)*lj + cri;
+				dsdl  =  sqrt(dxdl*dxdl + drdl*drdl);
+				dAdl  =  rr*dsdl;
+				dVdl  = -rr*rr*dxdl;
+
+				ssum += 0.5*dsdl;
+				Asum += 0.5*dAdl;
+				Vsum += 0.5*dVdl;
 			}
 
 			na = 2; // number of points added
@@ -118,7 +137,9 @@ public:
 				nt += na;
 
 				// store integrands before adding new points
-				ds = dsdl*dl;
+				ds = ssum*dl;
+				dA = Asum*dl;
+				dV = Vsum*dl;
 
 				// refine grid spacing
 				dl /= 2.;
@@ -128,31 +149,47 @@ public:
 					if (j % 2 != 0){ /* avoid double counting
 					                  * previous grid points */
 						lj = j*dl;
-						dxdl  = (3.*axi*lj + 2.*bxi)*lj + cxi;
-						drdl  = (3.*ari*lj + 2.*bri)*lj + cri;
-						step   = sqrt(dxdl*dxdl + drdl*drdl);
-						dsdl += step;
+
+						xx    =  ((axi*lj + bxi)*lj + cxi)*lj + xi;
+						rr    =  ((ari*lj + bri)*lj + cri)*lj + ri;
+						dxdl  =  (3.*axi*lj + 2.*bxi)*lj + cxi;
+						drdl  =  (3.*ari*lj + 2.*bri)*lj + cri;
+						dsdl  =  sqrt(dxdl*dxdl + drdl*drdl);
+						dAdl  =  rr*dsdl;
+						dVdl  = -rr*rr*dxdl;
+			
+						ssum += dsdl;
+						Asum += dAdl;
+						Vsum += dVdl;
 					}
 				}
 				
 				// calculate change in integrand
-				ds -= dsdl*dl; ds = fabs(ds);
-				
-				// break loop when integral converges
-				if (ds < TOL)
+				ds -= ssum*dl; ds = fabs(ds);
+				dA -= Asum*dl; dA = fabs(dA);
+				dV -= Vsum*dl; dV = fabs(dV);
+
+				// break loop when integrals converge
+				if (ds < stol && dA < Atol && dV < Vtol)
 					break;
 
 			}
-		  // diagnose level of refinement [uncomment when required]
+		  
+			// diagnose level of refinement [uncomment when required]
 //		  printf("%d stages of refinement and %d total points\n", n, nt);
+			
+			// increment the integrals
+			ds = ssum*dl;
+			dA = Asum*dl;
+			dV = Vsum*dl;
 
-			ds = dsdl*dl;
 			s[i+1] = s[i] + ds;
-
+			A     += dA;
+			V     += dV;
 		}
 
-		A = 0.;
-		V = 0.;
+		A *= 2*M_PI;
+		V *= M_PI;
 
 		// release memory
 		free(l);

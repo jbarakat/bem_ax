@@ -39,17 +39,18 @@ void testGeom(){
 	double *x, *r, *thet;
 	double *s;
 	double V, A;
+	double V0, A0;
 	double a, b;
-	int N = 100;
+	int N = 10;
 	
 	// allocate memory
-	x  = (double*) malloc((N+1) * sizeof(double));
-	r  = (double*) malloc((N+1) * sizeof(double));
+	x     = (double*) malloc((N+1) * sizeof(double));
+	r     = (double*) malloc((N+1) * sizeof(double));
 	thet  = (double*) malloc((N+1) * sizeof(double));
-	s  = (double*) malloc((N+1) * sizeof(double));
+	s     = (double*) malloc((N+1) * sizeof(double));
 	
 	// define coordinates on an ellipse
-	a = 1.;
+	a = 1.2;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
 		thet[i] = i*M_PI/N;
@@ -58,13 +59,20 @@ void testGeom(){
 		//printf("%.4f %.4f %.4f\n", T[i], X[i], Y[i]);
 	}
 
+	// calculate analytical area and volume
+	A0 = 0.;
+	V0 = 0.;
+
 	// create geometric shape
 	geom ellipse;
-	ellipse.calcParams(N, x, r,	s, V, A);
+	ellipse.calcParams(N, x, r,	s, A, V);
 	
 	printf("theta  s \n");
 	for (i = 0; i < N+1; i++)
 		printf("%.4f %.4f\n", thet[i], s[i]);
+	
+	printf("\n A = %.4f, A0 = %.4f\n", A, A0);
+	printf("\n V = %.4f\n", V);
 	
 }
 

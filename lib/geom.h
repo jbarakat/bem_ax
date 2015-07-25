@@ -8,17 +8,14 @@
  *  Item #2
  *  
  * PARAMETERS
- *  x,r [input]			nodal coordinates
- *  N		[input]			number of boundary elements
- *  s   [output]		meridional arc length
- *  A   [output]		area
- *  V   [output]		volume
- *  g   [output]		metric tensor
- *  h   [output]		curvature tensor
- *  H   [output]		mean curvature
- *  K   [output]		Gaussian curvature
- *  t   [output]		meridional tangent vector
- *  n   [output] 		normal vector
+ *  x,r   [input]			nodal coordinates
+ *  N	    [input]			number of boundary elements
+ *  s     [output]		meridional arc length
+ *  A     [output]		total area
+ *  V     [output]		total volume
+ *  cs,cp [output]		principal curvatures
+ *  t     [output]		meridional tangent vector
+ *  n     [output] 		normal vector
  */
 
 #ifndef GEOM_H
@@ -34,28 +31,24 @@ public:
 	
 	
 	/* IMPLEMENTATIONS */
-//	void geom(const int N, double *x, double *r,
-//						double *s, double &A, double &V,
-//						double *gss, double *gpp,
-//						double *hss, double *hpp,
-//	          double *tx, double *tr,
-//	          double *nx, double *nr){
-	void calcParams(const int N, double *x, double *r,
-						double *s, double &A, double &V){
+	void calcParams(const int N, double *x, double *r, double *s, double &A, double &V,
+									double *cs, double *cp, double *tx, double *tr, double *nx, double *nr){
 		// declare variables
-		int i, j, n;
+		int i,j, n;
 		int na, nt;
 		double *l, lj;
 		double *ax, *bx, *cx;
 		double *ar, *br, *cr;
 		double axi, bxi, cxi;
 		double ari, bri, cri;
-		double xi, ri, xx, rr, ss;
+		double xi, ri, xj, rj;
 		double dx, dr, ds, dA, dV, dl;
 		double dxdl, drdl, dsdl, dAdl, dVdl;
+		double d2xdl2, d2rdl2;
 		double ssum, Asum, Vsum;
 		const int MAXIT = 20;
 		double stol, Atol, Vtol;
+		double fc;
 
 		// allocate memory
 		l  = (double*) malloc((N+1) * sizeof(double));
@@ -77,15 +70,15 @@ public:
 
 		// set integration tolerances
 		dl = l[N] - l[0];
-		stol = 0.000001*dl;
-		Atol = 0.000001*dl*dl;
-		Vtol = 0.000001*dl*dl*dl;
-
+		stol = 0.0000001*dl;
+		Atol = 0.0000001*dl*dl;
+		Vtol = 0.0000001*dl*dl*dl;
+		
 		// calculate cubic spline coefficients
 		spline(N, l, x, 0.,  0., ax, bx, cx);
 		spline(N, l, r, 1., -1., ar, br, cr);
 
-		/* calculate the meridional arc length, area, and volume 
+		/* calculate meridional arc length, area, and volume 
 		 * using the extended trapezoidal rule */
 		s[0] = 0.;
 		A    = 0.;
@@ -109,15 +102,12 @@ public:
 			
 			// evaluate integrand at l[i], l[i+1]
 			for (j = i; j < i+2; j++){
-				lj = l[j];
-
-				xx    =  x[j];
-				rr    =  r[j];
-				dxdl  =  (3.*axi*lj + 2.*bxi)*lj + cxi;
-				drdl  =  (3.*ari*lj + 2.*bri)*lj + cri;
+				rj    =  r[j];
+				dxdl  =  cxi;
+				drdl  =  cri;
 				dsdl  =  sqrt(dxdl*dxdl + drdl*drdl);
-				dAdl  =  rr*dsdl;
-				dVdl  = -rr*rr*dxdl;
+				dAdl  =  rj*dsdl;
+				dVdl  = -rj*rj*dxdl;
 				
 				ssum += 0.5*dsdl;
 				Asum += 0.5*dAdl;
@@ -148,15 +138,14 @@ public:
 				for (j = 0; j < nt; j++){
 					if (j % 2 != 0){ /* avoid double counting
 					                  * previous grid points */
-						lj = j*dl;
+						lj    = j*dl;
 
-						xx    =  ((axi*lj + bxi)*lj + cxi)*lj + xi;
-						rr    =  ((ari*lj + bri)*lj + cri)*lj + ri;
+						rj    =  ((ari*lj + bri)*lj + cri)*lj + ri;
 						dxdl  =  (3.*axi*lj + 2.*bxi)*lj + cxi;
 						drdl  =  (3.*ari*lj + 2.*bri)*lj + cri;
 						dsdl  =  sqrt(dxdl*dxdl + drdl*drdl);
-						dAdl  =  rr*dsdl;
-						dVdl  = -rr*rr*dxdl;
+						dAdl  =  rj*dsdl;
+						dVdl  = -rj*rj*dxdl;
 						
 						ssum += dsdl;
 						Asum += dAdl;
@@ -172,7 +161,6 @@ public:
 				// break loop when integrals converge
 				if (ds < stol && dA < Atol && dV < Vtol)
 					break;
-
 			}
 		  
 			// diagnose level of refinement [uncomment when required]
@@ -190,7 +178,54 @@ public:
 
 		A *= 2*M_PI;
 		V *= M_PI;
+		
+		/* calculate principal curvatures, meridional tangent vector,
+		 * and outward normal vector at the nodal points */
+		cs[0]     =  0.;
+		cp[0]     =  0.;
+		
+		tx[0]     =  0.;
+		tr[0]     =  1.;
+		
+		nx[0]     =  1.;
+		nr[0]     =  0.;
 
+		for (i = 1; i < N; i++){
+			ri      =  r[i];
+			bxi     =  bx[i];
+			bri     =  br[i];
+			cxi     =  cx[i];
+			cri     =  cr[i];
+			dxdl    =  cxi;
+			d2xdl2  =  2*bxi;
+			drdl    =  cri;
+			d2rdl2  =  2*bri;
+			dsdl    =  sqrt(cxi*cxi + cri*cri);
+
+			cs[i]   = -(dxdl*d2rdl2 - d2xdl2*drdl)/pow(dsdl, 3);
+			cp[i]   =  dxdl/(ri*dsdl);
+			
+			tx[i]   =  dxdl/dsdl;
+			tr[i]   =  drdl/dsdl;
+			
+			nx[i]   =  tr[i];
+			nr[i]   = -tx[i];
+		}
+	
+		fc        = (s[0]   - s[2])/(s[1] - s[2]);
+		cs[0]     = cs[1]   + fc*(cs[1]   - cs[2]);
+		cp[0]     = cp[1]   + fc*(cp[1]   - cp[2]);
+
+		fc        = (s[N] - s[N-2])/(s[N-1] - s[N-2]);
+		cs[N]     = cs[N-1] + fc*(cs[N-1] - cs[N-2]);
+		cp[N]     = cp[N-1] + fc*(cp[N-1] - cp[N-2]);
+		
+		tx[N]     =  0.;
+		tr[N]     = -1.;
+		
+		nx[N]     = -1.;
+		nr[N]     =  0.;
+		
 		// release memory
 		free(l);
 		free(ax);

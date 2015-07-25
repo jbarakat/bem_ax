@@ -44,6 +44,7 @@ void testGeom(){
 	double *s;
 	double V, A;
 	double V0, A0;
+	double *cs, *cp, *nx, *nr, *tx, *tr;
 	double a, b;
 	int N = 100;
 	
@@ -52,9 +53,15 @@ void testGeom(){
 	r     = (double*) malloc((N+1) * sizeof(double));
 	thet  = (double*) malloc((N+1) * sizeof(double));
 	s     = (double*) malloc((N+1) * sizeof(double));
+	cs    = (double*) malloc((N+1) * sizeof(double));
+	cp    = (double*) malloc((N+1) * sizeof(double));
+	tx    = (double*) malloc((N+1) * sizeof(double));
+	tr    = (double*) malloc((N+1) * sizeof(double));
+	nx    = (double*) malloc((N+1) * sizeof(double));
+	nr    = (double*) malloc((N+1) * sizeof(double));
 	
 	// define coordinates on an ellipse
-	a = 40.;
+	a = 10.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
 		thet[i] = i*M_PI/N;
@@ -92,11 +99,11 @@ void testGeom(){
 
 	// create geometric shape
 	geom ellipse;
-	ellipse.calcParams(N, x, r,	s, A, V);
+	ellipse.calcParams(N, x, r,	s, A, V, cs, cp, tx, tr, nx, nr);
 	
-	//printf("theta  s \n");
-	//for (i = 0; i < N+1; i++)
-	//	printf("%.4f %.4f\n", thet[i], s[i]);
+	printf("theta  s       cs      cp      tx      tr      nx      nr\n");
+	for (i = 0; i < N+1; i++)
+		printf("%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n", thet[i], s[i], cs[i], cp[i], tx[i], tr[i], nx[i], nr[i]);
 	
 	double relerrA = (A-A0)/A0*100;
 	double relerrV = (V-V0)/V0*100;
@@ -115,7 +122,7 @@ void testInterp(){
 	double *A, *B, *C;
 	double *Ax, *Bx, *Cx;
 	double *Ay, *By, *Cy;
-	int N = 10;
+	int N = 100;
 	
 	// allocate memory
 	X  = (double*) malloc((N+1) * sizeof(double));

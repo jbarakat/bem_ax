@@ -54,7 +54,7 @@ void testGeom(){
 	s     = (double*) malloc((N+1) * sizeof(double));
 	
 	// define coordinates on an ellipse
-	a = 4.;
+	a = 40.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
 		thet[i] = i*M_PI/N;
@@ -100,7 +100,8 @@ void testGeom(){
 	
 	double relerrA = (A-A0)/A0*100;
 	double relerrV = (V-V0)/V0*100;
-	
+
+	printf("\n a = %.1f, b = %.1f\n", a, b);
 	printf("\n A = %.4f, A0 = %.4f, relerr = %.4f%\n", A, A0, relerrA);
 	printf("\n V = %.4f, V0 = %.4f, relerr = %.4f%\n", V, V0, relerrV);
 	

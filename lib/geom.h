@@ -109,16 +109,16 @@ public:
 			
 			// evaluate integrand at l[i], l[i+1]
 			for (j = i; j < i+2; j++){
-				lj = l[i];
+				lj = l[j];
 
-				xx    =  ((axi*lj + bxi)*lj + cxi)*lj + xi;
-				rr    =  ((ari*lj + bri)*lj + cri)*lj + ri;
+				xx    =  x[j];
+				rr    =  r[j];
 				dxdl  =  (3.*axi*lj + 2.*bxi)*lj + cxi;
 				drdl  =  (3.*ari*lj + 2.*bri)*lj + cri;
 				dsdl  =  sqrt(dxdl*dxdl + drdl*drdl);
 				dAdl  =  rr*dsdl;
 				dVdl  = -rr*rr*dxdl;
-
+				
 				ssum += 0.5*dsdl;
 				Asum += 0.5*dAdl;
 				Vsum += 0.5*dVdl;
@@ -157,14 +157,13 @@ public:
 						dsdl  =  sqrt(dxdl*dxdl + drdl*drdl);
 						dAdl  =  rr*dsdl;
 						dVdl  = -rr*rr*dxdl;
-			
+						
 						ssum += dsdl;
 						Asum += dAdl;
 						Vsum += dVdl;
-						
 					}
 				}
-				
+
 				// calculate change in integrand
 				ds -= ssum*dl; ds = fabs(ds);
 				dA -= Asum*dl; dA = fabs(dA);
@@ -177,7 +176,7 @@ public:
 			}
 		  
 			// diagnose level of refinement [uncomment when required]
-//		  printf("%d stages of refinement and %d total points\n", n, nt);
+		 // printf("%d stages of refinement and %d total points\n", n, nt);
 			
 			// increment the integrals
 			ds = ssum*dl;

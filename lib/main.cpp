@@ -98,21 +98,6 @@ void testGeom(){
 
 	V0 = 4*M_PI*a*b*b/3;
 
-	// test calcParams
-//	geom spheroid;
-//	spheroid.calcParams(N, x, r,	s, A, V, cs, cp, tx, tr, nx, nr);
-//	
-//	printf("theta  s       cs      cp      tx      tr      nx      nr\n");
-//	for (i = 0; i < N+1; i++)
-//		printf("%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n", thet[i], s[i], cs[i], cp[i], tx[i], tr[i], nx[i], nr[i]);
-//	
-//	relerrA = (A-A0)/A0*100;
-//	relerrV = (V-V0)/V0*100;
-//
-//	printf("\n a = %.1f, b = %.1f\n", a, b);
-//	printf("\n A = %.4f, A0 = %.4f, relerr = %.4f%\n", A, A0, relerrA);
-//	printf("\n V = %.4f, V0 = %.4f, relerr = %.4f%\n", V, V0, relerrV);
-
 	// test constructor, set and get functions
 	geom spheroid(N, x, r);
 	spheroid.getArcl(s);

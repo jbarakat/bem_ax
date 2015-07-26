@@ -4,16 +4,16 @@
  *  and interpolated using cubic splines.
  *
  * REFERENCES
- *  Item #1
- *  Item #2
+ *  N/A
  *  
  * PARAMETERS
  *  x,r   [input]			nodal coordinates
  *  N	    [input]			number of boundary elements
+ *  a,b,c [output]		cubic spline coefficients (for interpolation)
  *  s     [output]		meridional arc length
  *  A     [output]		total area
  *  V     [output]		total volume
- *  cs,cp [output]		principal curvatures
+ *  ks,kp [output]		principal curvatures
  *  t     [output]		meridional tangent vector
  *  n     [output] 		normal vector
  */
@@ -31,6 +31,8 @@ class geom {
 private:
 	int nnode, nelem;
 	double *nodex, *noder;
+	double *splnax, *splnbx, *splncx;
+	double *splnar, *splnbr, *splncr;
 	double *arcl, area, vlme;
 	double *curvs, *curvp;
 	double *tangx, *tangr;
@@ -51,18 +53,26 @@ public:
 		nelem = N;
 
 		// allocate memory for pointer arrays
-		arcl  = (double*) malloc(nnode * sizeof(double));
-		nodex = (double*) malloc(nnode * sizeof(double));
-		noder = (double*) malloc(nnode * sizeof(double));
-		curvs = (double*) malloc(nnode * sizeof(double));
-		curvp = (double*) malloc(nnode * sizeof(double));
-		tangx = (double*) malloc(nnode * sizeof(double));
-		tangr = (double*) malloc(nnode * sizeof(double));
-		nrmlx = (double*) malloc(nnode * sizeof(double));
-		nrmlr = (double*) malloc(nnode * sizeof(double));
+		splnax = (double*) malloc((nnode - 1) * sizeof(double));
+		splnbx = (double*) malloc( nnode      * sizeof(double));
+		splncx = (double*) malloc((nnode - 1) * sizeof(double));
+		splnar = (double*) malloc((nnode - 1) * sizeof(double));
+		splnbr = (double*) malloc( nnode      * sizeof(double));
+		splncr = (double*) malloc((nnode - 1) * sizeof(double));
+		arcl   = (double*) malloc( nnode      * sizeof(double));
+		nodex  = (double*) malloc( nnode      * sizeof(double));
+		noder  = (double*) malloc( nnode      * sizeof(double));
+		curvs  = (double*) malloc( nnode      * sizeof(double));
+		curvp  = (double*) malloc( nnode      * sizeof(double));
+		tangx  = (double*) malloc( nnode      * sizeof(double));
+		tangr  = (double*) malloc( nnode      * sizeof(double));
+		nrmlx  = (double*) malloc( nnode      * sizeof(double));
+		nrmlr  = (double*) malloc( nnode      * sizeof(double));
 		
 		// calculate geometric parameters
 		calcParams(N, x, r,
+		           splnax, splnbx, splncx,
+		           splnar, splnbr, splncr,
 		           arcl, area, vlme, 
 							 curvs, curvp, 
 		           tangx, tangr,
@@ -77,6 +87,78 @@ public:
 	// Set functions
 
 	// Get functions
+	void getALL(double *ax, double *bx, double *cx,
+							double *ar, double *br, double *cr,
+							double *s, double &A, double &V,
+							double *ks, double *kp,
+							double *tx, double *tr,
+							double *nx, double *nr){
+		int i;
+
+		if (ax == NULL || bx == NULL || cx == NULL ||
+		    ar == NULL || br == NULL || cr == NULL ||
+				s  == NULL || ks == NULL || kp == NULL ||
+				tx == NULL || tr == NULL || nx == NULL || nr == NULL){
+			printf("Error: no memory allocated for pointers.\n");
+			return;
+		}
+
+		A = area;
+		V = vlme;
+
+		for (i = 0; i < nnode-1; i++){
+			ax[i] = splnax[i];
+			br[i] = splnbr[i];
+			cx[i] = splncx[i];
+			ar[i] = splnar[i];
+			br[i] = splnbr[i];
+			cr[i] = splncr[i];
+			s [i] = arcl  [i];
+			ks[i] = curvs [i];
+			kp[i] = curvp [i];
+			tx[i] = tangx [i];
+			tr[i] = tangr [i];
+			nx[i] = nrmlx [i];
+			nr[i] = nrmlr [i];
+		}
+
+		i = nnode-1;
+			bx[i] = splnbx[i];
+			br[i] = splnbr[i];
+			s [i] = arcl  [i];
+			ks[i] = curvs [i];
+			kp[i] = curvp [i];
+			tx[i] = tangx [i];
+			tr[i] = tangr [i];
+			nx[i] = nrmlx [i];
+			nr[i] = nrmlr [i];
+
+	}
+
+	void getSpln(double *ax, double *bx, double *cx,
+	             double *ar, double *br, double *cr){
+		int i;
+		
+		if (ax == NULL || bx == NULL || cx == NULL ||
+		    ar == NULL || br == NULL || cr == NULL){
+			printf("Error: no memory allocated for a, b, c.\n");
+			return;
+		}
+
+		for (i = 0; i < nnode-1; i++){
+			ax[i] = splnax[i];
+			bx[i] = splnbx[i];
+			cx[i] = splncx[i];
+			ar[i] = splnar[i];
+			br[i] = splnbr[i];
+			cr[i] = splncr[i];
+		}
+		
+		i = nnode-1;
+			bx[i] = splnbx[i];
+			br[i] = splnbr[i];
+	}
+
 	void getArcl(double *s){
 		int i;
 		
@@ -110,17 +192,17 @@ public:
 		V = vlme;
 	}
 	
-	void getCurv(double *cs, double *cp){
+	void getCurv(double *ks, double *kp){
 		int i;
 		
-		if (cs == NULL || cp == NULL){
-			printf("Error: no memory allocated for cs, cp.\n");
+		if (ks == NULL || kp == NULL){
+			printf("Error: no memory allocated for ks, kp.\n");
 			return;
 		}
 
 		for (i = 0; i < nnode; i++){
-			cs[i] = curvs[i];
-			cp[i] = curvp[i];
+			ks[i] = curvs[i];
+			kp[i] = curvp[i];
 		}
 	}
 
@@ -155,16 +237,16 @@ public:
 	/* Function to calculate geometric parameters for a given set of N+1
 	 * nodal coordinates (x,r) */
 	void calcParams(int N, double *x, double *r, 				/* <--- inputs  */
-									double *s, double &A, double &V,		/* <--- outputs */
-									double *cs, double *cp,             /* <------|     */
+									double *ax, double *bx, double *cx,	/* <--- outputs */
+									double *ar, double *br, double *cr,	/* <------|     */
+									double *s, double &A, double &V,    /* <------|     */
+									double *ks, double *kp,             /* <------|     */
 									double *tx, double *tr,							/* <------|     */
 									double *nx, double *nr){						/* <------|     */
 		// declare variables
 		int i,j, n;
 		int na, nt;
 		double *l, lj;
-		double *ax, *bx, *cx;
-		double *ar, *br, *cr;
 		double axi, bxi, cxi;
 		double ari, bri, cri;
 		double xi, ri, xj, rj;
@@ -220,7 +302,7 @@ public:
 			bri = br[i];
 			cri = cr[i];
 
-			// initialize;
+			// initialize
 			ssum = 0.;
 			Asum = 0.;
 			Vsum = 0.;
@@ -307,8 +389,8 @@ public:
 		
 		/* calculate principal curvatures, meridional tangent vector,
 		 * and outward normal vector at the nodal points */
-		cs[0]     =  0.;
-		cp[0]     =  0.;
+		ks[0]     =  0.;
+		kp[0]     =  0.;
 		
 		tx[0]     =  0.;
 		tr[0]     =  1.;
@@ -328,8 +410,8 @@ public:
 			d2rdl2  =  2*bri;
 			dsdl    =  sqrt(cxi*cxi + cri*cri);
 
-			cs[i]   = -(dxdl*d2rdl2 - d2xdl2*drdl)/pow(dsdl, 3);
-			cp[i]   =  dxdl/(ri*dsdl);
+			ks[i]   = -(dxdl*d2rdl2 - d2xdl2*drdl)/pow(dsdl, 3);
+			kp[i]   =  dxdl/(ri*dsdl);
 			
 			tx[i]   =  dxdl/dsdl;
 			tr[i]   =  drdl/dsdl;
@@ -339,12 +421,12 @@ public:
 		}
 	
 		fc        = (s[0]   - s[2])/(s[1] - s[2]);
-		cs[0]     = cs[1]   + fc*(cs[1]   - cs[2]);
-		cp[0]     = cp[1]   + fc*(cp[1]   - cp[2]);
+		ks[0]     = ks[1]   + fc*(ks[1]   - ks[2]);
+		kp[0]     = kp[1]   + fc*(kp[1]   - kp[2]);
 
 		fc        = (s[N] - s[N-2])/(s[N-1] - s[N-2]);
-		cs[N]     = cs[N-1] + fc*(cs[N-1] - cs[N-2]);
-		cp[N]     = cp[N-1] + fc*(cp[N-1] - cp[N-2]);
+		ks[N]     = ks[N-1] + fc*(ks[N-1] - ks[N-2]);
+		kp[N]     = kp[N-1] + fc*(kp[N-1] - kp[N-2]);
 		
 		tx[N]     =  0.;
 		tr[N]     = -1.;

@@ -22,17 +22,143 @@
 #define GEOM_H
 
 /* HEADER FILES */
+#include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include "interp.h"
 
 class geom {
+private:
+	int nnode, nelem;
+	double *nodex, *noder;
+	double *arcl, area, vlme;
+	double *curvs, *curvp;
+	double *tangx, *tangr;
+	double *nrmlx, *nrmlr;
+
 public:
 	/* PROTOTYPES */
 	
-	
 	/* IMPLEMENTATIONS */
-	void calcParams(const int N, double *x, double *r, double *s, double &A, double &V,
-									double *cs, double *cp, double *tx, double *tr, double *nx, double *nr){
+
+	// Constructors
+	geom(){
+	}
+
+	geom(int N, double *x, double *r){
+		// assign nummber of nodes and boundary elements
+		nnode = N + 1;
+		nelem = N;
+
+		// allocate memory for pointer arrays
+		arcl  = (double*) malloc(nnode * sizeof(double));
+		nodex = (double*) malloc(nnode * sizeof(double));
+		noder = (double*) malloc(nnode * sizeof(double));
+		curvs = (double*) malloc(nnode * sizeof(double));
+		curvp = (double*) malloc(nnode * sizeof(double));
+		tangx = (double*) malloc(nnode * sizeof(double));
+		tangr = (double*) malloc(nnode * sizeof(double));
+		nrmlx = (double*) malloc(nnode * sizeof(double));
+		nrmlr = (double*) malloc(nnode * sizeof(double));
+		
+		// calculate geometric parameters
+		calcParams(N, x, r,
+		           arcl, area, vlme, 
+							 curvs, curvp, 
+		           tangx, tangr,
+							 nrmlx, nrmlr);
+
+	}
+
+	// Destructor
+//	~geom(){
+//	}
+	
+	// Set functions
+
+	// Get functions
+	void getArcl(double *s){
+		int i;
+		
+		if (s == NULL){
+			printf("Error: no memory allocated for s.\n");
+			return;
+		}
+
+		for (i = 0; i < nnode; i++){
+			s[i] = arcl[i];
+		}
+	}
+
+	double getArea(){
+		double A;
+		A = area;
+		return(A);
+	}
+	
+	void getArea(double &A){
+		A = area;
+	}
+	
+	double getVlme(){
+		double V;
+		V = vlme;
+		return(V);
+	}
+
+	void getVlme(double &V){
+		V = vlme;
+	}
+	
+	void getCurv(double *cs, double *cp){
+		int i;
+		
+		if (cs == NULL || cp == NULL){
+			printf("Error: no memory allocated for cs, cp.\n");
+			return;
+		}
+
+		for (i = 0; i < nnode; i++){
+			cs[i] = curvs[i];
+			cp[i] = curvp[i];
+		}
+	}
+
+	void getTang(double *tx, double *tr){
+		int i;
+		
+		if (tx == NULL || tr == NULL){
+			printf("Error: no memory allocated for tx, tr.\n");
+			return;
+		}
+
+		for (i = 0; i < nnode; i++){
+			tx[i] = tangx[i];
+			tr[i] = tangr[i];
+		}
+	}
+
+	void getNrml(double *nx, double *nr){
+		int i;
+		
+		if (nx == NULL || nr == NULL){
+			printf("Error: no memory allocated for nx, nr.\n");
+			return;
+		}
+
+		for (i = 0; i < nnode; i++){
+			nx[i] = nrmlx[i];
+			nr[i] = nrmlr[i];
+		}
+	}
+
+	/* Function to calculate geometric parameters for a given set of N+1
+	 * nodal coordinates (x,r) */
+	void calcParams(int N, double *x, double *r, 				/* <--- inputs  */
+									double *s, double &A, double &V,		/* <--- outputs */
+									double *cs, double *cp,             /* <------|     */
+									double *tx, double *tr,							/* <------|     */
+									double *nx, double *nr){						/* <------|     */
 		// declare variables
 		int i,j, n;
 		int na, nt;
@@ -74,7 +200,7 @@ public:
 		Atol = 0.0000001*dl*dl;
 		Vtol = 0.0000001*dl*dl*dl;
 		
-		// calculate cubic spline coefficients
+		// calculate cubic spline coefficients for interpolation
 		spline(N, l, x, 0.,  0., ax, bx, cx);
 		spline(N, l, r, 1., -1., ar, br, cr);
 
@@ -134,7 +260,7 @@ public:
 				// refine grid spacing
 				dl /= 2.;
 
-				// evaluate integrand at additional points
+				// interpolate integrand at additional points
 				for (j = 0; j < nt; j++){
 					if (j % 2 != 0){ /* avoid double counting
 					                  * previous grid points */

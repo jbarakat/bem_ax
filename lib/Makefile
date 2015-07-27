@@ -5,9 +5,9 @@ include ../Makefile.in
 OBJS = 
 OBJS += main.o 
 OBJS += gauleg.o
-OBJS += bessel.o
-OBJS += ellint.o
+OBJS += bessel.o ellint.o
 OBJS += grnfcn.o
+OBJS += interp.o
 
 #==============================================================================
 # rule for compiling everything

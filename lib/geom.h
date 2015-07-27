@@ -1,21 +1,20 @@
 /* GEOMETRY
- *  Shape class that prescribes the boundary elements and geometrical
- *  parameters of an axisymmetric contour with N+1 nodal points (x,r) 
- *  and interpolated using cubic splines.
+ *  Boundary class that prescribes the spline elements and geometrical
+ *  parameters of an axisymmetric contour with N+1 nodes.
  *
  * REFERENCES
  *  N/A
  *  
  * PARAMETERS
- *  x,r   [input]			nodal coordinates
- *  N	    [input]			number of boundary elements
- *  a,b,c [output]		cubic spline coefficients (for interpolation)
- *  s     [output]		meridional arc length
- *  A     [output]		total area
- *  V     [output]		total volume
- *  ks,kp [output]		principal curvatures
- *  t     [output]		meridional tangent vector
- *  n     [output] 		normal vector
+ *  x,r    [input]		nodal coordinates
+ *  N	     [input]		number of boundary elements
+ *  a,b,c  [output]		cubic spline coefficients (for interpolation)
+ *  s      [output]		meridional arc length
+ *  A      [output]		total area
+ *  V      [output]		total volume
+ *  ks,kp  [output]		principal curvatures
+ *  t      [output]		meridional tangent vector
+ *  n      [output] 	normal vector
  */
 
 #ifndef GEOM_H
@@ -48,11 +47,15 @@ public:
 	}
 
 	geom(int N, double *x, double *r){
+		int i;
+
 		// assign nummber of nodes and boundary elements
 		nnode = N + 1;
 		nelem = N;
 
 		// allocate memory for pointer arrays
+		nodex  = (double*) malloc( nnode      * sizeof(double));
+		noder  = (double*) malloc( nnode      * sizeof(double));
 		splnax = (double*) malloc((nnode - 1) * sizeof(double));
 		splnbx = (double*) malloc( nnode      * sizeof(double));
 		splncx = (double*) malloc((nnode - 1) * sizeof(double));
@@ -69,6 +72,12 @@ public:
 		nrmlx  = (double*) malloc( nnode      * sizeof(double));
 		nrmlr  = (double*) malloc( nnode      * sizeof(double));
 		
+		// set nodal coordinates
+		for (i = 0; i < nnode; i++){
+			nodex[i] = x[i];
+			noder[i] = r[i];
+		}
+
 		// calculate geometric parameters
 		calcParams(N, x, r,
 		           splnax, splnbx, splncx,
@@ -77,7 +86,6 @@ public:
 							 curvs, curvp, 
 		           tangx, tangr,
 							 nrmlx, nrmlr);
-
 	}
 
 	// Destructor
@@ -85,28 +93,41 @@ public:
 //	}
 	
 	// Set functions
+	void setNNode(int n){
+		nnode = n;
+	}
+	
+	void setNElem(int n){
+		nelem = n;
+	}
 
 	// Get functions
-	void getALL(double *ax, double *bx, double *cx,
+	void getAll(int    &n , double *x,  double *r,
+	            double *ax, double *bx, double *cx,
 							double *ar, double *br, double *cr,
-							double *s, double &A, double &V,
+							double *s , double &A,  double &V,
 							double *ks, double *kp,
 							double *tx, double *tr,
 							double *nx, double *nr){
 		int i;
 
-		if (ax == NULL || bx == NULL || cx == NULL ||
+		if (x  == NULL || r  == NULL ||
+		    ax == NULL || bx == NULL || cx == NULL ||
 		    ar == NULL || br == NULL || cr == NULL ||
 				s  == NULL || ks == NULL || kp == NULL ||
-				tx == NULL || tr == NULL || nx == NULL || nr == NULL){
+				tx == NULL || tr == NULL ||
+				nx == NULL || nr == NULL){
 			printf("Error: no memory allocated for pointers.\n");
 			return;
 		}
-
+		
+		n = nelem;
 		A = area;
 		V = vlme;
 
 		for (i = 0; i < nnode-1; i++){
+			x [i] = nodex [i];
+			r [i] = noder [i];
 			ax[i] = splnax[i];
 			br[i] = splnbr[i];
 			cx[i] = splncx[i];
@@ -123,6 +144,8 @@ public:
 		}
 
 		i = nnode-1;
+			x [i] = nodex [i];
+			r [i] = noder [i];
 			bx[i] = splnbx[i];
 			br[i] = splnbr[i];
 			s [i] = arcl  [i];
@@ -133,6 +156,26 @@ public:
 			nx[i] = nrmlx [i];
 			nr[i] = nrmlr [i];
 
+	}
+	
+	int getNNode(){
+		int n;
+		n = nnode;
+		return(n);
+	}
+	
+	void getNNode(int &n){
+		n = nnode;
+	}
+	
+	int getNElem(){
+		int n;
+		n = nelem;
+		return(n);
+	}
+	
+	void getNElem(int &n){
+		n = nelem;
 	}
 
 	void getSpln(double *ax, double *bx, double *cx,

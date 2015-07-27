@@ -10,8 +10,9 @@
 #include "ellint.h"
 //#include <boost/math/special_functions>
 #include "grnfcn.h"
-#include "bedisc.h"
 #include "interp.h"
+#include "stokes.h"
+#include "quad.h"
 #include "geom.h"
 #include <math.h>
 #include <gsl/gsl_sf_trig.h>
@@ -32,7 +33,7 @@ void testGeom();
 void testInterp();
 
 int main(){
-	testGeom();
+//	testGeom();
 //	testInterp();
 
 	return(0);
@@ -45,17 +46,24 @@ void testGeom(){
 	double V, A;
 	double V0, A0;
 	double relerrA, relerrV;
-	double *cs, *cp, *nx, *nr, *tx, *tr;
+	double *ks, *kp, *nx, *nr, *tx, *tr;
+	double *ax, *bx, *cx, *ar, *br, *cr;
 	double a, b;
 	int N = 400;
 	
 	// allocate memory
+	ax    = (double*) malloc( N    * sizeof(double));
+	bx    = (double*) malloc((N+1) * sizeof(double));
+	cx    = (double*) malloc( N    * sizeof(double));
+	ar    = (double*) malloc( N    * sizeof(double));
+	br    = (double*) malloc((N+1) * sizeof(double));
+	cr    = (double*) malloc( N    * sizeof(double));
 	x     = (double*) malloc((N+1) * sizeof(double));
 	r     = (double*) malloc((N+1) * sizeof(double));
 	thet  = (double*) malloc((N+1) * sizeof(double));
 	s     = (double*) malloc((N+1) * sizeof(double));
-	cs    = (double*) malloc((N+1) * sizeof(double));
-	cp    = (double*) malloc((N+1) * sizeof(double));
+	ks    = (double*) malloc((N+1) * sizeof(double));
+	kp    = (double*) malloc((N+1) * sizeof(double));
 	tx    = (double*) malloc((N+1) * sizeof(double));
 	tr    = (double*) malloc((N+1) * sizeof(double));
 	nx    = (double*) malloc((N+1) * sizeof(double));
@@ -100,19 +108,20 @@ void testGeom(){
 
 	// test constructor, set and get functions
 	geom spheroid(N, x, r);
-	spheroid.getArcl(s);
-	spheroid.getArea(A); //	OR A = spheroid.getArea();
-	spheroid.getVlme(V); //	OR V = spheroid.getVlme();
-	spheroid.getCurv(cs, cp);
-	spheroid.getTang(tx, tr);
-	spheroid.getNrml(nx, nr);
+//	spheroid.getArcl(s);
+//	spheroid.getArea(A); //	OR A = spheroid.getArea();
+//	spheroid.getVlme(V); //	OR V = spheroid.getVlme();
+//	spheroid.getCurv(ks, kp);
+//	spheroid.getTang(tx, tr);
+//	spheroid.getNrml(nx, nr);
+	spheroid.getAll(N, x, r, ax, bx, cx, ar, br, cr, s, A, V, ks, kp, tx, tr, nx, nr);
 
 	relerrA = (A-A0)/A0*100;
 	relerrV = (V-V0)/V0*100;
 
-	printf("theta  s       cs      cp      tx      tr      nx      nr\n");
+	printf("theta  s       ks      kp      tx      tr      nx      nr\n");
 	for (i = 0; i < N+1; i++)
-		printf("%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n", thet[i], s[i], cs[i], cp[i], tx[i], tr[i], nx[i], nr[i]);
+		printf("%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n", thet[i], s[i], ks[i], kp[i], tx[i], tr[i], nx[i], nr[i]);
 
 	printf("\n a = %.1f, b = %.1f\n", a, b);
 	printf("\n A = %.4f, A0 = %.4f, relerr = %.4f%\n", A, A0, relerrA);

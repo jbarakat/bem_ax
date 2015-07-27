@@ -9,6 +9,7 @@
  *  x,r    [input]		nodal coordinates
  *  N	     [input]		number of boundary elements
  *  a,b,c  [output]		cubic spline coefficients (for interpolation)
+ *  l      [output]		polygonal arc length (for interpolation)
  *  s      [output]		meridional arc length
  *  A      [output]		total area
  *  V      [output]		total volume
@@ -29,13 +30,14 @@
 class geom {
 private:
 	int nnode, nelem;
-	double *nodex, *noder;
+	double *nodex , *noder ;
 	double *splnax, *splnbx, *splncx;
 	double *splnar, *splnbr, *splncr;
-	double *arcl, area, vlme;
-	double *curvs, *curvp;
-	double *tangx, *tangr;
-	double *nrmlx, *nrmlr;
+	double *arcl  , *poly  ;
+	double  area  ,  vlme  ;
+	double *curvs , *curvp ;
+	double *tangx , *tangr ;
+	double *nrmlx , *nrmlr ;
 
 public:
 	/* PROTOTYPES */
@@ -62,6 +64,7 @@ public:
 		splnar = (double*) malloc((nnode - 1) * sizeof(double));
 		splnbr = (double*) malloc( nnode      * sizeof(double));
 		splncr = (double*) malloc((nnode - 1) * sizeof(double));
+		poly   = (double*) malloc( nnode      * sizeof(double));
 		arcl   = (double*) malloc( nnode      * sizeof(double));
 		nodex  = (double*) malloc( nnode      * sizeof(double));
 		noder  = (double*) malloc( nnode      * sizeof(double));
@@ -79,13 +82,14 @@ public:
 		}
 
 		// calculate geometric parameters
-		calcParams(N, x, r,
+		calcParams(N,      x,      r,
 		           splnax, splnbx, splncx,
 		           splnar, splnbr, splncr,
-		           arcl, area, vlme, 
-							 curvs, curvp, 
-		           tangx, tangr,
-							 nrmlx, nrmlr);
+		           poly,   arcl,
+							 area,   vlme, 
+							 curvs,  curvp, 
+		           tangx,  tangr,
+							 nrmlx,  nrmlr);
 	}
 
 	// Destructor
@@ -105,7 +109,8 @@ public:
 	void getAll(int    &n , double *x,  double *r,
 	            double *ax, double *bx, double *cx,
 							double *ar, double *br, double *cr,
-							double *s , double &A,  double &V,
+							double *l , double *s ,
+							double &A , double &V,
 							double *ks, double *kp,
 							double *tx, double *tr,
 							double *nx, double *nr){
@@ -114,7 +119,8 @@ public:
 		if (x  == NULL || r  == NULL ||
 		    ax == NULL || bx == NULL || cx == NULL ||
 		    ar == NULL || br == NULL || cr == NULL ||
-				s  == NULL || ks == NULL || kp == NULL ||
+				l  == NULL || s  == NULL || 
+				ks == NULL || kp == NULL ||
 				tx == NULL || tr == NULL ||
 				nx == NULL || nr == NULL){
 			printf("Error: no memory allocated for pointers.\n");
@@ -134,6 +140,7 @@ public:
 			ar[i] = splnar[i];
 			br[i] = splnbr[i];
 			cr[i] = splncr[i];
+			l [i] = poly  [i];
 			s [i] = arcl  [i];
 			ks[i] = curvs [i];
 			kp[i] = curvp [i];
@@ -148,6 +155,7 @@ public:
 			r [i] = noder [i];
 			bx[i] = splnbx[i];
 			br[i] = splnbr[i];
+			l [i] = poly  [i];
 			s [i] = arcl  [i];
 			ks[i] = curvs [i];
 			kp[i] = curvp [i];
@@ -156,6 +164,41 @@ public:
 			nx[i] = nrmlx [i];
 			nr[i] = nrmlr [i];
 
+	}
+	
+	void getAll(int i, int &n, double &x , double &r,
+	            double &ax,    double &bx, double &cx,
+							double &ar,    double &br, double &cr,
+							double &l ,    double &s ,
+							double &A,     double &V ,
+							double &ks,    double &kp,
+							double &tx,    double &tr,
+							double &nx,    double &nr){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		n = nelem;
+		A = area;
+		V = vlme;
+
+		x  = nodex [i];
+		r  = noder [i];
+		ax = splnax[i];
+		br = splnbr[i];
+		cx = splncx[i];
+		ar = splnar[i];
+		br = splnbr[i];
+		cr = splncr[i];
+		l  = poly  [i];
+		s  = arcl  [i];
+		ks = curvs [i];
+		kp = curvp [i];
+		tx = tangx [i];
+		tr = tangr [i];
+		nx = nrmlx [i];
+		nr = nrmlr [i];
 	}
 	
 	int getNNode(){
@@ -176,6 +219,30 @@ public:
 	
 	void getNElem(int &n){
 		n = nelem;
+	}
+
+	void getNode(double *x, double *r){
+		int i;
+		
+		if (x == NULL || r == NULL){
+			printf("Error: no memory allocated for x, r.\n");
+			return;
+		}
+
+		for (i = 0; i < nnode; i++){
+			x[i] = nodex[i];
+			r[i] = noder[i];
+		}
+	}
+	
+	void getNode(int i, double &x, double &r){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		x = nodex[i];
+		r = noder[i];
 	}
 
 	void getSpln(double *ax, double *bx, double *cx,
@@ -201,6 +268,44 @@ public:
 			bx[i] = splnbx[i];
 			br[i] = splnbr[i];
 	}
+	
+	void getSpln(int i, 
+	             double &ax, double &bx, double &cx,
+					 		 double &ar, double &br, double &cr){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		ax = splnax[i];
+		br = splnbr[i];
+		cx = splncx[i];
+		ar = splnar[i];
+		br = splnbr[i];
+		cr = splncr[i];
+	}
+
+	void getPoly(double *l){
+		int i;
+		
+		if (l == NULL){
+			printf("Error: no memory allocated for l.\n");
+			return;
+		}
+
+		for (i = 0; i < nnode; i++){
+			l[i] = poly[i];
+		}
+	}
+	
+	void getPoly(int i, double &l){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		l = poly[i];
+	}
 
 	void getArcl(double *s){
 		int i;
@@ -213,6 +318,15 @@ public:
 		for (i = 0; i < nnode; i++){
 			s[i] = arcl[i];
 		}
+	}
+	
+	void getArcl(int i, double &s){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		s = arcl[i];
 	}
 
 	double getArea(){
@@ -248,6 +362,16 @@ public:
 			kp[i] = curvp[i];
 		}
 	}
+	
+	void getCurv(int i, double &ks, double &kp){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		ks = curvs[i];
+		kp = curvp[i];
+	}
 
 	void getTang(double *tx, double *tr){
 		int i;
@@ -261,6 +385,16 @@ public:
 			tx[i] = tangx[i];
 			tr[i] = tangr[i];
 		}
+	}
+	
+	void getTang(int i, double &tx, double &tr){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		tx = tangx[i];
+		tr = tangr[i];
 	}
 
 	void getNrml(double *nx, double *nr){
@@ -276,23 +410,33 @@ public:
 			nr[i] = nrmlr[i];
 		}
 	}
+	
+	void getNrml(int i, double &nx, double &nr){
+		if (i >= nnode){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		nx = nrmlx[i];
+		nr = nrmlr[i];
+	}
 
 	/* Function to calculate geometric parameters for a given set of N+1
 	 * nodal coordinates (x,r) */
-	void calcParams(int N, double *x, double *r, 				/* <--- inputs  */
+	void calcParams(int      N, double *x,  double * r,	/* <--- inputs  */
 									double *ax, double *bx, double *cx,	/* <--- outputs */
 									double *ar, double *br, double *cr,	/* <------|     */
-									double *s, double &A, double &V,    /* <------|     */
+									double * l, double * s,             /* <------|     */
+									double & A, double & V,             /* <------|     */
 									double *ks, double *kp,             /* <------|     */
 									double *tx, double *tr,							/* <------|     */
-									double *nx, double *nr){						/* <------|     */
+									double *nx, double *nr ){						/* <------|     */
 		// declare variables
 		int i,j, n;
 		int na, nt;
-		double *l, lj;
 		double axi, bxi, cxi;
 		double ari, bri, cri;
-		double xi, ri, xj, rj;
+		double xi, ri, xj, rj, lj;
 		double dx, dr, ds, dA, dV, dl;
 		double dxdl, drdl, dsdl, dAdl, dVdl;
 		double d2xdl2, d2rdl2;
@@ -300,15 +444,6 @@ public:
 		const int MAXIT = 20;
 		double stol, Atol, Vtol;
 		double fc;
-
-		// allocate memory
-		l  = (double*) malloc((N+1) * sizeof(double));
-		ax = (double*) malloc( N    * sizeof(double));
-		bx = (double*) malloc((N+1) * sizeof(double));
-		cx = (double*) malloc( N    * sizeof(double));
-		ar = (double*) malloc( N    * sizeof(double));
-		br = (double*) malloc((N+1) * sizeof(double));
-		cr = (double*) malloc( N    * sizeof(double));	
 
 		// calculate polygonal arc length
 		l[0] = 0;
@@ -476,18 +611,7 @@ public:
 		
 		nx[N]     = -1.;
 		nr[N]     =  0.;
-		
-		// release memory
-		free(l);
-		free(ax);
-		free(bx);
-		free(cx);
-		free(ar);
-		free(br);
-		free(cr);
-
 	}
-	
 };
 
 #endif

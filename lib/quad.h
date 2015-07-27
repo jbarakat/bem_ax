@@ -17,102 +17,141 @@
 /* HEADER FILES */
 #include <stdlib.h>
 #include <stdio.h>
-#include "geom.h"
+#include "stokes.h"
+#include "gauleg.h"
 
 /* PROTOTYPES */
 
 /* IMPLEMENTATIONS */
 
-/* Evaluate single layer potential over the boundary surface */
-void singleLayer(int NGL, geom Geom){
-	// declare variables
-	int i, j, nnode, nelem;
+/* Evaluate single layer potential over the boundary surface 
+ *  IGF = 0  free-space axisymmetric Green's function
+ *  IGF = 1  tube-bounded Green's function
+ */
+void singleLayer(const int IGF, int ngl, stokes Stokes){
+	if (IGF != 0 && IGF != 1){
+		printf("Error: IGF can only take values of 0 or 1");
+		return;
+	}
 	
-	double *x,  *r;
-	double *ax, *bx, *cx;
-  double *ar, *br, *cr;
-  double *s, A, V;
-  double *ks, *kp;
-  double *tx, *tr;
-  double *nx, *nr;
+	// declare variables
+	int i, j, k, nnode, nelem;
+	double A, V;
+	
+	double  ax,  bx, cx;
+	double  ar,  br, cr;
+	
+	double  x ,  r ;
+	double  xp,  rp;
+	double  Dl,  l , dl;
+	double  w;
 
 	double  x0,  r0;
-	double ax0, bx0, cx0;
-	double ar0, br0, cr0;
-	double  s0;
+	double  l0,  s0;
 	double ks0, kp0;
 	double tx0, tr0;
 	double nx0, nr0;
 	
 	double  x1,  r1;
-	double  s1;
+	double  l1,  s1;
 	double ks1, kp1;
 	double tx1, tr1;
 	double nx1, nr1;
+
+	double *zgl, *wgl;
 	
 	// get number of boundary elements
-	nelem = Geom.getNElem();
+	nelem = Stokes.getNElem();
 	nnode = nelem + 1;
 
 	// allocate memory
-  x     = (double*) malloc( nnode    * sizeof(double));
-  r     = (double*) malloc( nnode    * sizeof(double));
-  ax    = (double*) malloc((nnode-1) * sizeof(double));
-  bx    = (double*) malloc( nnode    * sizeof(double));
-  cx    = (double*) malloc((nnode-1) * sizeof(double));
-  ar    = (double*) malloc((nnode-1) * sizeof(double));
-  br    = (double*) malloc( nnode    * sizeof(double));
-  cr    = (double*) malloc((nnode-1) * sizeof(double));
-  s     = (double*) malloc( nnode    * sizeof(double));
-  ks    = (double*) malloc( nnode    * sizeof(double));
-  kp    = (double*) malloc( nnode    * sizeof(double));
-  tx    = (double*) malloc( nnode    * sizeof(double));
-  tr    = (double*) malloc( nnode    * sizeof(double));
-  nx    = (double*) malloc( nnode    * sizeof(double));
-  nr    = (double*) malloc( nnode    * sizeof(double));
+  zgl   = (double*) malloc( ngl * sizeof(double));
+  wgl   = (double*) malloc( ngl * sizeof(double));
 
-	// get geometric parameters	
-	Geom.getAll(nelem, x , r ,
-              ax,    bx, cx,
-              ar,    br, cr,
-              s,     A ,  V, 
-              ks,    kp,
-              tx,    tr,
-              nx,    nr);
+	// get area and volume
+	A     = Stokes.getArea();
+	V     = Stokes.getVlme();
+
+	// get Gauss-Legendre abscissas and weights
+	gauleg(ngl, zgl, wgl);
 	
-	//
+	/* loop over boundary nodes and evaluate integrals
+	 * at field points (xp,rp) */
+	for (i = 0; i < nnode; i++){
+		
 
-	for (i = 0; i < nelem; i++){
-		// update parameters for the ith boundary element
-		 x0 = x [i];
-		 r0 = r [i];
-		ax0 = ax[i];
-		bx0 = bx[i];
-		cx0 = cx[i];
-		ar0 = ar[i];
-		br0 = br[i];
-		cr0 = cr[i];
-		 s0 = s [i];
-		ks0 = ks[i];
-		kp0 = kp[i];
-		tx0 = tx[i];
-		tr0 = tr[i];
-		nx0 = nx[i];
-		nr0 = nr[i];
-		
-		 x1 = x [i+1];
-		 r1 = r [i+1];
-	 	 s1 = s [i+1];
-		ks1 = ks[i+1];
-		kp1 = kp[i+1];
-		tx1 = tx[i+1];
-		tr1 = tr[i+1];
-		nx1 = nx[i+1];
-		nr1 = nr[i+1];
-		
-		// 
-	}
+
+		/* loop over boundary elements and carry out
+		 * quadrature over source points (x,r) */
+		for (j = 0; j < nelem; j++){
+			// update parameters for the jth boundary element
+			Stokes.getNode(j,    x0,  r0);
+			Stokes.getNode(j+1,  x1,  r1);
+			Stokes.getPoly(j,    l0);
+			Stokes.getPoly(j+1,  l1);
+	
+			Stokes.getSpln(j,   ax , bx , cx ,
+			                    ar , br , cr );
+	
+			Stokes.getNrml(j,   nx0, nr0);
+			Stokes.getNrml(j+1, nx1, nr1);
+			
+			// calculate length of polygonal line segment
+			Dl = l1 - l0;
+	
+			// loop over Gauss-Legendre grid points
+			for (k = 0; k < ngl; k++){
+				// get weight for kth node
+				w  = wgl[k];
+				
+				// map grid point onto polygonal arc length
+				l  = l0 + 0.5*Dl*(zgl[k] + 1);
+				dl = l  - l0;
+	
+				// interpolate x and r (source point)
+				x  = ((ax*dl + bx)*dl + cx)*dl + x0;
+				r  = ((ar*dl + br)*dl + cr)*dl + r0;
+
+				// calculate Green's functions
+				/* BASICALLY I HAVE SEVERAL OPTIONS HERE...
+				 *  For fluid-fluid interfaces...
+				 *  1. Free-space GF stokeslet + stresslet (if VISCRAT != 1)
+				 *  2. Free-space GF stokeslet only (if VISCRAT == 1)
+				 *  3. Tube GF stokeslet only for VISCRAT == 1
+				 *  
+				 *  For solid boundaries
+				 *  1. Probably only stokeslet or stresslet? Figure out
+				 *     whether I want to do a completed single / double layer
+				 *     formulation here...
+				 * 
+				 * 
+				 */
+	
+				
+			}
+	
+			// NEED WAY TO GET BOUNDARY TRACTION AND BOUNDARY VELOCITY 
+	
+			// map l domain onto [-1, 1] domain
+			//
+			//  xi = -1 + (2/(l[i+1] - l[i]))*(l - l[i])
+			//
+			//  or map xi onto l domain
+			//
+			//  l = l[i] + 0.5*(l[i+1] - l[i])*(1 + xi) 
+			
+		} // end of boundary elements (integration over source points)
+	} // end of boundary nodes (evaluation at field points)
 }
+
+
+
+
+
+
+
+
+
 
 /* Evaluate single layer potential over the nth spline element */
 

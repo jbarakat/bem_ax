@@ -11,8 +11,8 @@
 //#include <boost/math/special_functions>
 #include "grnfcn.h"
 #include "interp.h"
-#include "stokes.h"
 #include "quad.h"
+#include "stokes.h"
 #include "geom.h"
 #include <math.h>
 #include <gsl/gsl_sf_trig.h>
@@ -42,7 +42,7 @@ int main(){
 void testGeom(){
 	int i, j;
 	double *x, *r, *thet;
-	double *s;
+	double *l, *s;
 	double V, A;
 	double V0, A0;
 	double relerrA, relerrV;
@@ -61,6 +61,7 @@ void testGeom(){
 	x     = (double*) malloc((N+1) * sizeof(double));
 	r     = (double*) malloc((N+1) * sizeof(double));
 	thet  = (double*) malloc((N+1) * sizeof(double));
+	l     = (double*) malloc((N+1) * sizeof(double));
 	s     = (double*) malloc((N+1) * sizeof(double));
 	ks    = (double*) malloc((N+1) * sizeof(double));
 	kp    = (double*) malloc((N+1) * sizeof(double));
@@ -114,14 +115,14 @@ void testGeom(){
 //	spheroid.getCurv(ks, kp);
 //	spheroid.getTang(tx, tr);
 //	spheroid.getNrml(nx, nr);
-	spheroid.getAll(N, x, r, ax, bx, cx, ar, br, cr, s, A, V, ks, kp, tx, tr, nx, nr);
+	spheroid.getAll(N, x, r, ax, bx, cx, ar, br, cr, l, s, A, V, ks, kp, tx, tr, nx, nr);
 
 	relerrA = (A-A0)/A0*100;
 	relerrV = (V-V0)/V0*100;
 
-	printf("theta  s       ks      kp      tx      tr      nx      nr\n");
+	printf("theta  l       s       ks      kp      tx      tr      nx      nr\n");
 	for (i = 0; i < N+1; i++)
-		printf("%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n", thet[i], s[i], ks[i], kp[i], tx[i], tr[i], nx[i], nr[i]);
+		printf("%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n", thet[i], l[i], s[i], ks[i], kp[i], tx[i], tr[i], nx[i], nr[i]);
 
 	printf("\n a = %.1f, b = %.1f\n", a, b);
 	printf("\n A = %.4f, A0 = %.4f, relerr = %.4f%\n", A, A0, relerrA);

@@ -1,7 +1,7 @@
 /* STOKES FLOW
  *  Boundary class that inherits the members of GEOM.H and, in addition,
  *  prescribes the kinematic (e.g., velocity) and dynamic (e.g., stress)
- *  parameters associated with a Stokes flow.
+ *  quantities associated with a Stokes flow.
  *
  * REFERENCES
  *  N/A

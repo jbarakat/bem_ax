@@ -6,13 +6,13 @@
  *  Pozrikidis, Cambridge University Press (1992) [Ch. 6]
  *  
  * PARAMETERS
- *  n      [input]    nodal index
- *  NGL    [input]		number of quadrature points
- *  G      [input]		geometry of the boundary
+ *  x,r    [input]		source points
+ *  xp,rp  [input]		field points
+ *  ngl    [input]		number of quadrature points
  */
 
-#ifndef BEDISC_H
-#define BEDISC_H
+#ifndef QUAD_H
+#define QUAD_H
 
 /* HEADER FILES */
 #include <stdlib.h>
@@ -24,19 +24,20 @@
 
 /* IMPLEMENTATIONS */
 
-/* Evaluate single layer potential over the boundary surface 
+/* Evaluate the boundary integrals over an axisymmetric contour.
  *  IGF = 0  free-space axisymmetric Green's function
  *  IGF = 1  tube-bounded Green's function
  */
-void singleLayer(const int IGF, int ngl, stokes Stokes){
+void intBIE(const int IGF, int ngl, stokes Stokes){
 	if (IGF != 0 && IGF != 1){
-		printf("Error: IGF can only take values of 0 or 1");
+		printf("Error: IGF can only take values of 0 or 1.");
 		return;
 	}
 	
 	// declare variables
 	int i, j, k, nnode, nelem;
 	double A, V;
+	double lamb;
 	
 	double  ax,  bx, cx;
 	double  ar,  br, cr;
@@ -72,12 +73,20 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 	A     = Stokes.getArea();
 	V     = Stokes.getVlme();
 
+	// get viscosity ratio
+	lamb  = Stokes.getVisc();
+
 	// get Gauss-Legendre abscissas and weights
 	gauleg(ngl, zgl, wgl);
 	
 	/* loop over boundary nodes and evaluate integrals
 	 * at field points (xp,rp) */
 	for (i = 0; i < nnode; i++){
+		// get nodal coordinates at field point
+		Stokes.getNode(i, xp, rp);
+		
+		
+		// NEED TO DO OTHER STUFF HERE PROBABLY
 		
 
 
@@ -104,7 +113,8 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 				// get weight for kth node
 				w  = wgl[k];
 				
-				// map grid point onto polygonal arc length
+				/* map grid point onto polygonal arc length
+				 *  l = l[i] + 0.5*(l[i+1] - l[i])*(z + 1) */
 				l  = l0 + 0.5*Dl*(zgl[k] + 1);
 				dl = l  - l0;
 	
@@ -131,14 +141,6 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 			}
 	
 			// NEED WAY TO GET BOUNDARY TRACTION AND BOUNDARY VELOCITY 
-	
-			// map l domain onto [-1, 1] domain
-			//
-			//  xi = -1 + (2/(l[i+1] - l[i]))*(l - l[i])
-			//
-			//  or map xi onto l domain
-			//
-			//  l = l[i] + 0.5*(l[i+1] - l[i])*(1 + xi) 
 			
 		} // end of boundary elements (integration over source points)
 	} // end of boundary nodes (evaluation at field points)

@@ -29,12 +29,23 @@
 
 class geom {
 private:
+	// number of nodes and elemennts
 	int nnode, nelem;
+
+	// nodal coordinates
 	double *nodex , *noder ;
+
+	// cubic spline coefficients
 	double *splnax, *splnbx, *splncx;
 	double *splnar, *splnbr, *splncr;
+
+	// meridional and polygonal arc lengths
 	double *arcl  , *poly  ;
+	
+	// area and volume
 	double  area  ,  vlme  ;
+
+	// curvatures, tangent and normal vectors
 	double *curvs , *curvp ;
 	double *tangx , *tangr ;
 	double *nrmlx , *nrmlr ;
@@ -135,7 +146,7 @@ public:
 			x [i] = nodex [i];
 			r [i] = noder [i];
 			ax[i] = splnax[i];
-			br[i] = splnbr[i];
+			bx[i] = splnbx[i];
 			cx[i] = splncx[i];
 			ar[i] = splnar[i];
 			br[i] = splnbr[i];
@@ -186,7 +197,7 @@ public:
 		x  = nodex [i];
 		r  = noder [i];
 		ax = splnax[i];
-		br = splnbr[i];
+		bx = splnbx[i];
 		cx = splncx[i];
 		ar = splnar[i];
 		br = splnbr[i];
@@ -278,7 +289,7 @@ public:
 		}
 		
 		ax = splnax[i];
-		br = splnbr[i];
+		bx = splnbx[i];
 		cx = splncx[i];
 		ar = splnar[i];
 		br = splnbr[i];

@@ -33,7 +33,7 @@ void testGeom();
 void testInterp();
 
 int main(){
-//	testGeom();
+	testGeom();
 //	testInterp();
 
 	return(0);
@@ -49,7 +49,7 @@ void testGeom(){
 	double *ks, *kp, *nx, *nr, *tx, *tr;
 	double *ax, *bx, *cx, *ar, *br, *cr;
 	double a, b;
-	int N = 400;
+	int N = 40;
 	
 	// allocate memory
 	ax    = (double*) malloc( N    * sizeof(double));
@@ -108,7 +108,7 @@ void testGeom(){
 	V0 = 4*M_PI*a*b*b/3;
 
 	// test constructor, set and get functions
-	geom spheroid(N, x, r);
+	stokes spheroid(0, N, x, r);
 //	spheroid.getArcl(s);
 //	spheroid.getArea(A); //	OR A = spheroid.getArea();
 //	spheroid.getVlme(V); //	OR V = spheroid.getVlme();

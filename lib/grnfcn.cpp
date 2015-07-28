@@ -2,7 +2,7 @@
  *  Evaluate axisymmetric Green's functions for Stokes flow.
  *
  * REFERENCES
- *  Pozrikidis, Cambridge University Press (1992) [pp. 89-91]
+ *  Pozrikidis, Cambridge University Press (1992) [pp. 51, 89-91]
  *  Tozeren, Inter. J. Num. Meth. Fluids 4, 159-170 (1984) 
  *  
  * PARAMETERS
@@ -16,6 +16,18 @@
 
 /* HEADER FILES */
 #include "grnfcn.h"
+
+
+/* NOTE: SHOULD ALSO PROGRAM THE GREEN'S FUNCTIONS FOR FLOW BOUNDED
+ * INTERNALLY BY A SOLID SPHERE, REWRITTEN IN AXISYMMETRIC COORDINATES
+ * IN THE SAME WAY AS THE FREE-SPACE GREEN'S FUNCTION. THIS WILL
+ * REQUIRE QUITE A BIT OF ALGEBRA, SO DO THIS LATER
+ * see p. 51, 99 in Pozrikidis
+ *
+ *
+ */
+
+
 
 /* IMPLEMENTATIONS */
 /* Green's function M evaluated at (x,r) due to a ring of point forces

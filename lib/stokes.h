@@ -33,15 +33,12 @@ private:
 	
 	// displacement
 	double *dispx, *dispr;
-	double *disps, *dispp;
 
 	// velocity
 	double *velx , *velr ;
-	double *vels , *velp ;
 
 	// traction
 	double *trctx, *trctr;
-	double *trcts, *trctp;
 
 	// concentration
 	double *conc ;
@@ -81,16 +78,10 @@ public:
 		 * and initialize to zero */
 		dispx = (double*) calloc(n, sizeof(double));
 		dispr = (double*) calloc(n, sizeof(double));
-		disps = (double*) calloc(n, sizeof(double));
-		dispp = (double*) calloc(n, sizeof(double));
 		velx  = (double*) calloc(n, sizeof(double));
 		velr  = (double*) calloc(n, sizeof(double));
-		vels  = (double*) calloc(n, sizeof(double));
-		velp  = (double*) calloc(n, sizeof(double));
 		trctx = (double*) calloc(n, sizeof(double));
 		trctr = (double*) calloc(n, sizeof(double));
-		trcts = (double*) calloc(n, sizeof(double));
-		trctp = (double*) calloc(n, sizeof(double));
 		conc  = (double*) calloc(n, sizeof(double));
 
 		// initialize viscosity ratio
@@ -115,16 +106,10 @@ public:
 		 * and initialize to zero */
 		dispx = (double*) calloc(n, sizeof(double));
 		dispr = (double*) calloc(n, sizeof(double));
-		disps = (double*) calloc(n, sizeof(double));
-		dispp = (double*) calloc(n, sizeof(double));
 		velx  = (double*) calloc(n, sizeof(double));
 		velr  = (double*) calloc(n, sizeof(double));
-		vels  = (double*) calloc(n, sizeof(double));
-		velp  = (double*) calloc(n, sizeof(double));
 		trctx = (double*) calloc(n, sizeof(double));
 		trctr = (double*) calloc(n, sizeof(double));
-		trcts = (double*) calloc(n, sizeof(double));
-		trctp = (double*) calloc(n, sizeof(double));
 		conc  = (double*) calloc(n, sizeof(double));
 
 		// initialize viscosity ratio
@@ -136,6 +121,33 @@ public:
 	// Set functions
 
 	// Get functions
+	void getTrct(int i, double &fx, double &fr){
+		int n = getNNode();
+
+		if (i >= n){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+		
+		fx = trctx[i];
+		fr = trctr[i];
+	}
+
+	void getTrct(double *fx, double *fr){
+		int i;
+		int n = getNNode();
+
+		if (fx == NULL || fr == NULL){
+			printf("Error: no memory allocated for fx, fr\n");
+		}
+
+		for (i = 0; i < n-1; i++){
+			fx[i] = trctx[i];
+			fr[i] = trctr[i];
+		}
+		
+	}
+
 	double getVisc(){
 		double lamb;
 		lamb = visc;

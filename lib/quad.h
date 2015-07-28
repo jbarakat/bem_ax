@@ -18,17 +18,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "stokes.h"
+#include "grnfcn.h"
 #include "gauleg.h"
 
 /* PROTOTYPES */
 
 /* IMPLEMENTATIONS */
 
-/* Evaluate the boundary integrals over an axisymmetric contour.
+/* Evaluate the single layer potential over an axisymmetric
+ * contour.
  *  IGF = 0  free-space axisymmetric Green's function
- *  IGF = 1  tube-bounded Green's function
+ *  IGF = 1  Green's function bounded externally by a
+ *            cylindrical tube
  */
-void intBIE(const int IGF, int ngl, stokes Stokes){
+void singleLayer(const int IGF, int ngl, stokes Stokes){
 	if (IGF != 0 && IGF != 1){
 		printf("Error: IGF can only take values of 0 or 1.");
 		return;
@@ -42,10 +45,12 @@ void intBIE(const int IGF, int ngl, stokes Stokes){
 	double  ax,  bx, cx;
 	double  ar,  br, cr;
 	
-	double  x ,  r ;
-	double  xp,  rp;
-	double  Dl,  l , dl;
-	double  w;
+	double  x   ,  r   ;
+	double  dx  ,  dr  ;
+	double  dxdl,  drdl, dsdl;
+	double  xp  ,  rp  ;
+	double  dfx ,  dfr ;
+	double  dfxp,  dfrp;
 
 	double  x0,  r0;
 	double  l0,  s0;
@@ -60,6 +65,13 @@ void intBIE(const int IGF, int ngl, stokes Stokes){
 	double nx1, nr1;
 
 	double *zgl, *wgl;
+	double  Dl ,  l  , dl;
+	double  w  ;
+
+	double Mxx, Mxr, Mrx, Mrr;
+
+	double vx, vr;
+	double cf;
 	
 	// get number of boundary elements
 	nelem = Stokes.getNElem();
@@ -76,19 +88,41 @@ void intBIE(const int IGF, int ngl, stokes Stokes){
 	// get viscosity ratio
 	lamb  = Stokes.getVisc();
 
+
+
+
+
+
+
+	// NEED TO GET RADIUS OF TUBE!
+	double rc = 2.;
+	
+
+
+
+
+
+
 	// get Gauss-Legendre abscissas and weights
 	gauleg(ngl, zgl, wgl);
+
+	/*--------------------------------------------*/
+	/*- single layer potential over the boundary -*/
+	/*--------------------------------------------*/
+
+	cf = -1./(8.*M_PI);	
 	
 	/* loop over boundary nodes and evaluate integrals
 	 * at field points (xp,rp) */
 	for (i = 0; i < nnode; i++){
-		// get nodal coordinates at field point
-		Stokes.getNode(i, xp, rp);
-		
-		
-		// NEED TO DO OTHER STUFF HERE PROBABLY
-		
+		/* get position and jump in traction
+		 * at field point */
+		Stokes.getNode(i, xp  , rp  );
+		Stokes.getTrct(i, dfxp, dfrp);
 
+		// initialize quadrature
+		vx = 0.;
+		vr = 0.;
 
 		/* loop over boundary elements and carry out
 		 * quadrature over source points (x,r) */
@@ -110,19 +144,39 @@ void intBIE(const int IGF, int ngl, stokes Stokes){
 	
 			// loop over Gauss-Legendre grid points
 			for (k = 0; k < ngl; k++){
-				// get weight for kth node
-				w  = wgl[k];
-				
 				/* map grid point onto polygonal arc length
 				 *  l = l[i] + 0.5*(l[i+1] - l[i])*(z + 1) */
 				l  = l0 + 0.5*Dl*(zgl[k] + 1);
 				dl = l  - l0;
 	
-				// interpolate x and r (source point)
-				x  = ((ax*dl + bx)*dl + cx)*dl + x0;
-				r  = ((ar*dl + br)*dl + cr)*dl + r0;
+				// interpolate to source point
+				x    = ((  ax*dl +    bx)*dl + cx)*dl + x0;
+				r    = ((  ar*dl +    br)*dl + cr)*dl + r0;
+				dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
+				drdl = (3.*ar*dl + 2.*br)*dl + cr;
+				dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-				// calculate Green's functions
+				// get weight for kth node
+				w = wgl[k];
+
+
+
+				// START FROM HERE
+
+
+				
+				// evaluate Green's functions
+				if (IGF == 0){				/* free-space stokeslet */
+					gf_axR(xp, rp, x, r,
+					       Mxx, Mxr, Mrx, Mrr);
+				}
+				else if (IGF == 1){		/* stokeslet bounded externally
+															 * by a cylindrical tube */
+					gf_axT(xp, rp, x, r, rc,
+					       Mxx, Mxr, Mrx, Mrr);
+				}
+				
+				
 				/* BASICALLY I HAVE SEVERAL OPTIONS HERE...
 				 *  For fluid-fluid interfaces...
 				 *  1. Free-space GF stokeslet + stresslet (if VISCRAT != 1)

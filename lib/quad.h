@@ -9,6 +9,7 @@
  *  x,r    [input]		source points
  *  xp,rp  [input]		field points
  *  ngl    [input]		number of quadrature points
+ *  nfn    [input]		order of LAGRANGE INTERPOLANT...
  */
 
 #ifndef QUAD_H
@@ -65,8 +66,14 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 	double nx1, nr1;
 
 	double *zgl, *wgl;
-	double  Dl ,  l  , dl;
-	double  w  ;
+	double  l  ,  dl ;
+	double  w  ,  J  ;
+
+	double   lM,   lD;
+	double dfxM, dfxD;
+	double dfrM, dfrD;
+	double  nxM,  nxD;
+	double  nrM,  nrD;
 
 	double Mxx, Mxr, Mrx, Mrr;
 
@@ -127,26 +134,41 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 		/* loop over boundary elements and carry out
 		 * quadrature over source points (x,r) */
 		for (j = 0; j < nelem; j++){
-			// update parameters for the jth boundary element
-			Stokes.getNode(j,    x0,  r0);
-			Stokes.getNode(j+1,  x1,  r1);
-			Stokes.getPoly(j,    l0);
-			Stokes.getPoly(j+1,  l1);
+			// get parameters for the boundary element
+			Stokes.getNode(j,     x0,  r0);
+			Stokes.getNode(j+1,   x1,  r1);
+			Stokes.getPoly(j,     l0);
+			Stokes.getPoly(j+1,   l1);
 	
-			Stokes.getSpln(j,   ax , bx , cx ,
-			                    ar , br , cr );
+			Stokes.getSpln(j,    ax ,  bx , cx ,
+			                     ar ,  br , cr );
 	
-			Stokes.getNrml(j,   nx0, nr0);
-			Stokes.getNrml(j+1, nx1, nr1);
+			Stokes.getNrml(j,    nx0,  nr0);
+			Stokes.getNrml(j+1,  nx1,  nr1);
+
+			Stokes.getTrct(j,   dfx0, dfr0);
+			Stokes.getTrct(j+1, dfx1, dfr1);
 			
-			// calculate length of polygonal line segment
-			Dl = l1 - l0;
+			// prepare for quadrature
+			  lM = 0.5*(  l1 +   l0);
+			  lD = 0.5*(  l1 -   l0);
+
+			dfxM = 0.5*(dfx1 + dfx0);
+			dfxD = 0.5*(dfx1 - dfx0);
+
+			dfrM = 0.5*(dfr1 + dfr0);
+			dfrD = 0.5*(dfr1 - dfr0);
+			  
+			 nxM = 0.5*( nx1 +  nx0);
+			 nxD = 0.5*( nx1 -  nx0);
+	
+			 nrM = 0.5*( nr1 +  nr0);
+			 nrD = 0.5*( nr1 -  nr0);
 	
 			// loop over Gauss-Legendre grid points
 			for (k = 0; k < ngl; k++){
-				/* map grid point onto polygonal arc length
-				 *  l = l[i] + 0.5*(l[i+1] - l[i])*(z + 1) */
-				l  = l0 + 0.5*Dl*(zgl[k] + 1);
+				// map grid point onto polygonal arc length
+				l  = lM + lD*zgl[k];
 				dl = l  - l0;
 	
 				// interpolate to source point
@@ -156,12 +178,16 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 				drdl = (3.*ar*dl + 2.*br)*dl + cr;
 				dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
+				// define the Jacobian for the line integral
+				J = lD*dsdl;
+
 				// get weight for kth node
-				w = wgl[k];
+				w = J*wgl[k];
 
 
 
-				// START FROM HERE
+				// check for singularity
+				/* ------- NEED A CHECK FOR i == j --------*/
 
 
 				
@@ -175,8 +201,31 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 					gf_axT(xp, rp, x, r, rc,
 					       Mxx, Mxr, Mrx, Mrr);
 				}
+
+				
+
+
+
+
+
+
 				
 				
+			} // end of Gauss-Legendre grid points
+			
+		} // end of boundary elements
+		
+		vx *= cf;
+		vr *= cf;
+
+		// set velocity for the boundary node
+
+		//-------- NEED SET FUNCTION HERE -----------//
+
+	} // end of boundary nodes (evaluation at field points)
+}
+
+
 				/* BASICALLY I HAVE SEVERAL OPTIONS HERE...
 				 *  For fluid-fluid interfaces...
 				 *  1. Free-space GF stokeslet + stresslet (if VISCRAT != 1)
@@ -192,15 +241,6 @@ void singleLayer(const int IGF, int ngl, stokes Stokes){
 				 */
 	
 				
-			}
-	
-			// NEED WAY TO GET BOUNDARY TRACTION AND BOUNDARY VELOCITY 
-			
-		} // end of boundary elements (integration over source points)
-	} // end of boundary nodes (evaluation at field points)
-}
-
-
 
 
 

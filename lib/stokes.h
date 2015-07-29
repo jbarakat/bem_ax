@@ -70,19 +70,16 @@ public:
 
 		// set indicator function
 		IBE = ibe;
-		
-		// get number of boundary nodes
-		n = getNNode();
 
 		/* allocate memory for pointer arrays
 		 * and initialize to zero */
-		dispx = (double*) calloc(n, sizeof(double));
-		dispr = (double*) calloc(n, sizeof(double));
-		velx  = (double*) calloc(n, sizeof(double));
-		velr  = (double*) calloc(n, sizeof(double));
-		trctx = (double*) calloc(n, sizeof(double));
-		trctr = (double*) calloc(n, sizeof(double));
-		conc  = (double*) calloc(n, sizeof(double));
+		dispx = (double*) calloc(nnode, sizeof(double));
+		dispr = (double*) calloc(nnode, sizeof(double));
+		velx  = (double*) calloc(nnode, sizeof(double));
+		velr  = (double*) calloc(nnode, sizeof(double));
+		trctx = (double*) calloc(nnode, sizeof(double));
+		trctr = (double*) calloc(nnode, sizeof(double));
+		conc  = (double*) calloc(nnode, sizeof(double));
 
 		// initialize viscosity ratio
 		visc = 1.;
@@ -99,18 +96,15 @@ public:
 		// set indicator function
 		IBE = ibe;
 		
-		// get number of boundary nodes
-		n = getNNode();
-
 		/* allocate memory for pointer arrays
 		 * and initialize to zero */
-		dispx = (double*) calloc(n, sizeof(double));
-		dispr = (double*) calloc(n, sizeof(double));
-		velx  = (double*) calloc(n, sizeof(double));
-		velr  = (double*) calloc(n, sizeof(double));
-		trctx = (double*) calloc(n, sizeof(double));
-		trctr = (double*) calloc(n, sizeof(double));
-		conc  = (double*) calloc(n, sizeof(double));
+		dispx = (double*) calloc(nnode, sizeof(double));
+		dispr = (double*) calloc(nnode, sizeof(double));
+		velx  = (double*) calloc(nnode, sizeof(double));
+		velr  = (double*) calloc(nnode, sizeof(double));
+		trctx = (double*) calloc(nnode, sizeof(double));
+		trctr = (double*) calloc(nnode, sizeof(double));
+		conc  = (double*) calloc(nnode, sizeof(double));
 
 		// initialize viscosity ratio
 		visc = lamb;
@@ -122,9 +116,7 @@ public:
 
 	// Get functions
 	void getTrct(int i, double &fx, double &fr){
-		int n = getNNode();
-
-		if (i >= n){
+		if (i >= nnode){
 			printf("Error: index out of bounds.\n");
 			return;
 		}
@@ -135,13 +127,12 @@ public:
 
 	void getTrct(double *fx, double *fr){
 		int i;
-		int n = getNNode();
 
 		if (fx == NULL || fr == NULL){
 			printf("Error: no memory allocated for fx, fr\n");
 		}
 
-		for (i = 0; i < n-1; i++){
+		for (i = 0; i < nnode-1; i++){
 			fx[i] = trctx[i];
 			fr[i] = trctr[i];
 		}

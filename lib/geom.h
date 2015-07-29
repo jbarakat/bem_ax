@@ -28,6 +28,7 @@
 #include "interp.h"
 
 class geom {
+friend class stokes;
 private:
 	// number of nodes and elemennts
 	int nnode, nelem;

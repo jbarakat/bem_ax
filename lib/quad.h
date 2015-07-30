@@ -8,7 +8,7 @@
  *  
  * PARAMETERS
  *  x,r    [input]		source points
- *  xp,rp  [input]		field points
+ *  xf,rf  [input]		field points
  *  nquad  [input]		number of quadrature points (per element)
  */
 
@@ -40,28 +40,31 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	}
 	
 	// declare variables
-	int i, j, k;												// for loop indices
+	int i, j, k, m, n;									// for loop indices
 	int nelem, ngeom;										// number of geometric elements and nodes
 	int nlocl, nglob;										// number of local and global basis nodes
 	double area, vlme;									// total area and volume
 	double lamb;												// viscosity ratio
 	
+	double *xg, *rg;										// geometric points
+	double *xc, *rc;										// collocation points
+	
 	double  ax,  bx, cx;								// spline coefficients
 	double  ar,  br, cr;
 	
 	double *zquad, *wquad;							// quadrature abscissas and weights
-	double  l  ,  dl ;									// polygonal arc length and differential
-	double  w  ,  J  ;									// local weight and Jacobian
+	double  l    ,  dl   ;							// polygonal arc length and differential
+	double  w    ,  J    ;							// local weight and Jacobian
 
 	double *L;													// Lagrange polynomials
 	double *zlocl;											// local Gauss-Lobatto grid points
 
-	double  xp  ,  rp  ;								// field point coordinates
-	double  x   ,  r   ;								// source point coordinates
+	double  xf  ,  rf  ;								// field point coordinates
+	double  xs  ,  rs  ;								// source point coordinates
 	double  dx  ,  dr  ;
 	double  dxdl,  drdl, dsdl;
 	double  dfx ,  dfr ;
-	double  dfxp,  dfrp;
+	double  dfxf,  dfrf;
 
 	double   x0,   r0;
 	double   l0,   s0;
@@ -104,6 +107,10 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
   zlocl   = (double*) malloc(   nlocl       * sizeof(double));
   zquad   = (double*) malloc(   nquad       * sizeof(double));
   wquad   = (double*) malloc(   nquad       * sizeof(double));
+  xg      = (double*) malloc(   ngeom       * sizeof(double));
+  rg      = (double*) malloc(   ngeom       * sizeof(double));
+  xc      = (double*) malloc(   nglob       * sizeof(double));
+  rc      = (double*) malloc(   nglob       * sizeof(double));
 
 	// get area and volume
 	area  = Stokes.getArea();
@@ -115,14 +122,50 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	// assign Gauss-Lobatto points on the interval [-1,1]
 	cf = M_PI/(nlocl-1);
 	for (i = 0; i < nlocl; i++){
-		zlocl[i] = gsl_sf_cos(cf*i);
+		zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
 	}
 	
+	// get Gauss-Legendre abscissas and weights
+	gauleg(nquad, zquad, wquad);
+
+	// calculate coordinates of collocation points
+	for (i = 0; i < nelem; i++){			// loop over global elements
+		// get geometric parameters
+		Stokes.getNode(i,   x0 , r0);
+		Stokes.getNode(i+1, x1 , r1);
+		Stokes.getPoly(i,   l0); 
+		Stokes.getPoly(i+1, l1); 
 	
+		Stokes.getSpln(i,   ax , bx , cx ,
+		                    ar , br , cr );
+		
+		lM = 0.5*(l1 + l0);
+		lD = 0.5*(l1 - l0);
+
+		for (j = 0; j < nlocl-1; j++){	// loop over local element nodes
+			/* get global basis node corresponding
+			 * to local (i,j) basis */
+			n = i*(nlocl - 1) + j;
 	
-	
-	// assign native nodes and build connectivity list
-	
+			if (j == 0) {
+				xc[n] = x0;
+				rc[n] = r0;
+			}
+			else {
+				// map Gauss-Lobatto point onto polygonal arc length
+				l  = lM + lD*zlocl[j];
+				dl = l  - l0;
+				
+				// interpolate to collocation point
+				xc[n] = ((ax*dl + bx)*dl + cx)*dl + x0;
+				rc[n] = ((ar*dl + br)*dl + cr)*dl + r0;
+			}
+		}
+	}
+
+	Stokes.getNode(ngeom, x0, r0);
+	xc[nglob-1] = x0;
+	rc[nglob-1] = r0;
 	
 	
 	
@@ -130,7 +173,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	
 	
 	// NEED TO GET RADIUS OF TUBE!
-	double rc = 2.;
+	double rtube = 2.;
 	
 
 
@@ -138,8 +181,109 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 
 
 
-	// get Gauss-Legendre abscissas and weights
-	gauleg(nquad, zquad, wquad);
+	/*---------------------------------------------*/
+	/*- assemble matrix of influence coefficients -*/
+	/*---------------------------------------------*/
+
+	for (m = 0; m < nglob; m++){				/* loop over global element nodes
+																			 * (collocation points) */
+		// get field point
+		xf = xc[m];
+		rf = rc[m];
+
+		for (i = 0; i < nelem+1; i++){		// loop over boundary elements
+			// get geometric parameters
+			Stokes.getNode(i,    x0, 	 r0);
+			Stokes.getNode(i+1,  x1, 	 r1);
+			Stokes.getPoly(i,    l0);
+			Stokes.getPoly(i+1,  l1);
+	
+			Stokes.getSpln(i,    ax ,  bx , cx ,
+			                     ar ,  br , cr );
+
+
+
+			// START FROM HERE NExT !!! A LOT OF WORK TO BE DONE HERE
+
+			for (j = 0; j < nlocl; j++){		// loop over local element nodes
+				/* get global basis node corresponding
+				 * to local (i,j) basis */
+				n = i*(nlocl - 1) + j;
+
+				// CHECK FOR SINGULARITY
+				if (n == m)
+					// DO SOMETHING
+					n;
+					
+				if (j == nlocl && i != nelem-1)
+					// ADD ADDITIONAL INTEGRAL (2 INSTEAD OF 1)
+					n;
+				
+				// GET THE APPROPRIATE LAGRANGE INTERPOLATING POLYNOMIAL
+
+
+				// NEXT THING TO DO IS TO SET UP THE QUADRATURE
+			
+			
+				// evaluate quadrature	
+				for (k = 0; k < nquad; k++){	// loop over quadrature points
+					// map quadrature point onto polygonal arc length
+					l  = lM + lD*zquad[k];
+					dl = l  - l0;
+		
+					// interpolate to source point
+					xs   = ((  ax*dl +    bx)*dl + cx)*dl + x0;
+					rs   = ((  ar*dl +    br)*dl + cr)*dl + r0;
+					dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
+					drdl = (3.*ar*dl + 2.*br)*dl + cr;
+					dsdl = sqrt(dxdl*dxdl + drdl*drdl);
+
+					// define the Jacobian for the line integral
+					J = lD*dsdl;
+
+					// get weight for kth node
+					w = J*wquad[k];
+
+
+
+					// check for singularity
+					/* ------- NEED A CHECK FOR i == j --------*/
+
+
+					
+					// evaluate Green's functions
+					if (IGF == 0){				/* free-space stokeslet */
+						gf_axR(xf, rf, xs, rs,
+						       Mxx, Mxr, Mrx, Mrr);
+					}
+					else if (IGF == 1){		/* stokeslet bounded externally
+																 * by a cylindrical tube */
+						gf_axT(xf, rf, xs, rs, rtube,
+						       Mxx, Mxr, Mrx, Mrr);
+					}
+				}
+				
+				
+			} // end of local element nodes
+		} // end of boundary elements
+	} // end of global element nodes
+
+	/*  FOOTNOTE: A[m,n] corresponds to the matrix element 
+	 *  associated with the integral evaluated at the mth
+	 *  global boundary node over the density basis
+	 *  function at the nth global basis node, where
+	 *  n = i*(nlocl - 1) + j. */
+
+
+
+
+
+
+
+
+
+
+
 
 	/*--------------------------------------------*/
 	/*- single layer potential over the boundary -*/
@@ -147,27 +291,18 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 
 	cf = -1./(8.*M_PI);
 
-	/*- assemble the matrix of influence coefficients -*/
-	
-	// loop over boundary elements
-	for (i = 0; i < nelem+1; i++){
-		// loop over local element nodes
-		for (j = 0; j < nlocl; j++){
-			
-			
-		} // end of local element nodes
-	} // end of boundary elements
 
 
-
+	// THE STUFF BELOW WILL BE DELETED... SUPPLANTED BY THE
+	// ASSEMBLY OF THE MATRIX OF INFLUENCE COEFFICIENTS ABOVE
 	
 	/* loop over boundary nodes and evaluate integrals
-	 * at field points (xp,rp) */
+	 * at field points (xf,rf) */
 	for (i = 0; i < ngeom; i++){
 		/* get position and jump in traction
 		 * at field point */
-		Stokes.getNode(i, xp  , rp  );
-		Stokes.getTrct(i, dfxp, dfrp);
+		Stokes.getNode(i, xf  , rf  );
+		Stokes.getTrct(i, dfxf, dfrf);
 
 		// initialize quadrature
 		vx = 0.;
@@ -209,13 +344,13 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	
 			// loop over Gauss-Legendre grid points
 			for (k = 0; k < nquad; k++){
-				// map grid point onto polygonal arc length
+				// map quadrature point onto polygonal arc length
 				l  = lM + lD*zquad[k];
 				dl = l  - l0;
 	
 				// interpolate to source point
-				x    = ((  ax*dl +    bx)*dl + cx)*dl + x0;
-				r    = ((  ar*dl +    br)*dl + cr)*dl + r0;
+				xs   = ((  ax*dl +    bx)*dl + cx)*dl + x0;
+				rs   = ((  ar*dl +    br)*dl + cr)*dl + r0;
 				dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
 				drdl = (3.*ar*dl + 2.*br)*dl + cr;
 				dsdl = sqrt(dxdl*dxdl + drdl*drdl);
@@ -235,12 +370,12 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 				
 				// evaluate Green's functions
 				if (IGF == 0){				/* free-space stokeslet */
-					gf_axR(xp, rp, x, r,
+					gf_axR(xf, rf, xs, rs,
 					       Mxx, Mxr, Mrx, Mrr);
 				}
 				else if (IGF == 1){		/* stokeslet bounded externally
 															 * by a cylindrical tube */
-					gf_axT(xp, rp, x, r, rc,
+					gf_axT(xf, rf, xs, rs, rtube,
 					       Mxx, Mxr, Mrx, Mrr);
 				}
 

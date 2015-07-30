@@ -8,11 +8,14 @@
  *  N/A
  *  
  * PARAMETERS
+ *  x,r    [input]			nodal coordinates
+ *  N      [input]			number of (global) elements
+ *  M      [input]			number of (local) subelements
+ *  lamb   [input]			viscosity ratio
  *  u      [output]			displacement
  *  v      [output]			velocity
  *  f      [output]			traction
  *  c		   [output]			concentration (or any scalar field)
- *  lamb   [output]			viscosity ratio
  */
 
 #ifndef STOKES_H
@@ -27,9 +30,13 @@ const int FLUID = 1;
 class stokes: public geom {
 private:
 	// indicator for type of boundary
-	int     IBE;
+	int     type ;
 		/*     = RIGID  (rigid boundary)
 		 *     = FLUID  (fluid-fluid interface) */
+
+	/* local and global number of basis nodes 
+	 * for density function interpolation */
+	int     nlocl,  nglob;
 	
 	// displacement
 	double *dispx, *dispr;
@@ -60,51 +67,37 @@ public:
 	stokes() : geom() {
 	}
 
-	stokes(int ibe, int N, double *x, double *r) : geom(N, x, r) {
-		if (ibe != 0 && ibe != 1){
-			printf("Error: ibe can only take values of 0 or 1.");
-			return;
-		}
-
-		int i, n;
-
-		// set indicator function
-		IBE = ibe;
-
-		/* allocate memory for pointer arrays
-		 * and initialize to zero */
-		dispx = (double*) calloc(nnode, sizeof(double));
-		dispr = (double*) calloc(nnode, sizeof(double));
-		velx  = (double*) calloc(nnode, sizeof(double));
-		velr  = (double*) calloc(nnode, sizeof(double));
-		trctx = (double*) calloc(nnode, sizeof(double));
-		trctr = (double*) calloc(nnode, sizeof(double));
-		conc  = (double*) calloc(nnode, sizeof(double));
-
-		// initialize viscosity ratio
-		visc = 1.;
+	stokes(int id, int N, int M, 
+	       double *x, double *r) : geom(N, x, r) {
+		// set viscosity ratio = 1 if not given
+		stokes(id, N, M, 1., x, r);
 	}
 
-	stokes(int ibe, int N, double lamb, double *x, double *r) : geom(N, x, r) {
-		if (ibe != 0 && ibe != 1){
-			printf("Error: ibe can only take values of 0 or 1.");
+	stokes(int id, int N, int M, 
+	       double lamb, double *x, double *r) : geom(N, x, r) {
+		if (id != 0 && id != 1){
+			printf("Error: id can only take values of 0 or 1.");
 			return;
 		}
 
 		int i, n;
-		
-		// set indicator function
-		IBE = ibe;
-		
+
+		// set boundary type
+		type = id;
+
+		// set local and global number of basis nodes
+		nlocl = M + 1;
+		nglob = N*M + 1;
+
 		/* allocate memory for pointer arrays
 		 * and initialize to zero */
-		dispx = (double*) calloc(nnode, sizeof(double));
-		dispr = (double*) calloc(nnode, sizeof(double));
-		velx  = (double*) calloc(nnode, sizeof(double));
-		velr  = (double*) calloc(nnode, sizeof(double));
-		trctx = (double*) calloc(nnode, sizeof(double));
-		trctr = (double*) calloc(nnode, sizeof(double));
-		conc  = (double*) calloc(nnode, sizeof(double));
+		dispx = (double*) calloc(nglob, sizeof(double));
+		dispr = (double*) calloc(nglob, sizeof(double));
+		velx  = (double*) calloc(nglob, sizeof(double));
+		velr  = (double*) calloc(nglob, sizeof(double));
+		trctx = (double*) calloc(nglob, sizeof(double));
+		trctr = (double*) calloc(nglob, sizeof(double));
+		conc  = (double*) calloc(nglob, sizeof(double));
 
 		// initialize viscosity ratio
 		visc = lamb;
@@ -112,33 +105,72 @@ public:
 
 	// Destructor
 
-	// Set functions
+	/*- Set functions ---*/
 
-	// Get functions
-	void getTrct(int i, double &fx, double &fr){
-		if (i >= nnode){
+	/*- Get functions ---*/
+	// get local number of basis nodes
+	int getNLocl(){
+		int n = nlocl;
+		return(n);
+	}
+	
+	void getNLocl(int n){
+		n = nlocl;
+	}
+
+	// get global number of basis nodes
+	int getNGlob(){
+		int n = nglob;
+		return(n);
+	}
+	
+	void getNGlob(int n){
+		n = nglob;
+	}
+
+	/* get traction of the (ielem)th local basis node
+	 * of the (ilocl)th boundary element */
+	void getTrct(int ielem, int ilocl, double &fx, double &fr){
+		if ((ielem + 1)*ilocl >= nglob){
+			printf("Error: index out of bounds.\n");
+			return;
+		}
+
+		int iglob;
+		
+		// get index of the global basis node
+		iglob = ielem*(nlocl - 1) + ilocl;
+
+		fx = trctx[iglob];
+		fr = trctr[iglob];
+	}
+
+	// get traction at the (iglob)th global basis node
+	void getTrct(int iglob, double &fx, double &fr){
+		if (iglob >= nglob){
 			printf("Error: index out of bounds.\n");
 			return;
 		}
 		
-		fx = trctx[i];
-		fr = trctr[i];
+		fx = trctx[iglob];
+		fr = trctr[iglob];
 	}
 
+	// get traction at all global basis nodes
 	void getTrct(double *fx, double *fr){
-		int i;
+		int iglob;
 
 		if (fx == NULL || fr == NULL){
 			printf("Error: no memory allocated for fx, fr\n");
 		}
 
-		for (i = 0; i < nnode-1; i++){
-			fx[i] = trctx[i];
-			fr[i] = trctr[i];
+		for (iglob = 0; iglob < nglob; iglob++){
+			fx[iglob] = trctx[iglob];
+			fr[iglob] = trctr[iglob];
 		}
-		
 	}
-
+	
+	// get viscosity ratio
 	double getVisc(){
 		double lamb;
 		lamb = visc;

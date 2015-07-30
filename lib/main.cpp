@@ -33,8 +33,8 @@ void testGeom();
 void testInterp();
 
 int main(){
-	testGeom();
-//	testInterp();
+//	testGeom();
+	testInterp();
 
 	return(0);
 }
@@ -108,7 +108,7 @@ void testGeom(){
 	V0 = 4*M_PI*a*b*b/3;
 
 	// test constructor, set and get functions
-	stokes spheroid(0, N, x, r);
+	stokes spheroid(0, N, 1, x, r);
 //	spheroid.getArcl(s);
 //	spheroid.getArea(A); //	OR A = spheroid.getArea();
 //	spheroid.getVlme(V); //	OR V = spheroid.getVlme();
@@ -134,16 +134,19 @@ void testInterp(){
 	int i, j, k;
 	double *X, *Y, *T;
 	double x, y;
+	double dx;
 	double a, b;
+	double *L;
 	double *A, *B, *C;
 	double *Ax, *Bx, *Cx;
 	double *Ay, *By, *Cy;
-	int N = 100;
+	int N = 10;
 	
 	// allocate memory
 	X  = (double*) malloc((N+1) * sizeof(double));
 	Y  = (double*) malloc((N+1) * sizeof(double));
 	T  = (double*) malloc((N+1) * sizeof(double));
+	L  = (double*) malloc((N+1) * sizeof(double));
 	A  = (double*) malloc( N    * sizeof(double));
 	B  = (double*) malloc((N+1) * sizeof(double));
 	C  = (double*) malloc( N    * sizeof(double));
@@ -169,6 +172,12 @@ void testInterp(){
 	lagrange(N, X, Y, x, y);
 	printf("y = %.4f\n", y);
 
+	lagrange(N, X, x, L);
+	printf("L = \n");
+	for (i = 0; i < N+1; i++){
+		printf("%.4f\n", L[i]);
+	}
+
 	// interpolate (cubic spline)
 //	spline(N, X, Y, slope1, slope2, x, y);
 
@@ -177,6 +186,7 @@ void testInterp(){
 	double slopey1 = 1.;
 	double slopey2 = -1.;
 	spline(N, X, Y, slopex1, slopex2, slopey1, slopey2, Ax, Bx, Cx, Ay, By, Cy);
+	
 	printf("Ax        Bx        Cx\n");
 	for (i = 0; i < N+1; i++){
 		printf("%.4f %.4f %.4f\n", Ax[i], Bx[i], Cx[i]);

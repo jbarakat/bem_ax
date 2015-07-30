@@ -12,6 +12,7 @@
  *  a      [output]		spline coefficient of 3rd derivative
  *  b      [output]		spline coefficient of 2nd derivative
  *  c      [output]		spline coefficient of 1st derivative
+ *  L      [output]		Lagrange polynomial
  */
 
 #ifndef INTERP_H
@@ -33,6 +34,7 @@ void spline(const int, double*, double*,
 //            double, double&);
 void spline(const int, double*, double*, double, double,
             double*, double*, double*);
+void lagrange(const int, double*, double, double*);
 void lagrange(const int, double*, double*, double, double&);
 
 #endif

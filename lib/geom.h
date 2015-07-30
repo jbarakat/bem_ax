@@ -108,7 +108,7 @@ public:
 //	~geom(){
 //	}
 	
-	// Set functions
+	/*- Set functions ---*/
 	void setNNode(int n){
 		nnode = n;
 	}
@@ -117,7 +117,8 @@ public:
 		nelem = n;
 	}
 
-	// Get functions
+	/*- Get functions ---*/
+	// get all quantities at all geometric nodes
 	void getAll(int    &n , double *x,  double *r,
 	            double *ax, double *bx, double *cx,
 							double *ar, double *br, double *cr,
@@ -178,6 +179,7 @@ public:
 
 	}
 	
+	// get all quantities at the ith geometric node
 	void getAll(int i, int &n, double &x , double &r,
 	            double &ax,    double &bx, double &cx,
 							double &ar,    double &br, double &cr,
@@ -213,6 +215,7 @@ public:
 		nr = nrmlr [i];
 	}
 	
+	// get number of geometric nodes
 	int getNNode(){
 		int n;
 		n = nnode;
@@ -223,6 +226,7 @@ public:
 		n = nnode;
 	}
 	
+	// get number of boundary elements
 	int getNElem(){
 		int n;
 		n = nelem;
@@ -233,6 +237,7 @@ public:
 		n = nelem;
 	}
 
+	// get position coordinates at all geometric nodes
 	void getNode(double *x, double *r){
 		int i;
 		
@@ -247,6 +252,7 @@ public:
 		}
 	}
 	
+	// get position coordinates at the ith geometric node
 	void getNode(int i, double &x, double &r){
 		if (i >= nnode){
 			printf("Error: index out of bounds.\n");
@@ -257,6 +263,7 @@ public:
 		r = noder[i];
 	}
 
+	// get spline coefficients at all geometric nodes
 	void getSpln(double *ax, double *bx, double *cx,
 	             double *ar, double *br, double *cr){
 		int i;
@@ -281,6 +288,7 @@ public:
 			br[i] = splnbr[i];
 	}
 	
+	// get spline coefficients at the ith geometric node
 	void getSpln(int i, 
 	             double &ax, double &bx, double &cx,
 					 		 double &ar, double &br, double &cr){
@@ -297,6 +305,7 @@ public:
 		cr = splncr[i];
 	}
 
+	// get polygonal arc length at all geometric nodes
 	void getPoly(double *l){
 		int i;
 		
@@ -310,6 +319,7 @@ public:
 		}
 	}
 	
+	// get polygonal arc length at the ith geometric node
 	void getPoly(int i, double &l){
 		if (i >= nnode){
 			printf("Error: index out of bounds.\n");
@@ -319,6 +329,7 @@ public:
 		l = poly[i];
 	}
 
+	// get meridional arc length at all geometric nodes
 	void getArcl(double *s){
 		int i;
 		
@@ -332,6 +343,7 @@ public:
 		}
 	}
 	
+	// get meridional arc length at the ith geometric node
 	void getArcl(int i, double &s){
 		if (i >= nnode){
 			printf("Error: index out of bounds.\n");
@@ -340,7 +352,8 @@ public:
 		
 		s = arcl[i];
 	}
-
+	
+	// get total area
 	double getArea(){
 		double A;
 		A = area;
@@ -351,6 +364,7 @@ public:
 		A = area;
 	}
 	
+	// get total volume
 	double getVlme(){
 		double V;
 		V = vlme;
@@ -361,6 +375,7 @@ public:
 		V = vlme;
 	}
 	
+	// get principal curvatures at all geometric nodes
 	void getCurv(double *ks, double *kp){
 		int i;
 		
@@ -375,6 +390,7 @@ public:
 		}
 	}
 	
+	// get principal curvatures at the ith geometric node
 	void getCurv(int i, double &ks, double &kp){
 		if (i >= nnode){
 			printf("Error: index out of bounds.\n");
@@ -385,6 +401,7 @@ public:
 		kp = curvp[i];
 	}
 
+	// get meridional tangent components at all geometric nodes
 	void getTang(double *tx, double *tr){
 		int i;
 		
@@ -399,6 +416,7 @@ public:
 		}
 	}
 	
+	// get meridional tangent components at the ith geometric node
 	void getTang(int i, double &tx, double &tr){
 		if (i >= nnode){
 			printf("Error: index out of bounds.\n");
@@ -409,6 +427,7 @@ public:
 		tr = tangr[i];
 	}
 
+	// get normal components at all geometric nodes
 	void getNrml(double *nx, double *nr){
 		int i;
 		
@@ -423,6 +442,7 @@ public:
 		}
 	}
 	
+	// get normal components at the ith geometric node
 	void getNrml(int i, double &nx, double &nr){
 		if (i >= nnode){
 			printf("Error: index out of bounds.\n");

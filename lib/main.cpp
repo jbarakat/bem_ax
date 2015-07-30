@@ -15,6 +15,7 @@
 #include "stokes.h"
 #include "geom.h"
 #include <math.h>
+#include <vector>
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
@@ -131,6 +132,9 @@ void testGeom(){
 }
 
 void testInterp(){
+	const int N = 10;
+
+
 	int i, j, k;
 	double *X, *Y, *T;
 	double x, y;
@@ -140,7 +144,6 @@ void testInterp(){
 	double *A, *B, *C;
 	double *Ax, *Bx, *Cx;
 	double *Ay, *By, *Cy;
-	int N = 10;
 	
 	// allocate memory
 	X  = (double*) malloc((N+1) * sizeof(double));

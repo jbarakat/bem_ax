@@ -181,6 +181,69 @@ void spline(const int N, double *x, double *y, double slope1, double slope2,
 }
 
 /* Generate the set of Nth-degree Lagrange interpolating polynomials
+ * evaluated at M interpolant points xi based on a set of N+1 grid 
+ * points x.
+ */
+void lagrange(const int N, const int M, double *x, double *xi, double *L){
+	if (L == NULL){
+		printf("Error: no memory allocated for L");
+		return;
+	}
+	
+  // declare variables
+  int i, j, m;
+  double *rho, psi, dx; 
+  double idx;
+	double xim;
+  const double TOL = 1e-8;
+	
+	// allocate memory
+	rho = (double*) malloc((N+1) * sizeof(double));
+
+	for (m = 0; m < M; m++){
+		xim = xi[m];	
+
+		/* NOTE: Access L[m,n] by L[M*n + m]
+		 * (row-major ordering; columns indexed by m) */
+	  
+		// check if x contains xi[m]
+	  idx = 1.; 
+	  for (i = 0; i < N+1; i++){
+	    dx = fabs(xim - x[i]);
+	    idx = fmin(idx, dx);
+	    if (idx < TOL){
+				for (j = 0; j < N+1; j++)
+					L[M*j + m] = 0.;
+				L[M*i + m] = 1.;
+	      return;
+	    }   
+	  }
+	  
+	  // construction step
+		psi = 1.;
+	  for (i = 0; i < N+1; i++){
+	    dx     = xim - x[i];
+	    rho[i] = 1.; 
+	    psi   *= dx;
+	    for (j = 0; j < N+1; j++){
+	      dx = x[i] - x[j];
+	      if (j != i)
+	        rho[i] *= dx; 
+	    }   
+	  }
+	
+	  // evaluation step
+		for (i = 0; i < N+1; i++){
+	    dx   = xim - x[i];
+	    L[M*i + m] = psi/(dx*rho[i]);
+	  }
+	}
+	
+  // free memory
+  free(rho);
+}
+
+/* Generate the set of Nth-degree Lagrange interpolating polynomials
  * evaluated at xi based on a set of N+1 grid points x.
  */
 void lagrange(const int N, double *x, double xi, double *L){

@@ -31,34 +31,46 @@
 #endif
 
 
+void testSingleLayer();
 void testGeom();
 void testInterp();
 
 int main(){
-	double x0 = 1;
-	double x = 1;
-	double r0 = 1;
-	double r = 1.5;
-	double rc = 2;
-	double Mxx, Mxr, Mrx, Mrr;
-
-	double logR;
-
-	double R = sqrt((x - x0)*(x - x0) + (r - r0)*(r - r0));
-	if (R > 0.000001)
-		logR = gsl_sf_log(R);
-
-//	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
-//	printf("%.4f %.4f %.4f %.4f\n", Mxx + 2*logR, Mxr, Mrx, Mrr + 2*logR);
-	
-	gf_axT(x, r, x0, r0, rc, Mxx, Mxr, Mrx, Mrr);
-	printf("%.4f %.4f %.4f %.4f\n", Mxx, Mxr, Mrx, Mrr);
-	
-	
+	testSingleLayer();
 //	testGeom();
 //	testInterp();
 
 	return(0);
+}
+
+void testSingleLayer(){
+	int i, j, k;
+	int IGF = 0;
+	int nquad = 2;
+	int N = 10;
+	int M = 2;
+	double lamb = 1;
+	double *x, *r, *thet;
+	double a, b;
+
+	// allocate memory
+	x     = (double*) malloc((N+1) * sizeof(double));
+	r     = (double*) malloc((N+1) * sizeof(double));
+	thet  = (double*) malloc((N+1) * sizeof(double));
+
+	// define coordinates on an ellipse
+	a = 10.;
+	b = 1.;
+	for (i = 0; i < N+1; i++){
+		thet[i] = i*M_PI/N;
+		x[i] = a*gsl_sf_cos(thet[i]);
+		r[i] = b*gsl_sf_sin(thet[i]);
+		//printf("%.4f %.4f %.4f\n", T[i], X[i], Y[i]);
+	}
+
+	stokes spheroid(0, N, M, lamb, x, r);
+
+	singleLayer(IGF, nquad, spheroid);
 }
 
 void testGeom(){

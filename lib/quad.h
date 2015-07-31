@@ -8,8 +8,8 @@
  *  Crow, Mathematics of Computation 60-201 (1993)
  *  
  * PARAMETERS
- *  x,r    [input]		source points
- *  xf,rf  [input]		field points
+ *  xq,rq  [input]		source points
+ *  x ,r   [input]		field points
  *  nquad  [input]		number of quadrature points (per element)
  */
 
@@ -48,8 +48,6 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	}
 	
 	
-	
-	
 	// NEED TO GET RADIUS OF TUBE!
 	// (NEED A SMARTER WAY TO GET THIS)
 	double rtube = 2.;
@@ -79,25 +77,24 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	
 	double *zquad, *wquad;							// quadrature abscissas and weights
 	double  l    ,  dl   ;							// polygonal arc length and differential
-	double  w    ,  h    ;							// local weight and metric coefficient
+	double  z    ,  w    ;							// local abscissa and weight
+	double  h    ;											// metric coefficient
 	
 	int     ising;											// indicator for singular element
 	int     nsing;											// number of quadrature points for singular kernels
 	double *zqsng, *wqsng;							// singular quadrature abscissas and weights
 	double  zsing;											// singular point on the [-1,1] interval
 	double  lsing;											// singular point on the polygonal interval
-	double  logL;
-
+	double  logZ;
 
 	double *L    ,  Lq   ;							// Lagrange interpolating polynomials
 	double *zlocl;											// local Gauss-Lobatto grid points
 
-	double  xf  ,  rf  ;								// field point coordinates
+	double  x   ,  r   ;								// field point coordinates
 	double  xq  ,  rq  ;								// source point coordinates
 	double  dx  ,  dr  ;
 	double  dxdl,  drdl, dsdl;
 	double  dfx ,  dfr ;
-	double  dfxf,  dfrf;
 
 	double   x0,   r0;
 	double   l0,   s0;
@@ -120,12 +117,16 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	double  nrM,  nrD;
 
 	double *A, *df, *v;									// linear system: A*df = v
+
 	double Axx , Axr , Arx , Arr ;		 	// block components of A
 	double Mxx , Mxr , Mrx , Mrr ;			// total Green's function
 	double MRxx, MRxr, MRrx, MRrr;			// free-space (axisymmetric) Green's function
 	double MCxx, MCxr, MCrx, MCrr;			// complementary Green's function
-
-	double R, logR;
+	
+	double Asxx, Asrr;									// singular integrals
+	double L1  , L2  ;									// Lagrange polynomials for singular kernel
+	double L3  , L4  ;
+	double zS  , zD  ;
 
 	double vx, vr;
 	double cf;
@@ -239,10 +240,10 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	for (m = 0; m < nglob; m++){				/* ROWS: loop over global element
 																			 * nodes (collocation points) */
 		// get field point
-		xf = xc[m];
-		rf = rc[m];
+		x  = xc[m];
+		r  = rc[m];
 
-		for (i = 0; i < nelem+1; i++){		/* COLUMNS: loop over boundary
+		for (i = 0; i < nelem; i++){			/* COLUMNS: loop over boundary
 		                                   * elements */
 			// get geometric parameters
 			Stokes.getNode(i,    x0, 	 r0);
@@ -256,11 +257,11 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 			lM = 0.5*(l1 + l0);
 			lD = 0.5*(l1 - l0);
 
-			// check if (xf,rf) is in the boundary element
+			// check if (x,r) is in the boundary element
 			if (m >= i*(nlocl-1) && m <= (i+1)*(nlocl-1)){
 				ising = 1; // singular element
-				k     = m - (i*(nlocl-1));
-				zsing = zlocl[k];
+				j     = m - (i*(nlocl-1));
+				zsing = zlocl[j];
 				lsing = lM + lD*zsing;
 			}
 			else
@@ -284,7 +285,8 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 					Lq = L[nquad*j + k];
 					
 					// map quadrature point onto polygonal arc length
-					l  = lM + lD*zquad[k];
+					z  = zquad[k];
+					l  = lM + lD*z;
 					dl = l  - l0;
 		
 					// interpolate to source point
@@ -301,13 +303,13 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 					w = h*wquad[k];
 					
 					// evaluate free-space Green's function
-					gf_axR(xf  , rf  , xq  , rq  ,
+					gf_axR(x   , r   , xq  , rq  ,
 					       MRxx, MRxr, MRrx, MRrr);
 
 					// evaluate complementary Green's function
 					if (IGF == 1){				/* stokeslet bounded externally
 					                       * by a cylindrical tube */
-						gf_axC(xf  , rf  , xq  , rq  , rtube,
+						gf_axC(x   , r   , xq  , rq  , rtube,
 						       MCxx, MCxr, MCrx, MCrr);
 					}
 					else {
@@ -320,13 +322,11 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 					/* regularize diagonal components of the free-space
 					 * Green's function if near the singular point */
 					if (ising == 1){
-		//				R     = sqrt((xf - xq)*(xf - xq) + (rf - rq)*(rf - rq));
-		//				logR  = gsl_sf_log(R);
+						logZ  = gsl_sf_log(fabs(z - zsing));
 
-						logL  = gsl_sf_log(fabs(l - lsing));
+						MRxx += 2*logZ;
+						MRrr += 2*logZ;
 
-						MRxx += 2*logL;
-						MRrr += 2*logL;
 					}
 
 					// calculate total Green's function
@@ -346,6 +346,10 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 				/* add back singular part of the integral
 				 * using logarithmic quadrature */
 				if (ising == 1){
+					
+					// START BACK UP FROM HERE!
+
+					// INCORPORATE NEW INTEGRALS!
 
 
 				// START FROM HERE
@@ -354,6 +358,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 					Axr += 0;
 					Arx += 0;
 					Arr += 0;
+
 				}
 
 				// add 2x2 block of A
@@ -384,16 +389,11 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 
 
 
+	printf("\n got to the finish line!\n\n");
 
 
 
 
-
-
-
-
-	// THE STUFF BELOW WILL BE DELETED... SUPPLANTED BY THE
-	// ASSEMBLY OF THE MATRIX OF INFLUENCE COEFFICIENTS ABOVE
 
 	/*--------------------------------------------*/
 	/*- single layer potential over the boundary -*/
@@ -403,126 +403,126 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 
 
 
-	// THE STUFF BELOW WILL BE DELETED... SUPPLANTED BY THE
-	// ASSEMBLY OF THE MATRIX OF INFLUENCE COEFFICIENTS ABOVE
-	
-	/* loop over boundary nodes and evaluate integrals
-	 * at field points (xf,rf) */
-	for (i = 0; i < ngeom; i++){
-		/* get position and jump in traction
-		 * at field point */
-		Stokes.getNode(i, xf  , rf  );
-		Stokes.getTrct(i, dfxf, dfrf);
+//	// THE STUFF BELOW WILL BE DELETED... SUPPLANTED BY THE
+//	// ASSEMBLY OF THE MATRIX OF INFLUENCE COEFFICIENTS ABOVE
+//	
+//	/* loop over boundary nodes and evaluate integrals
+//	 * at field points (x,r) */
+//	for (i = 0; i < ngeom; i++){
+//		/* get position and jump in traction
+//		 * at field point */
+//		Stokes.getNode(i, x   , r   );
+//		Stokes.getTrct(i, dfxf, dfrf);
+//
+//		// initialize quadrature
+//		vx = 0.;
+//		vr = 0.;
+//
+//		/* loop over boundary elements and carry out
+//		 * quadrature over source points (x,r) */
+//		for (j = 0; j < nelem; j++){
+//			// get parameters for the boundary element
+//			Stokes.getNode(j,     x0,  r0);
+//			Stokes.getNode(j+1,   x1,  r1);
+//			Stokes.getPoly(j,     l0);
+//			Stokes.getPoly(j+1,   l1);
+//	
+//			Stokes.getSpln(j,    ax ,  bx , cx ,
+//			                     ar ,  br , cr );
+//	
+//			Stokes.getNrml(j,    nx0,  nr0);
+//			Stokes.getNrml(j+1,  nx1,  nr1);
+//
+//			Stokes.getTrct(j,   dfx0, dfr0);
+//			Stokes.getTrct(j+1, dfx1, dfr1);
+//			
+//			// prepare for quadrature
+//			  lM = 0.5*(  l1 +   l0);
+//			  lD = 0.5*(  l1 -   l0);
+//
+//			dfxM = 0.5*(dfx1 + dfx0);
+//			dfxD = 0.5*(dfx1 - dfx0);
+//
+//			dfrM = 0.5*(dfr1 + dfr0);
+//			dfrD = 0.5*(dfr1 - dfr0);
+//			  
+//			 nxM = 0.5*( nx1 +  nx0);
+//			 nxD = 0.5*( nx1 -  nx0);
+//	
+//			 nrM = 0.5*( nr1 +  nr0);
+//			 nrD = 0.5*( nr1 -  nr0);
+//	
+//			// loop over Gauss-Legendre grid points
+//			for (k = 0; k < nquad; k++){
+//				// map quadrature point onto polygonal arc length
+//				l  = lM + lD*zquad[k];
+//				dl = l  - l0;
+//	
+//				// interpolate to source point
+//				xq   = ((  ax*dl +    bx)*dl + cx)*dl + x0;
+//				rq   = ((  ar*dl +    br)*dl + cr)*dl + r0;
+//				dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
+//				drdl = (3.*ar*dl + 2.*br)*dl + cr;
+//				dsdl = sqrt(dxdl*dxdl + drdl*drdl);
+//
+//				// define the metric coefficient for the line integral
+//				h = lD*dsdl;
+//
+//				// get weight for kth node
+//				w = h*wquad[k];
+//
+//
+//
+//				// check for singularity
+//				/* ------- NEED A CHECK FOR i == j --------*/
+//
+//
+//				
+//				// evaluate Green's functions
+//				if (IGF == 0){				/* free-space stokeslet */
+//					gf_axR(x , rf, xq, rq,
+//					       Mxx, Mxr, Mrx, Mrr);
+//				}
+//				else if (IGF == 1){		/* stokeslet bounded externally
+//															 * by a cylindrical tube */
+//					gf_axT(x , rf, xq, rq, rtube,
+//					       Mxx, Mxr, Mrx, Mrr);
+//				}
+//
+//				
+//
+//
+//
+//
+//
+//
+//				
+//				
+//			} // end of Gauss-Legendre grid points
+//			
+//		} // end of boundary elements
+//		
+//		vx *= cf;
+//		vr *= cf;
+//
+//		// set velocity for the boundary node
+//
+//		//-------- NEED SET FUNCTION HERE -----------//
+//
+//	} // end of boundary nodes (evaluation at field points)
 
-		// initialize quadrature
-		vx = 0.;
-		vr = 0.;
-
-		/* loop over boundary elements and carry out
-		 * quadrature over source points (x,r) */
-		for (j = 0; j < nelem; j++){
-			// get parameters for the boundary element
-			Stokes.getNode(j,     x0,  r0);
-			Stokes.getNode(j+1,   x1,  r1);
-			Stokes.getPoly(j,     l0);
-			Stokes.getPoly(j+1,   l1);
-	
-			Stokes.getSpln(j,    ax ,  bx , cx ,
-			                     ar ,  br , cr );
-	
-			Stokes.getNrml(j,    nx0,  nr0);
-			Stokes.getNrml(j+1,  nx1,  nr1);
-
-			Stokes.getTrct(j,   dfx0, dfr0);
-			Stokes.getTrct(j+1, dfx1, dfr1);
-			
-			// prepare for quadrature
-			  lM = 0.5*(  l1 +   l0);
-			  lD = 0.5*(  l1 -   l0);
-
-			dfxM = 0.5*(dfx1 + dfx0);
-			dfxD = 0.5*(dfx1 - dfx0);
-
-			dfrM = 0.5*(dfr1 + dfr0);
-			dfrD = 0.5*(dfr1 - dfr0);
-			  
-			 nxM = 0.5*( nx1 +  nx0);
-			 nxD = 0.5*( nx1 -  nx0);
-	
-			 nrM = 0.5*( nr1 +  nr0);
-			 nrD = 0.5*( nr1 -  nr0);
-	
-			// loop over Gauss-Legendre grid points
-			for (k = 0; k < nquad; k++){
-				// map quadrature point onto polygonal arc length
-				l  = lM + lD*zquad[k];
-				dl = l  - l0;
-	
-				// interpolate to source point
-				xq   = ((  ax*dl +    bx)*dl + cx)*dl + x0;
-				rq   = ((  ar*dl +    br)*dl + cr)*dl + r0;
-				dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
-				drdl = (3.*ar*dl + 2.*br)*dl + cr;
-				dsdl = sqrt(dxdl*dxdl + drdl*drdl);
-
-				// define the metric coefficient for the line integral
-				h = lD*dsdl;
-
-				// get weight for kth node
-				w = h*wquad[k];
-
-
-
-				// check for singularity
-				/* ------- NEED A CHECK FOR i == j --------*/
-
-
-				
-				// evaluate Green's functions
-				if (IGF == 0){				/* free-space stokeslet */
-					gf_axR(xf, rf, xq, rq,
-					       Mxx, Mxr, Mrx, Mrr);
-				}
-				else if (IGF == 1){		/* stokeslet bounded externally
-															 * by a cylindrical tube */
-					gf_axT(xf, rf, xq, rq, rtube,
-					       Mxx, Mxr, Mrx, Mrr);
-				}
-
-				
-
-
-
-
-
-
-				
-				
-			} // end of Gauss-Legendre grid points
-			
-		} // end of boundary elements
-		
-		vx *= cf;
-		vr *= cf;
-
-		// set velocity for the boundary node
-
-		//-------- NEED SET FUNCTION HERE -----------//
-
-	} // end of boundary nodes (evaluation at field points)
-
-//	// release memory
-//	free(A);
-//	free(df);   
-//	free(v); 
-//	free(L);  
-//	free(zlocl);
-//	free(zquad);
-//	free(wquad);
-//	free(xg);
-//	free(rg); 
-//	free(xc); 
-//	free(rc); 
+	// release memory
+	free(A);
+	free(df);   
+	free(v); 
+	free(L);  
+	free(zlocl);
+	free(zquad);
+	free(wquad);
+	free(xg);
+	free(rg); 
+	free(xc); 
+	free(rc); 
 }
 
 

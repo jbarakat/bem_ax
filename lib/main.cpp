@@ -17,6 +17,7 @@
 #include <math.h>
 #include <vector>
 #include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_sf_log.h>
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
 
@@ -34,8 +35,28 @@ void testGeom();
 void testInterp();
 
 int main(){
+	double x0 = 1;
+	double x = 1;
+	double r0 = 1;
+	double r = 1.5;
+	double rc = 2;
+	double Mxx, Mxr, Mrx, Mrr;
+
+	double logR;
+
+	double R = sqrt((x - x0)*(x - x0) + (r - r0)*(r - r0));
+	if (R > 0.000001)
+		logR = gsl_sf_log(R);
+
+//	gf_axR(x, r, x0, r0, Mxx, Mxr, Mrx, Mrr);
+//	printf("%.4f %.4f %.4f %.4f\n", Mxx + 2*logR, Mxr, Mrx, Mrr + 2*logR);
+	
+	gf_axT(x, r, x0, r0, rc, Mxx, Mxr, Mrx, Mrr);
+	printf("%.4f %.4f %.4f %.4f\n", Mxx, Mxr, Mrx, Mrr);
+	
+	
 //	testGeom();
-	testInterp();
+//	testInterp();
 
 	return(0);
 }

@@ -172,28 +172,26 @@ void gf_axR_vel(double x, double r, double x0, double r0,
 
 }
 
-/* Green's function M = MR + MC evaluated at (x,r) due to a ring of 
+/* Complementary Green's function MC evaluated at (x,r) due to a ring of 
  * point forces located at (x0,r0), bounded externally by a cylindrical
  * tube of radius rc.
  */
-void gf_axT(double x, double r, double x0, double r0, double rc,
-            double &Mxx, double &Mxr, double &Mrx, double &Mrr){
+void gf_axC(double x, double r, double x0, double r0, double rc,
+            double &MCxx, double &MCxr, double &MCrx, double &MCrr){
 	/* set maximum number of refinement stages
 	 * and tolerance for Fourier integrals */
 	const int MAXIT = 20;
 	const double TOL = 0.00001;
 
 	// evaluate Green's function
-	gf_axT(x, r, x0, r0, rc, Mxx, Mxr, Mrx, Mrr, MAXIT, TOL);
+	gf_axC(x, r, x0, r0, rc, MCxx, MCxr, MCrx, MCrr, MAXIT, TOL);
 }
 
-void gf_axT(double x, double r, double x0, double r0, double rc,
-            double &Mxx, double &Mxr, double &Mrx, double &Mrr,
+void gf_axC(double x, double r, double x0, double r0, double rc,
+            double &MCxx, double &MCxr, double &MCrx, double &MCrr,
 						const int MAXIT, const double TOL){
 	// declare variables
 	int i, j, k, n;
-	double MRxx, MRxr, MRrx, MRrr;
-	double MCxx, MCxr, MCrx, MCrr;
 	double mCxx, mCxr, mCrx, mCrr;
 	double dmCxx, dmCxr, dmCrx, dmCrr;
 	double fc, dev;
@@ -227,7 +225,8 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 	for (n = 0; n < MAXIT; n++){
 		if (n == 0){
 			// evaluate kernels at midpoint of the domain
-			gf_axT_ker(x, r, x0, r0, rc, s, mCxx, mCxr, mCrx, mCrr);
+			gf_axC_ker(x, r, x0, r0, rc, s, mCxx, mCxr, mCrx, mCrr);
+
 			
 			// calculate change in kernels
 			dmCxx -= mCxx*ds; dmCxx = fabs(dmCxx);
@@ -260,7 +259,7 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 				if ((2*k + 1) % 3 != 0){ /* avoid double counting
 																	  previous grid points */
 					s = smin + (double(k) + 0.5)*ds;
-					gf_axT_ker(x, r, x0, r0, rc, s, mCxx, mCxr, mCrx, mCrr);
+					gf_axC_ker(x, r, x0, r0, rc, s, mCxx, mCxr, mCrx, mCrr);
 				}
 			}
 
@@ -285,20 +284,47 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
 	// diagnose level of refinement [uncomment when required]
 //	printf("%d stages of refinement and %d total points\n", n, nt);
 	
-	// calculate components of the free-space Green's function
-	gf_axR(x, r, x0, r0, MRxx, MRxr, MRrx, MRrr);
-
 	// calculate components of the complementary Green's function
 	MCxx = r0*mCxx*ds - 4*M_PI*r0/pow((x - x0)*(x - x0) + (2*rc - r - r0)*(2*rc - r - r0), 0.5);
 	MCxr = r0*mCxr*ds;
 	MCrx = r0*mCrx*ds;
 	MCrr = r0*mCrr*ds;
 	
+}
+
+/* Total Green's function MT = MR + MC evaluated at (x,r) due to a ring of 
+ * point forces located at (x0,r0), bounded externally by a cylindrical
+ * tube of radius rc.
+ */
+void gf_axT(double x, double r, double x0, double r0, double rc,
+            double &MTxx, double &MTxr, double &MTrx, double &MTrr){
+	/* set maximum number of refinement stages
+	 * and tolerance for Fourier integrals */
+	const int MAXIT = 20;
+	const double TOL = 0.00001;
+
+	// evaluate Green's function
+	gf_axT(x, r, x0, r0, rc, MTxx, MTxr, MTrx, MTrr, MAXIT, TOL);
+}
+
+void gf_axT(double x, double r, double x0, double r0, double rc,
+            double &MTxx, double &MTxr, double &MTrx, double &MTrr,
+						const int MAXIT, const double TOL){
+	// declare variables
+	double MRxx, MRxr, MRrx, MRrr;
+	double MCxx, MCxr, MCrx, MCrr;
+	
+	// calculate components of the free-space Green's function
+	gf_axR(x, r, x0, r0, MRxx, MRxr, MRrx, MRrr);
+
+	// calculate components of the complementary Green's function
+	gf_axC(x, r, x0, r0, rc, MCxx, MCxr, MCrx, MCrr);
+	
 	// calculate components of the total Green's function
-	Mxx = MRxx + MCxx;
-	Mxr = MRxr + MCxr;
-	Mrx = MRrx + MCrx;
-	Mrr = MRrr + MCrr;
+	MTxx = MRxx + MCxx;
+	MTxr = MRxr + MCxr;
+	MTrx = MRrx + MCrx;
+	MTrr = MRrr + MCrr;
 
 }
 
@@ -311,7 +337,7 @@ void gf_axT(double x, double r, double x0, double r0, double rc,
  * made improper. Instead, the closed-form expression for MR in terms
  * of complete elliptic integrals is used (see gf_axR above).
  */
-void gf_axT_ker(double x, double r, double x0, double r0, double rc, double s,
+void gf_axC_ker(double x, double r, double x0, double r0, double rc, double s,
             double &mCxx, double &mCxr, double &mCrx, double &mCrr){
 	// declare variables
 	double t;

@@ -5,6 +5,7 @@
  *
  * REFERENCES
  *  Pozrikidis, Cambridge University Press (1992) [Ch. 6]
+ *  Crow, Mathematics of Computation 60-201 (1993)
  *  
  * PARAMETERS
  *  x,r    [input]		source points
@@ -22,6 +23,7 @@
 #include "grnfcn.h"
 #include "gauleg.h"
 #include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_sf_log.h>
 
 /* PROTOTYPES */
 
@@ -35,9 +37,27 @@
  */
 void singleLayer(const int IGF, int nquad, stokes Stokes){
 	if (IGF != 0 && IGF != 1){
-		printf("Error: IGF can only take values of 0 or 1.");
+		printf("Error: IGF can only take values of 0 or 1.\n");
 		return;
 	}
+
+	if (nquad % 2 != 0){
+		printf("Error: choose an even number of quadrature points to avoid singularities.\n");
+		return;
+	}
+	
+	
+	
+	
+	// NEED TO GET RADIUS OF TUBE!
+	// (NEED A SMARTER WAY TO GET THIS)
+	double rtube = 2.;
+	
+
+
+
+
+
 	
 	/*---------------------------------------------*/
 	/*------------------- SETUP -------------------*/
@@ -47,10 +67,13 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	int i, j, k, m, n;									// for loop indices
 	int nelem, ngeom;										// number of geometric elements and nodes
 	int nlocl, nglob;										// number of local and global basis nodes
-	int ising;													// indicator for singular element
 	double area, vlme;									// total area and volume
 	double lamb;												// viscosity ratio
 	
+	int    ising;												// indicator for singular element
+	double zsing, lsing;								// position of singular element
+	double logL;
+
 	double *xg, *rg;										// geometric points
 	double *xc, *rc;										// collocation points
 	
@@ -59,7 +82,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	
 	double *zquad, *wquad;							// quadrature abscissas and weights
 	double  l    ,  dl   ;							// polygonal arc length and differential
-	double  w    ,  J    ;							// local weight and Jacobian
+	double  w    ,  h    ;							// local weight and metric coefficient
 
 	double *L    ,  Lq   ;							// Lagrange interpolating polynomials
 	double *zlocl;											// local Gauss-Lobatto grid points
@@ -91,9 +114,13 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	double  nxM,  nxD;
 	double  nrM,  nrD;
 
-	double *A, *df, *v;	// linear system: A*df = v
-	double sum;
-	double Mxx, Mxr, Mrx, Mrr;
+	double *A, *df, *v;									// linear system: A*df = v
+	double Axx , Axr , Arx , Arr ;		 	// block components of A
+	double Mxx , Mxr , Mrx , Mrr ;			// total Green's function
+	double MRxx, MRxr, MRrx, MRrr;			// free-space (axisymmetric) Green's function
+	double MCxx, MCxr, MCrx, MCrr;			// complementary Green's function
+
+	double R, logR;
 
 	double vx, vr;
 	double cf;
@@ -130,7 +157,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	for (i = 0; i < nlocl; i++){
 		zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
 	}
-	
+		
 	/* get Gauss-Legendre abscissas and weights on the
 	 * interval [-1,1] */
 	gauleg(nquad, zquad, wquad);
@@ -188,18 +215,6 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 		}
 	}
 	
-	
-	
-	
-	
-	// NEED TO GET RADIUS OF TUBE!
-	// (NEED A SMARTER WAY TO GET THIS)
-	double rtube = 2.;
-	
-
-
-
-
 
 
 	/*---------------------------------------------*/
@@ -222,12 +237,18 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	
 			Stokes.getSpln(i,    ax ,  bx , cx ,
 			                     ar ,  br , cr );
+			
+			lM = 0.5*(l1 + l0);
+			lD = 0.5*(l1 - l0);
 
-			// check if xf,rf lies in the boundary element
-			if (m >= i*(nlocl-1) && m <= (i+1)*(nlocl-1))
-				ising = 1;
+			// check if (xf,rf) is in the boundary element
+			if (m >= i*(nlocl-1) && m <= (i+1)*(nlocl-1)){
+				ising = 1; // singular element
+				k     = m - (i*(nlocl-1));
+				lsing = lM + lD*zlocl[k];
+			}
 			else
-				ising = 0;
+				ising = 0; // non-singular element
 
 			for (j = 0; j < nlocl; j++){		/* COLUMNS: loop over local element
 			                                 * nodes */
@@ -235,12 +256,13 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 				 * to local (i,j) basis */
 				n = i*(nlocl - 1) + j;
 				
+				// prepare for quadrature
+				Axx = 0;
+				Axr = 0;
+				Arx = 0;
+				Arr = 0;
 				
-				
-				
-				
-				// evaluate quadrature     //// THIS WILL CHANGE IF THERE'S A SINGULARITY ising == 1
-				sum = 0.;
+				// evaluate quadrature
 				for (k = 0; k < nquad; k++){	// loop over quadrature points
 					// get Lagrange polynomial
 					Lq = L[nquad*j + k];
@@ -256,37 +278,66 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 					drdl = (3.*ar*dl + 2.*br)*dl + cr;
 					dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-					// define the Jacobian for the line integral
-					J = lD*dsdl;
+					// define the metric coefficient for the line integral
+					h = lD*dsdl;
 
 					// get weight for kth node
-					w = J*wquad[k];
+					w = h*wquad[k];
 					
-					
-				
-					/// FIRST THING TO DO IS JUST EVALUATE THE REGULAR MATRIX ELEMENTS,
-					/// INCLUDING THE NODES SHARED BY TWO BEs, THEN
-					/// EVALUATE THE SINGULAR ELEMENTS LATER
+					// evaluate free-space Green's function
+					gf_axR(xf  , rf  , xq  , rq  ,
+					       MRxx, MRxr, MRrx, MRrr);
 
+					// evaluate complementary Green's function
+					if (IGF == 1){				/* stokeslet bounded externally
+					                       * by a cylindrical tube */
+						gf_axC(xf  , rf  , xq  , rq  , rtube,
+						       MCxx, MCxr, MCrx, MCrr);
+					}
+					else {
+						MCxx = 0;
+						MCxr = 0;
+						MCrx = 0;
+						MCrr = 0;
+					}
 
-					// check for singularity
-					// THIS WILL AFFECT THE CALCULATION OF THE GREEN'S FUNCTIONS
-					
-					//
-					//  START FROM HERE
-					//
-					
-					// evaluate Green's functions
-					if (IGF == 0){				/* free-space stokeslet */
-						gf_axR(xf, rf, xq, rq,
-						       Mxx, Mxr, Mrx, Mrr);
+					/* regularize diagonal components of the free-space
+					 * Green's function if near the singular point */
+					if (ising == 1){
+		//				R     = sqrt((xf - xq)*(xf - xq) + (rf - rq)*(rf - rq));
+		//				logR  = gsl_sf_log(R);
+
+						logL  = gsl_sf_log(fabs(l - lsing));
+
+						MRxx += 2*logL;
+						MRrr += 2*logL;
 					}
-					else if (IGF == 1){		/* stokeslet bounded externally
-																 * by a cylindrical tube */
-						gf_axT(xf, rf, xq, rq, rtube,
-						       Mxx, Mxr, Mrx, Mrr);
-					}
+
+					// calculate total Green's function
+					Mxx = MRxx + MCxx;
+					Mxr = MRxr + MCxr;
+					Mrx = MRrx + MCrx;
+					Mrr = MRrr + MCrr;
+
+					// increment the integrals
+					Axx += w*Mxx*Lq;
+					Axr += w*Mxr*Lq;
+					Arx += w*Mrx*Lq;
+					Arr += w*Mrr*Lq;
+
+				} // end of quadrature points
+
+				/* add back singular part of the integral
+				 * using logarithmic quadrature */
+				if (ising == 1){
+
+					Axx += 0;
+					Axr += 0;
+					Arx += 0;
+					Arr += 0;
 				}
+
+				// add 2x2 block of A
 				
 				// THIS IS WHERE WE AVOID DOUBLE COUNTING;
 				// AFTER DOING ALL THAT WORK, DECIDE TO ADD
@@ -296,7 +347,6 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 //				if (j == 0 && i != 0)
 //					// ADD ADDITIONAL INTEGRAL (2 INSTEAD OF 1)
 //					n;
-
 
 				
 		//		if (j == nlocl-1 && i != nelem-1) // avoid double counting
@@ -323,6 +373,8 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 
 
 
+	// THE STUFF BELOW WILL BE DELETED... SUPPLANTED BY THE
+	// ASSEMBLY OF THE MATRIX OF INFLUENCE COEFFICIENTS ABOVE
 
 	/*--------------------------------------------*/
 	/*- single layer potential over the boundary -*/
@@ -394,11 +446,11 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 				drdl = (3.*ar*dl + 2.*br)*dl + cr;
 				dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-				// define the Jacobian for the line integral
-				J = lD*dsdl;
+				// define the metric coefficient for the line integral
+				h = lD*dsdl;
 
 				// get weight for kth node
-				w = J*wquad[k];
+				w = h*wquad[k];
 
 
 

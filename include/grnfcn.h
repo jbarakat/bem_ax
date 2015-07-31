@@ -34,12 +34,17 @@ void gf_axR(double, double, double, double,
             double&, double&, double&, double&);
 void gf_axR_vel(double, double, double, double,
                 double, double, double&, double&);
-void gf_axT(double, double, double, double, double,
+void gf_axC(double, double, double, double, double,
+            double&, double&, double&, double&,
+            const int, const double);
+void gf_axC(double, double, double, double, double,
             double&, double&, double&, double&);
 void gf_axT(double, double, double, double, double,
             double&, double&, double&, double&,
             const int, const double);
-void gf_axT_ker(double, double, double, double, double, double,
+void gf_axT(double, double, double, double, double,
+            double&, double&, double&, double&);
+void gf_axC_ker(double, double, double, double, double, double,
             double &, double &, double&, double &);
 void gf_axT_vel(double, double, double, double, double,
                 double, double, double&, double&);

@@ -76,7 +76,12 @@ public:
 	stokes(int id, int N, int M, 
 	       double lamb, double *x, double *r) : geom(N, x, r) {
 		if (id != 0 && id != 1){
-			printf("Error: id can only take values of 0 or 1.");
+			printf("Error: id can only take values of 0 or 1.\n");
+			return;
+		}
+		
+		if (M < 1){
+			printf("Error: cannot have fewer than 1 subelements.\n");
 			return;
 		}
 

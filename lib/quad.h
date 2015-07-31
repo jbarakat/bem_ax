@@ -5,7 +5,7 @@
  *
  * REFERENCES
  *  Pozrikidis, Cambridge University Press (1992) [Ch. 6]
- *  Crow, Mathematics of Computation 60-201 (1993)
+ *  Pozrikidis, Chapman & Hall/CRC (2002) [Ch. 3]
  *  
  * PARAMETERS
  *  xq,rq  [input]		source points
@@ -66,6 +66,8 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	int i, j, k, m, n;									// for loop indices
 	int nelem, ngeom;										// number of geometric elements and nodes
 	int nlocl, nglob;										// number of local and global basis nodes
+	int ncoll;													// number of collocation points
+
 	double area, vlme;									// total area and volume
 	double lamb;												// viscosity ratio
 	
@@ -80,13 +82,6 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	double  z    ,  w    ;							// local abscissa and weight
 	double  h    ;											// metric coefficient
 	
-	int     ising;											// indicator for singular element
-	int     nsing;											// number of quadrature points for singular kernels
-	double *zqsng, *wqsng;							// singular quadrature abscissas and weights
-	double  zsing;											// singular point on the [-1,1] interval
-	double  lsing;											// singular point on the polygonal interval
-	double  logZ;
-
 	double *L    ,  Lq   ;							// Lagrange interpolating polynomials
 	double *zlocl;											// local Gauss-Lobatto grid points
 
@@ -123,10 +118,17 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	double MRxx, MRxr, MRrx, MRrr;			// free-space (axisymmetric) Green's function
 	double MCxx, MCxr, MCrx, MCrr;			// complementary Green's function
 	
-	double Asxx, Asrr;									// singular integrals
-	double L1  , L2  ;									// Lagrange polynomials for singular kernel
-	double L3  , L4  ;
-	double zS  , zD  ;
+	double  Asxx ,  Asrr ;							// singular integrals
+	double *L1   , *L2   , *L3 , *L4;		// Lagrange polynomials for additional integrals
+	double *z1   , *z2   , *z3 , *z4;		// parameters for additional integrals
+	double  zsp1 ,  zsm1 ; 							// 1 + zsing and 1 - zsing
+	double *zqsng, *wqsng; 							// singular quadrature abscissas and weights
+
+	int     ising;											// indicator for singular element
+	int     nsing;											// number of quadrature points for singular kernels
+	double  zsing;											// singular point on the [-1,1] interval
+	double  lsing;											// singular point on the polygonal interval
+	double  logZ , logZp1, logZm1;
 
 	double vx, vr;
 	double cf;
@@ -137,6 +139,10 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	ngeom = nelem + 1;
 	nlocl = Stokes.getNLocl();
 	nglob = Stokes.getNGlob();
+
+	/* get number of collocation points
+	 * (= no. global basis nodes - no. geometric nodes) */
+	ncoll = nglob - ngeom;
 
 	/* choose number of points for singular quadrature
 	 * (maximum is 6 points) */
@@ -151,6 +157,14 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
   zqsng   = (double*) malloc(   nsing       * sizeof(double));
   wqsng   = (double*) malloc(   nsing       * sizeof(double));
 	L       = (double*) malloc(   nlocl*nquad * sizeof(double));
+	L1      = (double*) malloc(   nlocl*nquad * sizeof(double));
+	L2      = (double*) malloc(   nlocl*nquad * sizeof(double));
+	L3      = (double*) malloc(   nlocl*nsing * sizeof(double));
+	L4      = (double*) malloc(   nlocl*nsing * sizeof(double));
+	z1      = (double*) malloc(   nquad       * sizeof(double));
+	z2      = (double*) malloc(   nquad       * sizeof(double));
+	z3      = (double*) malloc(   nsing       * sizeof(double));
+	z4      = (double*) malloc(   nsing       * sizeof(double));
   zlocl   = (double*) malloc(   nlocl       * sizeof(double));
   xg      = (double*) malloc(   ngeom       * sizeof(double));
   rg      = (double*) malloc(   ngeom       * sizeof(double));
@@ -182,9 +196,9 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	 * interval [-1,1] */
 	lagrange(nlocl-1, nquad, zlocl, zquad, L);
 
-	/*  NOTE: L[i,j] = L[nquad*j + i] is the
-	 *  jth polynomial of the Gauss-Lobatto
-	 *  grid evaluated at the ith quadrature
+	/*  NOTE: L[i,j] = L[nquad*i + j] is the
+	 *  ith polynomial of the Gauss-Lobatto
+	 *  grid evaluated at the jth quadrature
 	 *  (Gauss-Legendre) grid point, defined
 	 *  on the interval [-1,1], */
 
@@ -260,9 +274,59 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 			// check if (x,r) is in the boundary element
 			if (m >= i*(nlocl-1) && m <= (i+1)*(nlocl-1)){
 				ising = 1; // singular element
+
+				/* When the element is singular, the diagonal components
+				 * of the free-space Green's function contain a logarithmic
+				 * singularity:
+				 * 
+				 *  Mxx ~ Mrr ~ -2*log{[x - xq)^2 + (r - rq)^2]^(1/2)}
+				 *
+				 * This singularity is subtracted off inside
+				 * the kernel and the remainder is evaluated separately.
+				 *
+				 * The singular integral is split up into four separate
+				 * integrals, two of which are regular (use Gauss-Legendre
+				 * quadrature on the [-1,1] interval) and the remaining
+				 * two are singular (use a special logarithmic quadrature
+				 * on the [0,1] interval). For reference, see Pozrikidis
+				 * (2002), Ch. 3, pp. 71-73.
+				 */
+
+				// get singular point
 				j     = m - (i*(nlocl-1));
 				zsing = zlocl[j];
 				lsing = lM + lD*zsing;
+
+				/* get Lagrange interpolants for the
+				 * additional integrals */
+				zsp1   = 1 + zsing;
+				zsm1   = 1 - zsing;
+				printf("%.4f\n",zsp1);
+				logZp1 = gsl_sf_log(zsp1);
+				logZm1 = gsl_sf_log(zsm1);
+				
+				/// LOOK HERE FIRST!!!
+				/// don't actually start from here, but here is where I spotted
+				/// a problem: the collocation point CANNOT coincide with a
+				/// geometric node (singularity in the quadrature
+				/// so remove the geometric nodes from the collocatin points...
+				//
+				// THEN... go from here...
+
+
+
+				for (k = 0; k < nquad; k++){ // regular quadrature
+					z1[k] = 0.5*(-zsm1 + zsp1*zquad[k]);
+					z2[k] = 0.5*( zsp1 + zsm1*zquad[k]);
+					
+				}
+
+				for (k = 0; k < nsing; k++){ // singular quadrature
+					
+				}
+				
+
+
 			}
 			else
 				ising = 0; // non-singular element
@@ -336,10 +400,10 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 					Mrr = MRrr + MCrr;
 
 					// increment the integrals
-					Axx += w*Mxx*Lq;
-					Axr += w*Mxr*Lq;
-					Arx += w*Mrx*Lq;
-					Arr += w*Mrr*Lq;
+					Axx = w*Mxx*Lq;
+					Axr = w*Mxr*Lq;
+					Arx = w*Mrx*Lq;
+					Arr = w*Mrr*Lq;
 
 				} // end of quadrature points
 
@@ -367,6 +431,8 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 				// AFTER DOING ALL THAT WORK, DECIDE TO ADD
 				// THE RESULT TO THE PREVIOUS ELEMENT OR TO
 				// START A NEW ELEMENT
+
+				//A[nglob* 
 
 //				if (j == 0 && i != 0)
 //					// ADD ADDITIONAL INTEGRAL (2 INSTEAD OF 1)

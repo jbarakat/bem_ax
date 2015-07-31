@@ -182,7 +182,9 @@ void spline(const int N, double *x, double *y, double slope1, double slope2,
 
 /* Generate the set of Nth-degree Lagrange interpolating polynomials
  * evaluated at M interpolant points xi based on a set of N+1 grid 
- * points x.
+ * points x, where L[M*i + j] corresponds the ith polynomial associated
+ * with x, evaluated at the jth element of xi. In row-major ordering 
+ * for a two-dimensional array, this element is accessed by L[i,j].
  */
 void lagrange(const int N, const int M, double *x, double *xi, double *L){
 	if (L == NULL){
@@ -196,6 +198,7 @@ void lagrange(const int N, const int M, double *x, double *xi, double *L){
   double idx;
 	double xim;
   const double TOL = 1e-8;
+	int ising;
 	
 	// allocate memory
 	rho = (double*) malloc((N+1) * sizeof(double));
@@ -203,21 +206,26 @@ void lagrange(const int N, const int M, double *x, double *xi, double *L){
 	for (m = 0; m < M; m++){
 		xim = xi[m];	
 
-		/* NOTE: Access L[m,n] by L[M*n + m]
-		 * (row-major ordering; columns indexed by m) */
+		/* NOTE: Access L[n,m] by L[M*n + m]
+		 * (row-major ordering - columns indexed by m) */
 	  
 		// check if x contains xi[m]
-	  idx = 1.; 
+	  idx = 1.;
+		ising = 0;
 	  for (i = 0; i < N+1; i++){
 	    dx = fabs(xim - x[i]);
 	    idx = fmin(idx, dx);
 	    if (idx < TOL){
+				ising = 1;
 				for (j = 0; j < N+1; j++)
 					L[M*j + m] = 0.;
 				L[M*i + m] = 1.;
-	      return;
+				break;
 	    }   
 	  }
+
+		if (ising == 1)
+			continue;
 	  
 	  // construction step
 		psi = 1.;

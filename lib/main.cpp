@@ -32,11 +32,13 @@
 
 
 void testSingleLayer();
+void testLagrange();
 void testGeom();
 void testInterp();
 
 int main(){
-	testSingleLayer();
+//	testSingleLayer();
+	testLagrange();
 //	testGeom();
 //	testInterp();
 
@@ -48,7 +50,7 @@ void testSingleLayer(){
 	int IGF = 0;
 	int nquad = 2;
 	int N = 10;
-	int M = 2;
+	int M = 3;
 	double lamb = 1;
 	double *x, *r, *thet;
 	double a, b;
@@ -71,6 +73,72 @@ void testSingleLayer(){
 	stokes spheroid(0, N, M, lamb, x, r);
 
 	singleLayer(IGF, nquad, spheroid);
+}
+
+void testLagrange(){
+	int i, j, k;
+	int N = 6;
+	int M = 2;
+	double lamb = 1;
+	double *x, *r, *thet;
+	double *xi;
+	double a, b;
+	double *L, *L1;
+
+	// allocate memory
+	x     = (double*) malloc((N+1)   * sizeof(double));
+	xi    = (double*) malloc(      M * sizeof(double));
+	r     = (double*) malloc((N+1)   * sizeof(double));
+	thet  = (double*) malloc((N+1)   * sizeof(double));
+	L     = (double*) malloc((N+1)*M * sizeof(double));
+	L1    = (double*) malloc((N+1)   * sizeof(double));
+
+	// define coordinates on an ellipse
+	a = 10.;
+	b = 1.;
+	printf("x = \n");
+	for (i = 0; i < N+1; i++){
+		thet[i] = i*M_PI/N;
+		x[i] = a*gsl_sf_cos(thet[i]);
+		r[i] = b*gsl_sf_sin(thet[i]);
+		printf("%.4f\n", x[i]);
+	}
+	printf("\n");
+
+	printf("xi = \n");
+	for (i = 0; i < M; i++){
+		xi[i] = -10. + i*20/(M-1);
+	//	xi[i] *= 0.9;
+		printf("%.4f\n", xi[i]);
+	}
+	printf("\n");
+
+	lagrange(N, M, x, xi, L);
+	
+	printf("L = \n");
+	for (i = 0; i < N+1; i++){		// rows = polynomial
+		for (j = 0; j < M; j++){		// columns = grid point
+			if (L[i*M+j] >= 0)
+				printf(" ");
+			printf("%.4f ", L[i*M + j]);
+
+	//		if (L[i*M+j] < 10)
+	//			printf(" ");
+	//		printf("%d ",i*M + j);
+		}
+		printf("\n");
+	}
+	
+	lagrange(N, x, xi[1], L1);
+	printf("L = \n");
+	for (i = 0; i < N+1; i++){		// polynomial
+		if (L1[i] >= 0)
+			printf(" ");
+		printf("%.4f", L1[i]);
+		printf("\n");
+	}
+
+
 }
 
 void testGeom(){

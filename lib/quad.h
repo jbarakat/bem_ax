@@ -22,6 +22,7 @@
 #include "stokes.h"
 #include "grnfcn.h"
 #include "gauleg.h"
+#include "gaulog.h"
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_sf_log.h>
 
@@ -70,10 +71,6 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	double area, vlme;									// total area and volume
 	double lamb;												// viscosity ratio
 	
-	int    ising;												// indicator for singular element
-	double zsing, lsing;								// position of singular element
-	double logL;
-
 	double *xg, *rg;										// geometric points
 	double *xc, *rc;										// collocation points
 	
@@ -83,6 +80,14 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	double *zquad, *wquad;							// quadrature abscissas and weights
 	double  l    ,  dl   ;							// polygonal arc length and differential
 	double  w    ,  h    ;							// local weight and metric coefficient
+	
+	int     ising;											// indicator for singular element
+	int     nsing;											// number of quadrature points for singular kernels
+	double *zqsng, *wqsng;							// singular quadrature abscissas and weights
+	double  zsing;											// singular point on the [-1,1] interval
+	double  lsing;											// singular point on the polygonal interval
+	double  logL;
+
 
 	double *L    ,  Lq   ;							// Lagrange interpolating polynomials
 	double *zlocl;											// local Gauss-Lobatto grid points
@@ -132,14 +137,20 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	nlocl = Stokes.getNLocl();
 	nglob = Stokes.getNGlob();
 
+	/* choose number of points for singular quadrature
+	 * (maximum is 6 points) */
+	nsing = 6;
+
 	// allocate memory
 	A       = (double*) calloc( 4*nglob*nglob , sizeof(double));
 	df      = (double*) malloc( 2*nglob       * sizeof(double));
 	v       = (double*) malloc( 2*nglob       * sizeof(double));
-	L       = (double*) malloc(   nlocl*nquad * sizeof(double));
-  zlocl   = (double*) malloc(   nlocl       * sizeof(double));
   zquad   = (double*) malloc(   nquad       * sizeof(double));
   wquad   = (double*) malloc(   nquad       * sizeof(double));
+  zqsng   = (double*) malloc(   nsing       * sizeof(double));
+  wqsng   = (double*) malloc(   nsing       * sizeof(double));
+	L       = (double*) malloc(   nlocl*nquad * sizeof(double));
+  zlocl   = (double*) malloc(   nlocl       * sizeof(double));
   xg      = (double*) malloc(   ngeom       * sizeof(double));
   rg      = (double*) malloc(   ngeom       * sizeof(double));
   xc      = (double*) malloc(   nglob       * sizeof(double));
@@ -161,6 +172,10 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 	/* get Gauss-Legendre abscissas and weights on the
 	 * interval [-1,1] */
 	gauleg(nquad, zquad, wquad);
+
+	/* get Gauss-logarithmic abscissas and weights on
+	 * the interval [0,1] */
+	gaulog(nsing, zqsng, wqsng);
 	
 	/* get Lagrange interpolating polynomials on the
 	 * interval [-1,1] */
@@ -245,7 +260,8 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 			if (m >= i*(nlocl-1) && m <= (i+1)*(nlocl-1)){
 				ising = 1; // singular element
 				k     = m - (i*(nlocl-1));
-				lsing = lM + lD*zlocl[k];
+				zsing = zlocl[k];
+				lsing = lM + lD*zsing;
 			}
 			else
 				ising = 0; // non-singular element
@@ -264,7 +280,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 				
 				// evaluate quadrature
 				for (k = 0; k < nquad; k++){	// loop over quadrature points
-					// get Lagrange polynomial
+					// get Lagrange interpolating polynomial
 					Lq = L[nquad*j + k];
 					
 					// map quadrature point onto polygonal arc length
@@ -330,6 +346,9 @@ void singleLayer(const int IGF, int nquad, stokes Stokes){
 				/* add back singular part of the integral
 				 * using logarithmic quadrature */
 				if (ising == 1){
+
+
+				// START FROM HERE
 
 					Axx += 0;
 					Axr += 0;

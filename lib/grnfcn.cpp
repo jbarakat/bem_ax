@@ -36,52 +36,76 @@
 void gf_axR(double x, double r, double x0, double r0,
             double &Mxx, double &Mxr, double &Mrx, double &Mrr){
 	// declare variables
-	double K, E;
-	double x2 = x*x;
-	double x02 = x0*x0;
-	double r2 = r*r;
-	double r02 = r0*r0;
-	double X = x - x0; 
-	double X2 = X*X;
-	double R2 = X2 + (r - r0)*(r - r0);
-	double R = pow(R2, 0.5);
-	double k2 = 4*r*r0/(X2 + (r + r0)*(r + r0));
-	double k = pow(k2, 0.5);
-	double k4 = k2*k2;
-	double kp2 = 1 - k2;
-  double fc = 0.5*k/pow(r*r0, 0.5);
-  double fc3 = fc*fc*fc;
-	double fcM = r0;
+	double K  , E  ;
+	double x2 , x02;
+	double r2 , r02;
+	double X  , X2 ;
+	double R  , R2 ;
+	double k  , k2 , k4, kp2;
+	double fc , fc3;
+	double fcM;
   double I10, I11, I30, I31, I32;
-	
-	fc  *= 4;
-	fc3 *= (4/kp2);
 
-	// evaluate complete elliptic integrals
-	K = ellintK(k);
-	E = ellintE(k);
+	x2  = x*x;
+	x02 = x0*x0;
+	r2  = r*r;
+	r02 = r0*r0;
+	X   = x - x0; 
+	X2  = X*X;
+	R2  = X2 + (r - r0)*(r - r0);
+	R   = pow(R2, 0.5);
+	k2  = 4*r*r0/(X2 + (r + r0)*(r + r0));
+	k   = pow(k2, 0.5);
 	
-  // reduce integrals in terms of complete elliptic integrals
-  I10 = fc  *                          K;
-	I11 = fc  * ((  2 -    k2        ) * K
-					    -   2                  * E) / k2;
-	I30 = fc3 *                          E; 
-	I31 = fc3 * ((- 2 +  2*k2        ) * K  
-	            +(  2 -    k2        ) * E) / k2;
-	I32 = fc3 * ((- 8 + 12*k2 - 4*k4 ) * K  
-	            +(  8 -  8*k2 +   k4 ) * E) / k4; 
-
-  // calculate components of the Stokeslet M
-  Mxx =  fcM*  (     I10 + X2        *I30);
-  Mxr = -fcM*X*(r0  *I30 - r         *I31);
-  Mrx = -fcM*X*(r0  *I31 - r         *I30);
-  Mrr =  fcM*  (     I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
+	if (r < 1e-8){
+		Mxx = 2*M_PI*(r0/R)*(1 + X2/R2);
+		Mxr =  -M_PI*(X /R)*(1 - (X2 - r02)/R2); 
+		Mrx =   0;
+		Mrr =   0;
+	}
+	else {
+		k4  = k2*k2;
+		kp2 = 1 - k2;
+	  fc  = 0.5*k/pow(r*r0, 0.5);
+	  fc3 = fc*fc*fc;
+		fcM = r0;
+		
+		fc  *= 4;
+		fc3 *= (4/kp2);
+	
+		// evaluate complete elliptic integrals
+		K = ellintK(k);
+		E = ellintE(k);
+		
+	  // reduce integrals in terms of complete elliptic integrals
+	  I10 = fc  *                          K;
+		I11 = fc  * ((  2 -    k2        ) * K
+						    -   2                  * E) / k2;
+		I30 = fc3 *                          E; 
+		I31 = fc3 * ((- 2 +  2*k2        ) * K  
+		            +(  2 -    k2        ) * E) / k2;
+		I32 = fc3 * ((- 8 + 12*k2 - 4*k4 ) * K  
+		            +(  8 -  8*k2 +   k4 ) * E) / k4; 
+		
+		if (r < 0.001)
+			printf("%.16f\n", I31);
+	
+	  // calculate components of the Stokeslet M
+	  Mxx =  fcM*  (     I10 + X2        *I30);
+	  Mxr = -fcM*X*(r0  *I30 - r         *I31);
+	  Mrx = -fcM*X*(r0  *I31 - r         *I30);
+	  Mrr =  fcM*  (     I11 + (r02 + r2)*I31 - r*r0*(I30 + I32));
+	}
 
 }
 
 /* Green's functions M and Q evaluated at (x,r) due to a ring of point
  * forces located at (x0,r0) in an unbound domain (free space).
  */
+
+/* NOTE: I have not removed the singularity at r = 0 in this function yet! */
+/* FIX THIS LATER (SEE FUNCTION ABOVE) */
+
 void gf_axR(double x, double r, double x0, double r0, 
             double &Mxx, double &Mxr, double &Mrx, double &Mrr,
             double &Qxxx, double &Qxxr, double &Qxrx, double &Qxrr,

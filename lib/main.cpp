@@ -37,8 +37,8 @@ void testGeom();
 void testInterp();
 
 int main(){
-//	testSingleLayer();
-	testLagrange();
+	testSingleLayer();
+//	testLagrange();
 //	testGeom();
 //	testInterp();
 
@@ -48,20 +48,25 @@ int main(){
 void testSingleLayer(){
 	int i, j, k;
 	int IGF = 0;
-	int nquad = 2;
-	int N = 10;
-	int M = 3;
+	int nquad = 4;
+	int N = 4;
+	int M = 2;
 	double lamb = 1;
 	double *x, *r, *thet;
 	double a, b;
+	double *A;
+
+	// get number of collocation points
+	int ncoll = N*M + 1;
 
 	// allocate memory
 	x     = (double*) malloc((N+1) * sizeof(double));
 	r     = (double*) malloc((N+1) * sizeof(double));
 	thet  = (double*) malloc((N+1) * sizeof(double));
+	A     = (double*) malloc(4*ncoll*ncoll * sizeof(double));
 
 	// define coordinates on an ellipse
-	a = 10.;
+	a = 1.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
 		thet[i] = i*M_PI/N;
@@ -72,7 +77,17 @@ void testSingleLayer(){
 
 	stokes spheroid(0, N, M, lamb, x, r);
 
-	singleLayer(IGF, nquad, spheroid);
+	singleLayer(IGF, nquad, spheroid, A);
+
+	printf("A = \n");
+	for (i = 0; i < 2*ncoll; i++){
+		for (j = 0; j < 2*ncoll; j++){
+			if (A[2*ncoll*i + j] >= 0 && A[2*ncoll*i + j] < 10)
+				printf(" ");
+			printf("%.4f ", A[2*ncoll*i + j]);
+		}
+		printf("\n");
+	}
 }
 
 void testLagrange(){
@@ -137,8 +152,6 @@ void testLagrange(){
 		printf("%.4f", L1[i]);
 		printf("\n");
 	}
-
-
 }
 
 void testGeom(){

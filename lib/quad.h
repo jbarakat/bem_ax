@@ -46,7 +46,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 	}
 
 	if (nquad % 2 != 0){
-		printf("Error: choose an even number of quadrature points to avoid singularities.\n");
+		printf("Error: choose an even number of quadrature points to avoid coinciding with the collocation points.\n");
 		return;
 	}
 	
@@ -250,6 +250,56 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 		}
 	}
 	
+	
+
+
+
+
+
+
+	/*------ FOR DEBUGGING -------*/
+
+	printf("\nzlocl = ");
+	for (i = 0; i < nlocl; i++){
+    if (zlocl[i] >= 0)
+      printf(" ");
+		printf("%.4f ", zlocl[i]);
+	}
+	printf("\n");
+
+	printf("\nzquad = ");
+	for (i = 0; i < nquad; i++){
+    if (zquad[i] >= 0)
+      printf(" ");
+		printf("%.4f ", zquad[i]);
+	}
+	printf("\n");
+
+	printf("\nwquad = ");
+	for (i = 0; i < nquad; i++){
+    if (wquad[i] >= 0)
+      printf(" ");
+		printf("%.4f ", wquad[i]);
+	}
+	printf("\n");
+	printf("\n");
+
+	printf("L = \n");
+  for (i = 0; i < nlocl; i++){    	// rows = polynomial
+    for (j = 0; j < nquad; j++){    // columns = grid point
+      if (L[i*nquad+j] >= 0)
+        printf(" ");
+      printf("%.4f ", L[i*nquad + j]);
+    }   
+    printf("\n");
+  }
+
+	/*--------------------------*/
+
+
+
+
+
 
 
 	/*---------------------------------------------*/
@@ -265,12 +315,12 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 		for (i = 0; i < nelem; i++){			/* COLUMNS: loop over boundary
 		                                   * elements */
 			// get geometric parameters
-			Stokes.getNode(i,    x0, 	 r0);
+			Stokes.getNode(i  ,  x0, 	 r0);
 			Stokes.getNode(i+1,  x1, 	 r1);
-			Stokes.getPoly(i,    l0);
+			Stokes.getPoly(i  ,  l0);
 			Stokes.getPoly(i+1,  l1);
 	
-			Stokes.getSpln(i,    ax ,  bx , cx ,
+			Stokes.getSpln(i  ,  ax ,  bx , cx ,
 			                     ar ,  br , cr );
 			
 			lM = 0.5*(l1 + l0);
@@ -280,7 +330,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 			if (m >= i*(nlocl-1) && m <= (i+1)*(nlocl-1)){
 				ising = 1; // singular element
 
-				/* When the element is singular, the diagonal components
+				/* As the (x,r) --> (xq,rq), the diagonal components
 				 * of the free-space Green's function contain a logarithmic
 				 * singularity:
 				 * 
@@ -301,7 +351,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 				j     = m - (i*(nlocl-1));
 				zsing = zlocl[j];
 				lsing = lM + lD*zsing;
-
+				
 				/* prepare for singular quadrature
 				 *  integrals 1,2 are regular
 				 *  integrals 3,4 are singular */
@@ -386,14 +436,6 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 					// evaluate free-space Green's function
 					gf_axR(x   , r   , xq  , rq  ,
 					       MRxx, MRxr, MRrx, MRrr);
-					
-				//	if (m == 0){
-				//	double R2 = (x - xq)*(x - xq) + (r - rq)*(r - rq);
-				//	double R  = sqrt(R2);
-				//	double mxx = 2*M_PI*rq/R*(1 + (x - xq)*(x - xq)/R2);
-				//	double mxr = - M_PI*(x - xq)/R*(1 - ((x - xq)*(x - xq) - rq*rq)/R2);
-				//	//printf("%.14f %.4f\n", MRrx, mxr);
-				//	}
 
 					// evaluate complementary Green's function
 					if (IGF == 1){				/* stokeslet bounded externally

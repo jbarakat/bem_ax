@@ -32,12 +32,14 @@
 
 
 void testSingleLayer();
+void testQuadrature();
 void testLagrange();
 void testGeom();
 void testInterp();
 
 int main(){
 	testSingleLayer();
+//	testQuadrature();
 //	testLagrange();
 //	testGeom();
 //	testInterp();
@@ -48,9 +50,9 @@ int main(){
 void testSingleLayer(){
 	int i, j, k;
 	int IGF = 0;
-	int nquad = 4;
-	int N = 4;
-	int M = 2;
+	int N = 3;
+	int M = 1;
+	int nquad;
 	double lamb = 1;
 	double *x, *r, *thet;
 	double a, b;
@@ -58,6 +60,10 @@ void testSingleLayer(){
 
 	// get number of collocation points
 	int ncoll = N*M + 1;
+
+	// get number of quadrature points
+	printf("nquad = ");
+	scanf("%u", &nquad);
 
 	// allocate memory
 	x     = (double*) malloc((N+1) * sizeof(double));
@@ -88,6 +94,51 @@ void testSingleLayer(){
 		}
 		printf("\n");
 	}
+}
+
+void testQuadrature(){
+	int i, j, k;
+	double *x, *r, *thet;
+	double *P;
+	double *zq, *wq;
+	double z, w;
+	double h;
+	double integral;
+	int nquad;
+
+	// get number of quadrature points
+	printf("nquad = ");
+	scanf("%u", &nquad);
+
+	// allocate memory
+	x     = (double*) malloc(nquad * sizeof(double));
+	r     = (double*) malloc(nquad * sizeof(double));
+	P     = (double*) malloc(nquad * sizeof(double));
+	thet  = (double*) malloc(nquad * sizeof(double));
+	zq    = (double*) malloc(nquad * sizeof(double));
+	wq    = (double*) malloc(nquad * sizeof(double));
+	
+	// get quadrature points
+	gauleg(nquad, zq, wq);
+
+	// define coordinates on a circle
+	for (i = 0; i < nquad; i++){
+		thet[i] = M_PI/4*(1 + zq[i]);
+		x[i] = gsl_sf_cos(thet[i]);
+		r[i] = gsl_sf_sin(thet[i]);
+	}
+
+	// evaluate quadrature
+	integral = 0;
+	for (i = 0; i < nquad; i++){
+		integral += wq[i]*x[i];
+	}
+	integral *= M_PI/4;
+	
+	printf("Exact answer = 1\n");
+	printf("Approximate answer = %.4f\n", integral);
+
+
 }
 
 void testLagrange(){

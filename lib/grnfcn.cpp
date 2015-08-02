@@ -56,16 +56,16 @@ void gf_axR(double x, double r, double x0, double r0,
 	R   = pow(R2, 0.5);
 	k2  = 4*r*r0/(X2 + (r + r0)*(r + r0));
 	k   = pow(k2, 0.5);
+	k4  = k2*k2;
+	kp2 = 1 - k2;
 	
 	if (r < 1e-8){
-		Mxx = 2*M_PI*(r0/R)*(1 + X2/R2);
-		Mxr =  -M_PI*(X /R)*(1 - (X2 - r02)/R2); 
-		Mrx =   0;
-		Mrr =   0;
+		Mxx =  2*M_PI*(r0/R)*(1 + X2/R2);
+		Mxr = -2*M_PI*(X*r02)/(R*R2); 
+		Mrx =  0;
+		Mrr =  0;
 	}
 	else {
-		k4  = k2*k2;
-		kp2 = 1 - k2;
 	  fc  = 0.5*k/pow(r*r0, 0.5);
 	  fc3 = fc*fc*fc;
 		fcM = r0;

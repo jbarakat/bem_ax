@@ -1,6 +1,8 @@
-/* SURFACE MECHANICS
- *  Produce the local in-plane tensions, transverse shear tension,
- *  and bending/twisting moments for an axisymmetric free surface.
+/* COMPLEX FREE SURFACE
+ *  Boundary class that inherits the members of STOKES.H with type = 1
+ *  (fluid-fluid interface) and, in addition, prescribes a surface
+ *  constitutive model for the in-plane tensions, transverse shear
+ *  tensions, bending and twisting moments.
  *
  * REFERENCES
  *  Mollman, John Wiley & Sons (1982)
@@ -14,41 +16,126 @@
 #ifndef SURFACE_H
 #define SURFACE_H
 
+/* HEADER FILES */
 #include "stokes.h"
 
-/* HEADER FILES */
+class surface: public stokes {
+private:
+  // indicator for constitive model
+  int model;
+  /*  = 0  (drop w/constant surfactant)
+   *  = 1  (drop w/varying surface tension)
+   *  = 2  (vesicle w/fixed surface area - Helfrich model)
+   *  = 3  (vesicle w/variable surface area)
+   *  = 4  (red blood cell - Skalak model) */
+  
+  // in-plane tensions
+  double *tenss, *tensp;
 
+  // transverse shear tensions
+  double *tensn;
 
-/* PROTOTYPES */
+  // moments
+  double *mmnts, *mmntp;
+ 
+public:
+  /* PROTOTYPES */
+  
+  
+  /* IMPLEMENTATIONS */
+  surface() : stokes() {
+  }
 
+  surface(int id, int N, int M,
+          double gamm,
+          double ES, double ED, double EB, double ET,
+          double *x, double *r) : stokes(1, N, M, x, r) {
+    // declare variables
+    int i, j;
 
-/* IMPLEMENTATIONS */
+    // set constitutive model
+    model = id;
 
-void drop(
-     stokes Stokes,
-     double taus, double taup,
-	 	 double q   , 
-	 	 double ms  , double mp){
-	// declare variables
-}
+    /* allocate memory for pointer arrays
+     * and initialize to zero */
+    tenss = (double*) calloc(nglob, sizeof(double));
+    tensp = (double*) calloc(nglob, sizeof(double));
+    tensn = (double*) calloc(nglob, sizeof(double));
+    mmnts = (double*) calloc(nglob, sizeof(double));
+    mmntp = (double*) calloc(nglob, sizeof(double));
 
+    if (id == 0){ // drop w/constant surface tension
+      for (i = 0; i < nglob; i++){
+        tenss[i] = gamm;
+        tensp[i] = gamm;
+        tensn[i] = 0;
+        mmnts[i] = 0;
+        mmnts[i] = 0;
+      }
+    }
+    
+    if (id == 1){ // drop w/varying surface tension
+      for (i = 0; i < nglob; i++){
+         
+        // NEED TO FINISH THIS
 
-void helfrich(
-     stokes Stokes,
-     double taus, double taup,
-	 	 double q   , 
-	 	 double ms  , double mp){
-	// declare variables
-}
+      }
+    }
+    
+    if (id == 2){ // vesicle w/constant surface area
+      for (i = 0; i < nglob; i++){
+        
+        // NEED TO FINISH THIS
 
-void skalak(
-     stokes Stokes,
-     double taus, double taup,
-	 	 double q   , 
-	 	 double ms  , double mp){
-	// declare variables
-}
+      }
+    }
 
+    // ADD IF STATMENTS FOR id == 3 (vesicle w/non-constant area)
+    // and id == 4 (red blood cell)
 
+  }
+  
+  /*- Set functions ---*/
+
+  /*- Get functions ---*/
+  
+  // get tension components at the (iglob)th global basis node
+  void getTens(int iglob, double &taus, double &taup, double &q){
+    if (iglob >= nglob){
+      printf("Error: index out of bounds.\n");
+      return;
+    }
+
+    taus = tenss[iglob];
+    taup = tensp[iglob];
+    q    = tensn[iglob];
+  }
+
+  // get tension components at all global basis nodes
+  void getTens(double *taus, double *taup, double &q){
+    int iglob;
+
+    if (taus == NULL || taup == NULL || q == NULL){
+      printf("Error: no memory allocated for fx, fr\n");
+    }
+
+    for (iglob = 0; iglob < nglob; iglob++){
+      taus[iglob] = tenss[iglob];
+      taup[iglob] = tensp[iglob];
+      q   [iglob] = tensn[iglob];
+    }
+  }
+
+  /* Function to calculate the force resultants normal and tangential
+   * (in the meridional direction) to a free surface with constitutive
+   * tensions and moments */
+  void calcForce(surface Surface,
+                 double *fn, double *fs){
+    
+    // NEED LAGRANGE INTERPOLANT AAAAAND THEIR DERIVATIVES
+
+  }
+
+};
 
 #endif

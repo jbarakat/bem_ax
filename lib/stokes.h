@@ -28,11 +28,12 @@ const int RIGID = 0;
 const int FLUID = 1;
 
 class stokes: public geom {
+friend class surface;
 private:
 	// indicator for type of boundary
 	int     type ;
-		/*     = RIGID  (rigid boundary)
-		 *     = FLUID  (fluid-fluid interface) */
+	/*       = RIGID  (rigid boundary)
+	 *       = FLUID  (fluid-fluid interface) */
 
 	/* local and global number of basis nodes 
 	 * for density function interpolation */
@@ -174,7 +175,7 @@ public:
 			fr[iglob] = trctr[iglob];
 		}
 	}
-	
+
 	// get viscosity ratio
 	double getVisc(){
 		double lamb;

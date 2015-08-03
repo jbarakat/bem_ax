@@ -29,6 +29,7 @@
 
 class geom {
 friend class stokes;
+friend class surface;
 private:
 	// number of nodes and elemennts
 	int nnode, nelem;

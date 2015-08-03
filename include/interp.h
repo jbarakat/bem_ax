@@ -34,8 +34,11 @@ void spline(const int, double*, double*,
 //            double, double&);
 void spline(const int, double*, double*, double, double,
             double*, double*, double*);
-void lagrange(const int, double*, double, double*);
+
+void lagrange(const int, double*  , double , double*         );
+void lagrange(const int, double*  , double , double*, double*);
 void lagrange(const int, const int, double*, double*, double*);
-void lagrange(const int, double*, double*, double, double&);
+void lagrange(const int, const int, double*, double*, double*, double*);
+void lagrange(const int, double*  , double*, double , double&);
 
 #endif

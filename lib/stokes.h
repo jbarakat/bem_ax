@@ -167,7 +167,7 @@ public:
 		int iglob;
 
 		if (fx == NULL || fr == NULL){
-			printf("Error: no memory allocated for fx, fr\n");
+			printf("Error: no memory allocated for fx, fr.\n");
 		}
 
 		for (iglob = 0; iglob < nglob; iglob++){

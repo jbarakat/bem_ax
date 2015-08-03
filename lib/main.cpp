@@ -12,6 +12,7 @@
 #include "grnfcn.h"
 #include "interp.h"
 #include "quad.h"
+#include "surface.h"
 #include "stokes.h"
 #include "geom.h"
 #include <math.h>
@@ -38,7 +39,7 @@ void testGeom();
 void testInterp();
 
 int main(){
-	testSingleLayer();
+//	testSingleLayer();
 //	testQuadrature();
 //	testLagrange();
 //	testGeom();
@@ -143,24 +144,29 @@ void testQuadrature(){
 
 void testLagrange(){
 	int i, j, k;
-	int N = 6;
-	int M = 2;
+	int N = 10; // order of Lagrange polynomial
+	int M = 10; // number of points to interpolate to
 	double lamb = 1;
 	double *x, *r, *thet;
 	double *xi;
+	double *theti;
 	double a, b;
 	double *L, *L1;
+	double *dLdx, *dL1dx;
 
 	// allocate memory
 	x     = (double*) malloc((N+1)   * sizeof(double));
 	xi    = (double*) malloc(      M * sizeof(double));
 	r     = (double*) malloc((N+1)   * sizeof(double));
 	thet  = (double*) malloc((N+1)   * sizeof(double));
+	theti = (double*) malloc((N+1)   * sizeof(double));
 	L     = (double*) malloc((N+1)*M * sizeof(double));
 	L1    = (double*) malloc((N+1)   * sizeof(double));
+	dLdx  = (double*) malloc((N+1)*M * sizeof(double));
+	dL1dx = (double*) malloc((N+1)   * sizeof(double));
 
 	// define coordinates on an ellipse
-	a = 10.;
+	a = 1.;
 	b = 1.;
 	printf("x = \n");
 	for (i = 0; i < N+1; i++){
@@ -171,15 +177,42 @@ void testLagrange(){
 	}
 	printf("\n");
 
-	printf("xi = \n");
+	printf("theti = \n");
 	for (i = 0; i < M; i++){
-		xi[i] = -10. + i*20/(M-1);
+		xi   [i] = x   [0] + i*(x   [N] - x   [0])/(M-1);
+		theti[i] = thet[0] + i*(thet[N] - thet[0])/(M-1);
 	//	xi[i] *= 0.9;
-		printf("%.4f\n", xi[i]);
+	//	printf("%.4f\n", xi[i]);
+		printf("%.4f\n", theti[i]);
 	}
 	printf("\n");
 
-	lagrange(N, M, x, xi, L);
+//	lagrange(N, M, x, xi, L);
+//	
+//	printf("L = \n");
+//	for (i = 0; i < N+1; i++){		// rows = polynomial
+//		for (j = 0; j < M; j++){		// columns = grid point
+//			if (L[i*M+j] >= 0)
+//				printf(" ");
+//			printf("%.4f ", L[i*M + j]);
+//
+//	//		if (L[i*M+j] < 10)
+//	//			printf(" ");
+//	//		printf("%d ",i*M + j);
+//		}
+//		printf("\n");
+//	}
+//	
+//	lagrange(N, x, xi[1], L1);
+//	printf("L = \n");
+//	for (i = 0; i < N+1; i++){		// polynomial
+//		if (L1[i] >= 0)
+//			printf(" ");
+//		printf("%.4f", L1[i]);
+//		printf("\n");
+//	}
+
+	lagrange(N, M, x, xi, L, dLdx);
 	
 	printf("L = \n");
 	for (i = 0; i < N+1; i++){		// rows = polynomial
@@ -187,21 +220,54 @@ void testLagrange(){
 			if (L[i*M+j] >= 0)
 				printf(" ");
 			printf("%.4f ", L[i*M + j]);
-
-	//		if (L[i*M+j] < 10)
-	//			printf(" ");
-	//		printf("%d ",i*M + j);
 		}
 		printf("\n");
 	}
 	
-	lagrange(N, x, xi[1], L1);
-	printf("L = \n");
-	for (i = 0; i < N+1; i++){		// polynomial
-		if (L1[i] >= 0)
-			printf(" ");
-		printf("%.4f", L1[i]);
+	printf("dLdx = \n");
+	for (i = 0; i < N+1; i++){		// rows = polynomial
+		for (j = 0; j < M; j++){		// columns = grid point
+			if (dLdx[i*M+j] >= 0)
+				printf(" ");
+			printf("%.4f ", dLdx[i*M + j]);
+		}
 		printf("\n");
+	}
+	
+	for (k = 0; k < M; k++){
+		lagrange(N, x, xi[k], L1, dL1dx);
+		for (i = 0; i < N+1; i++){		// polynomial
+			printf(" L%d(xi[%d]) = ",i, k);
+			if (L1[i] >= 0)
+				printf(" ");
+			printf("%.4f    ", L1[i]);
+		}
+		printf("\n");
+		
+		for (i = 0; i < N+1; i++){		// polynomial
+			printf("dL%d(xi[%d]) = ", i, k);
+			if (dL1dx[i] >= 0)
+				printf(" ");
+			printf("%.4f    ", dL1dx[i]);
+		}
+		printf("\n");
+	}
+	
+	lagrange(N, M, thet, theti, L, dLdx);
+	
+	double yi, dyi;
+	for (k = 0; k < M; k++){
+		lagrange(N, thet, theti[k], L1, dL1dx);
+		yi  = 0;
+		dyi = 0;
+		for (i = 0; i < N+1; i++){
+			yi  += L1   [i]*r[i];
+			dyi += dL1dx[i]*r[i];
+		}
+		printf("yint = %.4f, yexact = %.4f   ", yi, gsl_sf_sin(theti[k]));
+		printf("dyint = %.4f, dyexact = %.4f", dyi, gsl_sf_cos(theti[k]));
+		printf("\n");
+		
 	}
 }
 

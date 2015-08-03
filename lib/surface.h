@@ -1,8 +1,8 @@
-/* COMPLEX FREE SURFACE
+/* SURFACE MECHANICS
  *  Boundary class that inherits the members of STOKES.H with type = 1
  *  (fluid-fluid interface) and, in addition, prescribes a surface
- *  constitutive model for the in-plane tensions, transverse shear
- *  tensions, bending and twisting moments.
+ *  constitutive model for the in-plane tensions (shear and dilatation),
+ *  transverse shear tensions, and in-plane moments (bending and twisting).
  *
  * REFERENCES
  *  Mollman, John Wiley & Sons (1982)
@@ -112,11 +112,11 @@ public:
   }
 
   // get tension components at all global basis nodes
-  void getTens(double *taus, double *taup, double &q){
+  void getTens(double *taus, double *taup, double *q){
     int iglob;
 
     if (taus == NULL || taup == NULL || q == NULL){
-      printf("Error: no memory allocated for fx, fr\n");
+      printf("Error: no memory allocated for taus, taup, q.\n");
     }
 
     for (iglob = 0; iglob < nglob; iglob++){
@@ -128,10 +128,42 @@ public:
 
   /* Function to calculate the force resultants normal and tangential
    * (in the meridional direction) to a free surface with constitutive
-   * tensions and moments */
+   * tensions and moments. The force resultants are evaluated at the
+	 * basis nodes (collocation points) of the surface. */
   void calcForce(surface Surface,
                  double *fn, double *fs){
-    
+		// declare variables
+		int i, j, k;
+		double *zlocl, *L, *dLdx;
+		double  cf;
+
+		// allocate memory
+		zlocl = (double*) malloc(nlocl * sizeof(double));
+
+		/* calculate Gauss-Lobatto points on the
+		 * interval [-1,1] */
+		// REDUNDANT CALCULATION
+		cf = M_PI/(nlocl-1);
+		for (i = 0; i < nlocl; i++){
+			zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
+		}
+
+		lagrange(nlocl-1, nquad, zlocl, zquad);
+
+		/* NOTE: Calculating the Lagrange polynomials here
+		 * is redundant; that is, they are calculated else-
+		 * where for the same interval. Could improve per-
+		 * formance by eliminating redundancy, but since
+		 * this is a small calculation, we'll just keep it
+		 * here for now */
+
+		for (i = 0; i < nelem; i++){		// loop over boundary elements
+			for (j = 0; j < nlocl; j++){	// loop over local basis nodes
+
+			}
+		}
+
+
     // NEED LAGRANGE INTERPOLANT AAAAAND THEIR DERIVATIVES
 
   }

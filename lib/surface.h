@@ -131,24 +131,75 @@ public:
    * tensions and moments. The force resultants are evaluated at the
 	 * basis nodes (collocation points) of the surface. */
   void calcForce(surface Surface,
-                 double *fn, double *fs){
+                 double *fx, double *fr){
 		// declare variables
-		int i, j, k;
+		int i, j, k, m, n;
+		double *fn, *fs;
+		double *tx, *tr;
+		double *nx, *nr;
+		double *ks, *kp;
+		double  ax,  bx,  cx;
+		double  ar,  br,  cr;
+		double  l0,  l1,  lM,  lD;
 		double *zlocl, *L, *dLdx;
 		double  cf;
 
 		// allocate memory
+		fx    = (double*) calloc(nglob , sizeof(double));
+		fr    = (double*) calloc(nglob , sizeof(double));
+		tx    = (double*) malloc(nglob * sizeof(double));
+		tr    = (double*) malloc(nglob * sizeof(double));
+		nx    = (double*) malloc(nglob * sizeof(double));
+		nr    = (double*) malloc(nglob * sizeof(double));
+		ks    = (double*) malloc(nglob * sizeof(double));
+		kp    = (double*) malloc(nglob * sizeof(double));
 		zlocl = (double*) malloc(nlocl * sizeof(double));
 
 		/* calculate Gauss-Lobatto points on the
 		 * interval [-1,1] */
-		// REDUNDANT CALCULATION
 		cf = M_PI/(nlocl-1);
 		for (i = 0; i < nlocl; i++){
 			zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
 		}
+		// REDUNDANT CALCULATION - MAYBE INCORPORATE INTO STOKES CLASS
+		// AS A MEMBER?? ONCE NLOCL IS KNOWN, IT IS STRAIGHTFORWARD TO
+		// CALCULATE NLOCL
 
-		lagrange(nlocl-1, nquad, zlocl, zquad);
+		/*----------------------------------------------*/
+		/*---------------     setup     ----------------*/
+		/*----------------------------------------------*/
+		
+		/* interpolate to local element nodes and
+		 * calculate tangent, normal, and curvature */
+		for (i = 0; i < nelem; i++){		// loop over boundary elements
+			// get spline coefficients
+			ax = splnax[i];
+			bx = splnbx[i];
+			cx = splncx[i];
+			ar = splnar[i];
+			br = splnbr[i];
+			cr = splncr[i];
+
+			// get polygonal arc length
+			l0 = poly[i  ];
+			l1 = poly[i+1];
+			lM = 0.5*(l1 + l0);
+			lD = 0.5*(l1 - l0);
+			
+			for (j = 0; j < nlocl; j++){	// loop over local basis nodes
+				// global element node
+				n = i*(nlocl - 1) + j;
+				
+				// START BACK UP FROM HERE AND START INTERPOLATING!!!
+						
+				
+			}
+		}
+		
+
+		// WILL NEED TO CALCULATE THE LAGRANGE POLYNOMIALS
+		// FOR THE SPATIAL DERIVATIVE TERMS
+		//lagrange(nlocl-1, nquad, zlocl, zquad);
 
 		/* NOTE: Calculating the Lagrange polynomials here
 		 * is redundant; that is, they are calculated else-
@@ -159,7 +210,18 @@ public:
 
 		for (i = 0; i < nelem; i++){		// loop over boundary elements
 			for (j = 0; j < nlocl; j++){	// loop over local basis nodes
-
+				// global element node
+				n = i*(nlocl - 1) + j;
+				
+				// FOR NOW, JUST FOCUS ON THE DROP,
+				// AND THEN LATER, THE VESICLE
+				if (model == 0){
+					
+		//			fn[n] +=
+					
+					
+				}
+				
 			}
 		}
 

@@ -222,7 +222,7 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 		lM = 0.5*(l1 + l0);
 		lD = 0.5*(l1 - l0);
 
-		for (j = 0; j < nlocl; j++){		// loop over local element nodes,
+		for (j = 0; j < nlocl; j++){				// loop over local element nodes
 			if (j == nlocl-1 && i != nelem-1) // avoid double counting
 				continue;
 

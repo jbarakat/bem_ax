@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "surface.h"
-#include "stokes.h"
 #include "grnfcn.h"
 #include "gauleg.h"
 #include "gaulog.h"
@@ -28,6 +27,7 @@
 #include <gsl/gsl_sf_log.h>
 
 /* PROTOTYPES */
+
 
 /* IMPLEMENTATIONS */
 
@@ -136,8 +136,9 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 	double  logZ ;
 
 	double *dfx , *dfr ;								// traction components
-	double *vx  , *vr  ;											// velocity components
-	double cf;													// coefficient
+	double  vx  ,  vr  ;								// velocity components
+
+	double  cf;													// coefficient
 	
 	/* get number of boundary elements,
 	 * geometric nodes, and basis nodes */
@@ -156,8 +157,6 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 //	v       = (double*) malloc( 2*nglob       * sizeof(double));
 	dfx     = (double*) malloc(   nglob       * sizeof(double));
 	dfr     = (double*) malloc(   nglob       * sizeof(double));
-	vx      = (double*) malloc(   nglob       * sizeof(double));
-	vr      = (double*) malloc(   nglob       * sizeof(double));
   zquad   = (double*) malloc(   nquad       * sizeof(double));
   wquad   = (double*) malloc(   nquad       * sizeof(double));
   zqsng   = (double*) malloc(   nsing       * sizeof(double));
@@ -294,6 +293,7 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
     }   
     printf("\n");
   }
+	printf("\n");
 
 	/*--------------------------*/
 
@@ -608,15 +608,6 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 		} // end of boundary elements
 	} // end of global element nodes
 
-	/*  FOOTNOTE: A[m,n] corresponds to the matrix element 
-	 *  associated with the integral evaluated at the mth
-	 *  global boundary node over the density basis
-	 *  function at the nth global basis node, where
-	 *  n = i*(nlocl-1) + j. */
-
-
-	// FOR DEBUGGING 
-	printf("\n Assembled the matrix of influence coefficients...\n\n");
 
 	
 	/*---------------------------------------------*/
@@ -636,123 +627,23 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 
 	cf = -1./(8.*M_PI);
 
-	for (i = 0; i < nglob; i++){ // loop over global element nodes
+	for (i = 0; i < nglob; i++){		// loop over collocation points
 		// initialize
-		v[2*i  ] = 0.;
-		v[2*i+1] = 0.;
+		vx = 0.;
+		vr = 0.;
 
+		for (j = 0; j < nglob; j++){	// loop over collocation points
+			vx += A[2*nglob*(2*i  ) + (2*j  )]*df[2*j  ];
+			vx += A[2*nglob*(2*i  ) + (2*j+1)]*df[2*j+1];
+			vr += A[2*nglob*(2*i+1) + (2*j  )]*df[2*j  ];
+			vr += A[2*nglob*(2*i+1) + (2*j+1)]*df[2*j+1];
+		}
 
+		// store velocity
+		v[2*i  ] = cf*vx;
+		v[2*i+1] = cf*vr;
 	}
 
-
-
-//	// THE STUFF BELOW WILL BE DELETED... SUPPLANTED BY THE
-//	// ASSEMBLY OF THE MATRIX OF INFLUENCE COEFFICIENTS ABOVE
-//	
-//	/* loop over boundary nodes and evaluate integrals
-//	 * at field points (x,r) */
-//	for (i = 0; i < ngeom; i++){
-//		/* get position and jump in traction
-//		 * at field point */
-//		Stokes.getNode(i, x   , r   );
-//		Stokes.getTrct(i, dfxf, dfrf);
-//
-//		// initialize quadrature
-//		vx = 0.;
-//		vr = 0.;
-//
-//		/* loop over boundary elements and carry out
-//		 * quadrature over source points (x,r) */
-//		for (j = 0; j < nelem; j++){
-//			// get parameters for the boundary element
-//			Stokes.getNode(j,     x0,  r0);
-//			Stokes.getNode(j+1,   x1,  r1);
-//			Stokes.getPoly(j,     l0);
-//			Stokes.getPoly(j+1,   l1);
-//	
-//			Stokes.getSpln(j,    ax ,  bx , cx ,
-//			                     ar ,  br , cr );
-//	
-//			Stokes.getNrml(j,    nx0,  nr0);
-//			Stokes.getNrml(j+1,  nx1,  nr1);
-//
-//			Stokes.getTrct(j,   dfx0, dfr0);
-//			Stokes.getTrct(j+1, dfx1, dfr1);
-//			
-//			// prepare for quadrature
-//			  lM = 0.5*(  l1 +   l0);
-//			  lD = 0.5*(  l1 -   l0);
-//
-//			dfxM = 0.5*(dfx1 + dfx0);
-//			dfxD = 0.5*(dfx1 - dfx0);
-//
-//			dfrM = 0.5*(dfr1 + dfr0);
-//			dfrD = 0.5*(dfr1 - dfr0);
-//			  
-//			 nxM = 0.5*( nx1 +  nx0);
-//			 nxD = 0.5*( nx1 -  nx0);
-//	
-//			 nrM = 0.5*( nr1 +  nr0);
-//			 nrD = 0.5*( nr1 -  nr0);
-//	
-//			// loop over Gauss-Legendre grid points
-//			for (k = 0; k < nquad; k++){
-//				// map quadrature point onto polygonal arc length
-//				l  = lM + lD*zquad[k];
-//				dl = l  - l0;
-//	
-//				// interpolate to source point
-//				xq   = ((  ax*dl +    bx)*dl + cx)*dl + x0;
-//				rq   = ((  ar*dl +    br)*dl + cr)*dl + r0;
-//				dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
-//				drdl = (3.*ar*dl + 2.*br)*dl + cr;
-//				dsdl = sqrt(dxdl*dxdl + drdl*drdl);
-//
-//				// define the metric coefficient for the line integral
-//				h = lD*dsdl;
-//
-//				// get weight for kth node
-//				w = h*wquad[k];
-//
-//
-//
-//				// check for singularity
-//				/* ------- NEED A CHECK FOR i == j --------*/
-//
-//
-//				
-//				// evaluate Green's functions
-//				if (IGF == 0){				/* free-space stokeslet */
-//					gf_axR(x , rf, xq, rq,
-//					       Mxx, Mxr, Mrx, Mrr);
-//				}
-//				else if (IGF == 1){		/* stokeslet bounded externally
-//															 * by a cylindrical tube */
-//					gf_axT(x , rf, xq, rq, rtube,
-//					       Mxx, Mxr, Mrx, Mrr);
-//				}
-//
-//				
-//
-//
-//
-//
-//
-//
-//				
-//				
-//			} // end of Gauss-Legendre grid points
-//			
-//		} // end of boundary elements
-//		
-//		vx *= cf;
-//		vr *= cf;
-//
-//		// set velocity for the boundary node
-//
-//		//-------- NEED SET FUNCTION HERE -----------//
-//
-//	} // end of boundary nodes (evaluation at field points)
 
 	// release memory
 	free(dfx  );
@@ -797,33 +688,33 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 
 
 
-/* Determine native element nodes:
- *  M = 0	- uniform elements
- *  M = 1 - linear basis
- *  M = 2 - quadratic basis
- */
-void be_native(int M, int N, double *XG, double *YG, int n1, int n2){
-	// check value of M
-	if (M != 0 && M != 1 && M != 2){
-		printf("Error: M must equal 0, 1, or 2");
-		return;
-	}
-	
-	// uniform elements
-	if (M == 0){
-		
-	}
-	
-	// linear basis in Lagrange polynomials
-	if (M == 1){
-
-	}
-
-	// quadratic basis in Lagrange polynomials
-	if (M == 2){
-
-	}
-}
+///* Determine native element nodes:
+// *  M = 0	- uniform elements
+// *  M = 1 - linear basis
+// *  M = 2 - quadratic basis
+// */
+//void be_native(int M, int N, double *XG, double *YG, int n1, int n2){
+//	// check value of M
+//	if (M != 0 && M != 1 && M != 2){
+//		printf("Error: M must equal 0, 1, or 2");
+//		return;
+//	}
+//	
+//	// uniform elements
+//	if (M == 0){
+//		
+//	}
+//	
+//	// linear basis in Lagrange polynomials
+//	if (M == 1){
+//
+//	}
+//
+//	// quadratic basis in Lagrange polynomials
+//	if (M == 2){
+//
+//	}
+//}
 
 
 #endif

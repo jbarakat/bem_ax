@@ -135,11 +135,11 @@ public:
   void calcForce(double *fx, double *fr){
 		// declare variables
 		int i, j, k, m, n;
+		double *x , *r ;
 		double *fs, *fn;
 		double *ks, *kp;
 		double *tx, *tr;
 		double *nx, *nr;
-		double   x,   r;
 		double  ax,  bx,  cx;
 		double  ar,  br,  cr;
 		double  x0,  x1;
@@ -154,8 +154,10 @@ public:
 		double  cf;
 
 		// allocate memory
-		fs    = (double*) calloc(nglob , sizeof(double));
-		fn    = (double*) calloc(nglob , sizeof(double));
+		x     = (double*) malloc(nglob * sizeof(double));
+		r     = (double*) malloc(nglob * sizeof(double));
+		fs    = (double*) malloc(nglob * sizeof(double));
+		fn    = (double*) malloc(nglob * sizeof(double));
 		tx    = (double*) malloc(nglob * sizeof(double));
 		tr    = (double*) malloc(nglob * sizeof(double));
 		nx    = (double*) malloc(nglob * sizeof(double));
@@ -207,6 +209,8 @@ public:
 				
 				if (j == 0){							  /* basis node coincides with
 				                             * lower geometric node */
+					x [n] = x0      ; 
+					r [n] = r0      ;
 					ks[n] = curvs[i];
 					kp[n] = curvp[i];
 					tx[n] = tangx[i];
@@ -216,6 +220,8 @@ public:
 				}
 				else if (j == nlocl - 1){		/* basis node coincides with
 				                             * upper geometric node */
+					x [n] = x1        ;
+					r [n] = r1        ;
 					ks[n] = curvs[i+1];
 					kp[n] = curvp[i+1];
 					tx[n] = tangx[i+1];
@@ -232,17 +238,19 @@ public:
 					dl = l  - l0;
 
 					// interpolate to basis node
-					x      = ((  ax*dl +    bx)*dl + cx)*dl + x0;
-					r      = ((  ar*dl +    br)*dl + cr)*dl + r0;
-					dxdl   = (3.*ax*dl + 2.*bx)*dl + cx         ;
-					drdl   = (3.*ar*dl + 2.*br)*dl + cr         ;
-					d2xdl2 =  6.*ax*dl + 2.*bx                  ;
-					d2rdl2 =  6.*ar*dl + 2.*br                  ;
+					x [n]  = ((  ax*dl +    bx)*dl + cx)*dl + x0;
+					r [n]  = ((  ar*dl +    br)*dl + cr)*dl + r0;
+
+					// calculate derivatives
+					dxdl   = (3.*ax*dl + 2.*bx)*dl + cx ;
+					drdl   = (3.*ar*dl + 2.*br)*dl + cr ;
+					d2xdl2 =  6.*ax*dl + 2.*bx          ;
+					d2rdl2 =  6.*ar*dl + 2.*br          ;
 					dsdl   = sqrt(dxdl*dxdl + drdl*drdl);
 
 					// calculate curvatures
 					ks[n]  = -(dxdl*d2rdl2 - d2xdl2*drdl)/pow(dsdl, 3);
-					kp[n]  =   dxdl/(r*dsdl);
+					kp[n]  =   dxdl/(r[n]*dsdl);
 
 					// calculate tangent components
 					tx[n] = dxdl/dsdl;
@@ -276,12 +284,20 @@ public:
 				
 				// FOR NOW, JUST FOCUS ON THE DROP...
 				if (model == 0){
-					
+					// surface tension force
 					fs[n] = 0;
 					fn[n] = -(ks[n]*tenss[n] + kp[n]*tensp[n]);
-
+					
+					// add buoyance force (assume drho = 1, acceleration due to gravity = 1)
+					double rhod = 1.;
+					double rhoa = 0.;
+					double gac  = 1.;
+					fn[n] += (rhod - rhoa)*gac*x[n];
+					
+					// calculate x and r components
 					fx[n] = fs[n]*tx[n] + fn[n]*nx[n];
 					fr[n] = fs[n]*tr[n] + fn[n]*nr[n];
+
 				}
 				
 				// ...AND THEN LATER, THE VESICLE
@@ -291,6 +307,8 @@ public:
 
     // NEED LAGRANGE INTERPOLANT AAAAAND THEIR DERIVATIVES
 
+		free(x    );
+		free(r    );
 		free(fs   );
 		free(fn   );
 		free(tx   );

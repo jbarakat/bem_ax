@@ -1,6 +1,6 @@
 /* STOKES FLOW
  *  Boundary class that inherits the members of GEOM.H and, in addition,
- *  prescribes the material properties (e.g., viscosity) as well as the
+ *  prescribes the fluid properties (e.g., viscosity) as well as the
  *  kinematic (e.g., velocity) and dynamic (e.g., stress) quantities 
  *  associated with the boundary in a Stokes flow.
  *

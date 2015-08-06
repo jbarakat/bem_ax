@@ -24,6 +24,9 @@
  * REQUIRE QUITE A BIT OF ALGEBRA, SO DO THIS LATER
  * see p. 51, 99 in Pozrikidis
  *
+ * NOTE: I have not removed the singularity at r = 0 in the free-space
+ * Green's function w/the stresslet... need to address this at some
+ * point.
  *
  */
 

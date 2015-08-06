@@ -119,6 +119,18 @@ void testSingleLayer(){
 		}
 		printf("\n");
 	}
+	printf("\n");
+	
+	printf("v = \n");
+	for (i = 0; i < ncoll; i++){
+		for (j = 0; j < 2; j++){
+			if (v[2*i+j] >= 0 && v[2*i+j] < 10)
+				printf(" ");
+			printf("%.4f", v[2*i+j]);
+			printf(" ");
+		}
+		printf("\n");
+	}
 }
 
 void testQuadrature(){

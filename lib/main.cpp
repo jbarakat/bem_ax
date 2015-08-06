@@ -13,8 +13,6 @@
 #include "interp.h"
 #include "quad.h"
 #include "surface.h"
-#include "stokes.h"
-#include "geom.h"
 #include <math.h>
 #include <vector>
 #include <gsl/gsl_sf_trig.h>
@@ -39,7 +37,7 @@ void testGeom();
 void testInterp();
 
 int main(){
-//	testSingleLayer();
+	testSingleLayer();
 //	testQuadrature();
 //	testLagrange();
 //	testGeom();
@@ -51,13 +49,23 @@ int main(){
 void testSingleLayer(){
 	int i, j, k;
 	int IGF = 0;
-	int N = 3;
+	int N = 4;
 	int M = 1;
 	int nquad;
 	double lamb = 1;
 	double *x, *r, *thet;
 	double a, b;
-	double *A;
+	double *A, *df, *v;
+
+	// interface parameters
+	double gamm = 1.;
+	double ES = 0.;
+	double ED = 0.;
+	double EB = 0.;
+	double ET = 0.;
+
+	// constitutive model
+	int model = 0;
 
 	// get number of collocation points
 	int ncoll = N*M + 1;
@@ -67,10 +75,12 @@ void testSingleLayer(){
 	scanf("%u", &nquad);
 
 	// allocate memory
-	x     = (double*) malloc((N+1) * sizeof(double));
-	r     = (double*) malloc((N+1) * sizeof(double));
-	thet  = (double*) malloc((N+1) * sizeof(double));
+	x     = (double*) malloc((N+1)         * sizeof(double));
+	r     = (double*) malloc((N+1)         * sizeof(double));
+	thet  = (double*) malloc((N+1)         * sizeof(double));
 	A     = (double*) malloc(4*ncoll*ncoll * sizeof(double));
+	df    = (double*) malloc(2*ncoll       * sizeof(double));
+	v     = (double*) malloc(2*ncoll       * sizeof(double));
 
 	// define coordinates on an ellipse
 	a = 1.;
@@ -82,9 +92,11 @@ void testSingleLayer(){
 		//printf("%.4f %.4f %.4f\n", T[i], X[i], Y[i]);
 	}
 
-	stokes spheroid(0, N, M, lamb, x, r);
+	surface spheroid(model, N, M, lamb, gamm,
+	                 ES, ED, EB, ET,
+									 x, r);
 
-	singleLayer(IGF, nquad, spheroid, A);
+	singleLayer(IGF, nquad, spheroid, A, df, v);
 
 	printf("A = \n");
 	for (i = 0; i < 2*ncoll; i++){
@@ -92,6 +104,18 @@ void testSingleLayer(){
 			if (A[2*ncoll*i + j] >= 0 && A[2*ncoll*i + j] < 10)
 				printf(" ");
 			printf("%.4f ", A[2*ncoll*i + j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	
+	printf("df = \n");
+	for (i = 0; i < ncoll; i++){
+		for (j = 0; j < 2; j++){
+			if (df[2*i+j] >= 0 && df[2*i+j] < 10)
+				printf(" ");
+			printf("%.4f", df[2*i+j]);
+			printf(" ");
 		}
 		printf("\n");
 	}

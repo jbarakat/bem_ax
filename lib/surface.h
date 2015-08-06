@@ -43,13 +43,15 @@ public:
   
   
   /* IMPLEMENTATIONS */
+
+	/*- Constructors -*/
   surface() : stokes() {
   }
 
   surface(int id, int N, int M,
-          double gamm,
+          double lamb, double gamm,
           double ES, double ED, double EB, double ET,
-          double *x, double *r) : stokes(1, N, M, x, r) {
+          double *x, double *r) : stokes(1, N, M, lamb, x, r) {
     // declare variables
     int i, j;
 
@@ -130,23 +132,30 @@ public:
    * (in the meridional direction) to a free surface with constitutive
    * tensions and moments. The force resultants are evaluated at the
 	 * basis nodes (collocation points) of the surface. */
-  void calcForce(surface Surface,
-                 double *fx, double *fr){
+  void calcForce(double *fx, double *fr){
 		// declare variables
 		int i, j, k, m, n;
-		double *fn, *fs;
+		double *fs, *fn;
+		double *ks, *kp;
 		double *tx, *tr;
 		double *nx, *nr;
-		double *ks, *kp;
+		double   x,   r;
 		double  ax,  bx,  cx;
 		double  ar,  br,  cr;
+		double  x0,  x1;
+		double  r0,  r1;
 		double  l0,  l1,  lM,  lD;
+
+		double  dxdl  , drdl  , dsdl;
+		double  d2xdl2, d2rdl2;
+
 		double *zlocl, *L, *dLdx;
+		double  z , l,  dl;
 		double  cf;
 
 		// allocate memory
-		fx    = (double*) calloc(nglob , sizeof(double));
-		fr    = (double*) calloc(nglob , sizeof(double));
+		fs    = (double*) calloc(nglob , sizeof(double));
+		fn    = (double*) calloc(nglob , sizeof(double));
 		tx    = (double*) malloc(nglob * sizeof(double));
 		tr    = (double*) malloc(nglob * sizeof(double));
 		nx    = (double*) malloc(nglob * sizeof(double));
@@ -159,7 +168,7 @@ public:
 		 * interval [-1,1] */
 		cf = M_PI/(nlocl-1);
 		for (i = 0; i < nlocl; i++){
-			zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
+			zlocl[nlocl-i-1] = gsl_sf_cos(cf*i);
 		}
 		// REDUNDANT CALCULATION - MAYBE INCORPORATE INTO STOKES CLASS
 		// AS A MEMBER?? ONCE NLOCL IS KNOWN, IT IS STRAIGHTFORWARD TO
@@ -170,8 +179,14 @@ public:
 		/*----------------------------------------------*/
 		
 		/* interpolate to local element nodes and
-		 * calculate tangent, normal, and curvature */
+		 * calculate curvature, tangent, and normal */
 		for (i = 0; i < nelem; i++){		// loop over boundary elements
+			// get nodal coordinates
+			x0 = nodex[i  ];
+			x1 = nodex[i+1];
+			r0 = noder[i  ];
+			r1 = noder[i+1];
+
 			// get spline coefficients
 			ax = splnax[i];
 			bx = splnbx[i];
@@ -187,12 +202,56 @@ public:
 			lD = 0.5*(l1 - l0);
 			
 			for (j = 0; j < nlocl; j++){	// loop over local basis nodes
-				// global element node
+				// get global index for basis node
 				n = i*(nlocl - 1) + j;
 				
-				// START BACK UP FROM HERE AND START INTERPOLATING!!!
-						
-				
+				if (j == 0){							  /* basis node coincides with
+				                             * lower geometric node */
+					ks[n] = curvs[i];
+					kp[n] = curvp[i];
+					tx[n] = tangx[i];
+					tr[n] = tangr[i];
+					nx[n] = nrmlx[i];
+					nr[n] = nrmlr[i];
+				}
+				else if (j == nlocl - 1){		/* basis node coincides with
+				                             * upper geometric node */
+					ks[n] = curvs[i+1];
+					kp[n] = curvp[i+1];
+					tx[n] = tangx[i+1];
+					tr[n] = tangr[i+1];
+					nx[n] = nrmlx[i+1];
+					nr[n] = nrmlr[i+1];
+
+					/* NOTE: This assignment is redundant for
+					 * intermediate nodes. */
+				}
+				else {
+					// map Gauss-Lobatto point onto polygonal arc length
+					l  = lM + lD*zlocl[j];
+					dl = l  - l0;
+
+					// interpolate to basis node
+					x      = ((  ax*dl +    bx)*dl + cx)*dl + x0;
+					r      = ((  ar*dl +    br)*dl + cr)*dl + r0;
+					dxdl   = (3.*ax*dl + 2.*bx)*dl + cx         ;
+					drdl   = (3.*ar*dl + 2.*br)*dl + cr         ;
+					d2xdl2 =  6.*ax*dl + 2.*bx                  ;
+					d2rdl2 =  6.*ar*dl + 2.*br                  ;
+					dsdl   = sqrt(dxdl*dxdl + drdl*drdl);
+
+					// calculate curvatures
+					ks[n]  = -(dxdl*d2rdl2 - d2xdl2*drdl)/pow(dsdl, 3);
+					kp[n]  =   dxdl/(r*dsdl);
+
+					// calculate tangent components
+					tx[n] = dxdl/dsdl;
+					tr[n] = drdl/dsdl;
+
+					// calculate normal components
+					nx[n] =  tr[n];
+					nr[n] = -tx[n];
+				}
 			}
 		}
 		
@@ -208,26 +267,39 @@ public:
 		 * this is a small calculation, we'll just keep it
 		 * here for now */
 
+
+		
 		for (i = 0; i < nelem; i++){		// loop over boundary elements
 			for (j = 0; j < nlocl; j++){	// loop over local basis nodes
 				// global element node
 				n = i*(nlocl - 1) + j;
 				
-				// FOR NOW, JUST FOCUS ON THE DROP,
-				// AND THEN LATER, THE VESICLE
+				// FOR NOW, JUST FOCUS ON THE DROP...
 				if (model == 0){
 					
-		//			fn[n] +=
-					
-					
+					fs[n] = 0;
+					fn[n] = -(ks[n]*tenss[n] + kp[n]*tensp[n]);
+
+					fx[n] = fs[n]*tx[n] + fn[n]*nx[n];
+					fr[n] = fs[n]*tr[n] + fn[n]*nr[n];
 				}
 				
+				// ...AND THEN LATER, THE VESICLE
 			}
 		}
 
 
     // NEED LAGRANGE INTERPOLANT AAAAAND THEIR DERIVATIVES
 
+		free(fs   );
+		free(fn   );
+		free(tx   );
+		free(tr   );
+		free(nx   );
+		free(nr   );
+		free(ks   );
+		free(kp   );
+		free(zlocl);
   }
 
 };

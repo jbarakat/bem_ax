@@ -19,6 +19,7 @@
 /* HEADER FILES */
 #include <stdlib.h>
 #include <stdio.h>
+#include "surface.h"
 #include "stokes.h"
 #include "grnfcn.h"
 #include "gauleg.h"
@@ -36,7 +37,7 @@
  *  IGF = 1  Green's function bounded externally by a
  *            cylindrical tube
  */
-void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
+void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df, double *v){
 
 	/* NOTE: A is a 2*nglob x 2*nglob matrix */
 	
@@ -96,18 +97,15 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 	double  xq  ,  rq  ;								// source point coordinates
 	double  dx  ,  dr  ;
 	double  dxdl,  drdl, dsdl;
-	double  dfx ,  dfr ;
 
 	double   x0,   r0;
 	double   l0,   s0;
-	double dfx0, dfr0;
 	double  ks0,  kp0;
 	double  tx0,  tr0;
 	double  nx0,  nr0;
 	
 	double   x1,   r1;
 	double   l1,   s1;
-	double dfx1, dfr1;
 	double  ks1,  kp1;
 	double  tx1,  tr1;
 	double  nx1,  nr1;
@@ -117,8 +115,6 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 	double dfrM, dfrD;
 	double  nxM,  nxD;
 	double  nrM,  nrD;
-
-	double *df, *v;									// linear system: A*df = v
 
 	double Axx , Axr , Arx , Arr ;		 	// block components of A
 	double Mxx , Mxr , Mrx , Mrr ;			// total Green's function
@@ -139,7 +135,8 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 	double  lsing;											// singular point on the polygonal interval
 	double  logZ ;
 
-	double vx, vr;											// velocity components
+	double *dfx , *dfr ;								// traction components
+	double *vx  , *vr  ;											// velocity components
 	double cf;													// coefficient
 	
 	/* get number of boundary elements,
@@ -155,8 +152,12 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 
 	// allocate memory
 	//A       = (double*) calloc( 4*nglob*nglob , sizeof(double));
-	df      = (double*) malloc( 2*nglob       * sizeof(double));
-	v       = (double*) malloc( 2*nglob       * sizeof(double));
+//	df      = (double*) malloc( 2*nglob       * sizeof(double));
+//	v       = (double*) malloc( 2*nglob       * sizeof(double));
+	dfx     = (double*) malloc(   nglob       * sizeof(double));
+	dfr     = (double*) malloc(   nglob       * sizeof(double));
+	vx      = (double*) malloc(   nglob       * sizeof(double));
+	vr      = (double*) malloc(   nglob       * sizeof(double));
   zquad   = (double*) malloc(   nquad       * sizeof(double));
   wquad   = (double*) malloc(   nquad       * sizeof(double));
   zqsng   = (double*) malloc(   nsing       * sizeof(double));
@@ -614,18 +615,34 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 	 *  n = i*(nlocl-1) + j. */
 
 
+	// FOR DEBUGGING 
+	printf("\n Assembled the matrix of influence coefficients...\n\n");
 
-	printf("\n got to the finish line!\n\n");
+	
+	/*---------------------------------------------*/
+	/*------- CALCULATE SINGLE LAYER DENSITY ------*/
+	/*---------------------------------------------*/
 
+	Stokes.calcForce(dfx, dfr);
+	for (i = 0; i < nglob; i++){ // loop over global element nodes
+		df[2*i  ] = dfx[i];
+		df[2*i+1] = dfr[i];
+	}
+	
 
-
-
-
-	/*--------------------------------------------*/
-	/*- single layer potential over the boundary -*/
-	/*--------------------------------------------*/
+	/*---------------------------------------------*/
+	/*------ CALCULATE SINGLE LAYER POTENTIAL -----*/
+	/*---------------------------------------------*/
 
 	cf = -1./(8.*M_PI);
+
+	for (i = 0; i < nglob; i++){ // loop over global element nodes
+		// initialize
+		v[2*i  ] = 0.;
+		v[2*i+1] = 0.;
+
+
+	}
 
 
 
@@ -738,16 +755,26 @@ void singleLayer(const int IGF, int nquad, stokes Stokes, double* A){
 //	} // end of boundary nodes (evaluation at field points)
 
 	// release memory
-	free(df);   
-	free(v); 
-	free(L);  
-	free(zlocl);
-	free(zquad);
-	free(wquad);
-	free(xg);
-	free(rg); 
-	free(xc); 
-	free(rc); 
+	free(dfx  );
+	free(dfr  );
+  free(zquad);
+  free(wquad);
+  free(zqsng);
+  free(wqsng);
+	free(L    );
+	free(L1   );
+	free(L2   );
+	free(L3   );
+	free(L4   );
+	free(z1   );
+	free(z2   );
+	free(z3   );
+	free(z4   );
+  free(zlocl);
+  free(xg   );
+  free(rg   );
+  free(xc   );
+  free(rc   );
 }
 
 

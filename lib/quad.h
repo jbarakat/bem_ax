@@ -307,6 +307,7 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 	/*- ASSEMBLE MATRIX OF INFLUENCE COEFFICIENTS -*/
 	/*---------------------------------------------*/
 
+
 	for (m = 0; m < nglob; m++){				/* ROWS: loop over global element
 																			 * nodes (collocation points) */
 		// get field point

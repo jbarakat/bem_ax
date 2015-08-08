@@ -321,7 +321,7 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 			Stokes.getNode(i+1,  x1, 	 r1);
 			Stokes.getPoly(i  ,  l0);
 			Stokes.getPoly(i+1,  l1);
-	
+			
 			Stokes.getSpln(i  ,  ax ,  bx , cx ,
 			                     ar ,  br , cr );
 			
@@ -416,12 +416,12 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 				for (k = 0; k < nquad; k++){	// loop over quadrature points
 					// get Lagrange interpolating polynomial
 					Lq = L[nquad*j + k];
-					
+
 					// map quadrature point onto polygonal arc length
 					z  = zquad[k];
 					l  = lM + lD*z;
 					dl = l  - l0;
-		
+				
 					// interpolate to source point
 					xq   = ((  ax*dl +    bx)*dl + cx)*dl + x0;
 					rq   = ((  ar*dl +    br)*dl + cr)*dl + r0;
@@ -468,6 +468,24 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 					Mrx = MRrx + MCrx;
 					Mrr = MRrr + MCrr;
 					
+					printf("n = ");
+					printf("%d  ", n);
+					printf("l = ");
+					printf("%.4f  ", l);
+					printf("l0 = ");
+					printf("%.4f  ", l0);
+					printf("xq = ");
+					if (xq > 0)
+						printf(" ");
+					printf("%.4f  ", xq);
+					printf("rq = ");
+					printf("%.4f  ", rq);
+					printf("Mxx = ");
+					printf("%.4f  ", Mxx);
+					printf("Mxr = ");
+					printf("%.4f  ", Mxr);
+					printf("\n");
+		
 					// increment the integrals
 					Axx = w*Mxx*Lq;
 					Axr = w*Mxr*Lq;

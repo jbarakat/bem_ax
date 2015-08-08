@@ -49,7 +49,7 @@ int main(){
 void testSingleLayer(){
 	int i, j, k;
 	int IGF = 0;
-	int N = 4;
+	int N = 2;
 	int M = 1;
 	int nquad;
 	double lamb = 1;
@@ -86,7 +86,7 @@ void testSingleLayer(){
 	a = 1.;
 	b = 1.;
 	for (i = 0; i < N+1; i++){
-		thet[i] = i*M_PI/N;
+		thet[i] = (N-i)*M_PI/N;
 		x[i] = a*gsl_sf_cos(thet[i]);
 		r[i] = b*gsl_sf_sin(thet[i]);
 		//printf("%.4f %.4f %.4f\n", T[i], X[i], Y[i]);
@@ -129,6 +129,25 @@ void testSingleLayer(){
 			printf("%.4f", v[2*i+j]);
 			printf(" ");
 		}
+		printf("\n");
+	}
+
+	double *ax, *bx, *cx;
+	double *ar, *br, *cr;
+	ax = (double*) malloc( N    * sizeof(double));
+	bx = (double*) malloc((N+1) * sizeof(double));
+	cx = (double*) malloc( N    * sizeof(double));
+	ar = (double*) malloc( N    * sizeof(double));
+	br = (double*) malloc((N+1) * sizeof(double));
+	cr = (double*) malloc( N    * sizeof(double));
+
+	spline(N, x, r, 0, 0, 1, -1, ax, bx, cx, ar, br, cr);
+	printf("a      b      c");
+	printf("\n");
+	for (i = 0; i < N+1; i++){
+		printf("%.4f ", ar[i]);
+		printf("%.4f ", br[i]);
+		printf("%.4f ", cr[i]);
 		printf("\n");
 	}
 }

@@ -37,7 +37,7 @@ int main(){
 //	testBesselNegativeOrder();
 //	testBesselComplexNegativeOrder();
 //	testEllint();
-//	testGauleg();
+	testGauleg();
 
 	return(0);
 }

@@ -13,6 +13,7 @@
 #include "interp.h"
 #include "quad.h"
 #include "surface.h"
+#include "solver.h"
 #include <math.h>
 #include <vector>
 #include <gsl/gsl_sf_trig.h>
@@ -55,7 +56,7 @@ void testSingleLayer(){
 	double lamb = 1;
 	double *x, *r, *thet;
 	double a, b;
-	double *A, *df, *v;
+	double *v;
 
 	// interface parameters
 	double gamm = 1;
@@ -78,8 +79,6 @@ void testSingleLayer(){
 	x     = (double*) malloc((N+1)         * sizeof(double));
 	r     = (double*) malloc((N+1)         * sizeof(double));
 	thet  = (double*) malloc((N+1)         * sizeof(double));
-	A     = (double*) malloc(4*ncoll*ncoll * sizeof(double));
-	df    = (double*) malloc(2*ncoll       * sizeof(double));
 	v     = (double*) malloc(2*ncoll       * sizeof(double));
 
 	// define coordinates on an ellipse
@@ -96,60 +95,31 @@ void testSingleLayer(){
 	                 ES, ED, EB, ET,
 									 x, r);
 
-	singleLayer(IGF, nquad, spheroid, A, df, v);
+	singleLayer(IGF, nquad, spheroid, v);
 
-	printf("A = \n");
-	for (i = 0; i < 2*ncoll; i++){
-		for (j = 0; j < 2*ncoll; j++){
-			if (A[2*ncoll*i + j] >= 0 && A[2*ncoll*i + j] < 10)
-				printf(" ");
-			printf("%.4f ", A[2*ncoll*i + j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-	
-	printf("df = \n");
-	for (i = 0; i < ncoll; i++){
-		for (j = 0; j < 2; j++){
-			if (df[2*i+j] >= 0 && df[2*i+j] < 10)
-				printf(" ");
-			printf("%.4f", df[2*i+j]);
-			printf(" ");
-		}
-		printf("\n");
-	}
-	printf("\n");
-	
-	printf("v = \n");
-	for (i = 0; i < ncoll; i++){
-		for (j = 0; j < 2; j++){
-			if (v[2*i+j] >= 0 && v[2*i+j] < 10)
-				printf(" ");
-			printf("%.4f", v[2*i+j]);
-			printf(" ");
-		}
-		printf("\n");
-	}
+//	double *ax, *bx, *cx;
+//	double *ar, *br, *cr;
+//	ax = (double*) malloc( N    * sizeof(double));
+//	bx = (double*) malloc((N+1) * sizeof(double));
+//	cx = (double*) malloc( N    * sizeof(double));
+//	ar = (double*) malloc( N    * sizeof(double));
+//	br = (double*) malloc((N+1) * sizeof(double));
+//	cr = (double*) malloc( N    * sizeof(double));
+//
+//	spline(N, x, r, 0, 0, 1, -1, ax, bx, cx, ar, br, cr);
+//	printf("a      b      c");
+//	printf("\n");
+//	for (i = 0; i < N+1; i++){
+//		printf("%.4f ", ar[i]);
+//		printf("%.4f ", br[i]);
+//		printf("%.4f ", cr[i]);
+//		printf("\n");
+//	}
 
-	double *ax, *bx, *cx;
-	double *ar, *br, *cr;
-	ax = (double*) malloc( N    * sizeof(double));
-	bx = (double*) malloc((N+1) * sizeof(double));
-	cx = (double*) malloc( N    * sizeof(double));
-	ar = (double*) malloc( N    * sizeof(double));
-	br = (double*) malloc((N+1) * sizeof(double));
-	cr = (double*) malloc( N    * sizeof(double));
-
-	spline(N, x, r, 0, 0, 1, -1, ax, bx, cx, ar, br, cr);
-	printf("a      b      c");
-	printf("\n");
-	for (i = 0; i < N+1; i++){
-		printf("%.4f ", ar[i]);
-		printf("%.4f ", br[i]);
-		printf("%.4f ", cr[i]);
-		printf("\n");
-	}
+	free(x);
+	free(r);
+	free(thet);
+	free(v);
 }
 
 void testQuadrature(){
@@ -402,7 +372,7 @@ void testGeom(){
 //	spheroid.getCurv(ks, kp);
 //	spheroid.getTang(tx, tr);
 //	spheroid.getNrml(nx, nr);
-	spheroid.getAll(N, x, r, ax, bx, cx, ar, br, cr, l, s, A, V, ks, kp, tx, tr, nx, nr);
+	spheroid.getGeomParams(N, x, r, ax, bx, cx, ar, br, cr, l, s, A, V, ks, kp, tx, tr, nx, nr);
 
 	relerrA = (A-A0)/A0*100;
 	relerrV = (V-V0)/V0*100;

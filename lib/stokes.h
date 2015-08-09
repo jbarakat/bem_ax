@@ -111,9 +111,52 @@ public:
 
 	// Destructor
 
-	/*- Set functions ---*/
+	/*- SET FUNCTIONS ---*/
+	
+	/* set velocity of the (ielem)th local basis node
+	 * of the (ilocl)th boundary element */
+	void setVel(int ielem, int ilocl, double vx, double vr){
+		if ((ielem + 1)*ilocl >= nglob){
+			printf("Error: index out of bounds in vx, vr.\n");
+			return;
+		}
 
-	/*- Get functions ---*/
+		int iglob;
+		
+		// get index of the global basis node
+		iglob = ielem*(nlocl - 1) + ilocl;
+
+		velx[iglob] = vx;
+		velr[iglob] = vr;
+	}
+
+	// set velocity at the (iglob)th global basis node
+	void setVel(int iglob, double vx, double vr){
+		if (iglob >= nglob){
+			printf("Error: index out of bounds in vx, vr.\n");
+			return;
+		}
+		
+		velx[iglob] = vx;
+		velr[iglob] = vr;
+	}
+
+	// set velocity at all global basis nodes
+	void setVel(double *vx, double *vr){
+		int iglob;
+
+		if (vx == NULL || vr == NULL){
+			printf("Error: no memory allocated for vx, vr.\n");
+		}
+
+		for (iglob = 0; iglob < nglob; iglob++){
+			 velx[iglob] = vx[iglob];
+			 velr[iglob] = vr[iglob];
+		}
+	}
+
+	/*- GET FUNCTIONS ---*/
+
 	// get local number of basis nodes
 	int getNLocl(){
 		int n = nlocl;
@@ -133,12 +176,54 @@ public:
 	void getNGlob(int n){
 		n = nglob;
 	}
+	
+	/* get velocity of the (ielem)th local basis node
+	 * of the (ilocl)th boundary element */
+	void getVel(int ielem, int ilocl, double &vx, double &vr){
+		if ((ielem + 1)*ilocl >= nglob){
+			printf("Error: index out of bounds in vx, vr.\n");
+			return;
+		}
+
+		int iglob;
+		
+		// get index of the global basis node
+		iglob = ielem*(nlocl - 1) + ilocl;
+
+		vx = velx[iglob];
+		vr = velr[iglob];
+	}
+
+	// get velocity at the (iglob)th global basis node
+	void getVel(int iglob, double &vx, double &vr){
+		if (iglob >= nglob){
+			printf("Error: index out of bounds in vx, vr.\n");
+			return;
+		}
+		
+		vx = velx[iglob];
+		vr = velr[iglob];
+	}
+
+	// get velocity at all global basis nodes
+	void getVel(double *vx, double *vr){
+		int iglob;
+
+		if (vx == NULL || vr == NULL){
+			printf("Error: no memory allocated for vx, vr.\n");
+		}
+
+		for (iglob = 0; iglob < nglob; iglob++){
+			vx[iglob] = velx[iglob];
+			vr[iglob] = velr[iglob];
+		}
+	}
 
 	/* get traction of the (ielem)th local basis node
 	 * of the (ilocl)th boundary element */
 	void getTrct(int ielem, int ilocl, double &fx, double &fr){
 		if ((ielem + 1)*ilocl >= nglob){
-			printf("Error: index out of bounds.\n");
+			printf("Error: index out of bounds in fx, fr.\n");
 			return;
 		}
 
@@ -154,7 +239,7 @@ public:
 	// get traction at the (iglob)th global basis node
 	void getTrct(int iglob, double &fx, double &fr){
 		if (iglob >= nglob){
-			printf("Error: index out of bounds.\n");
+			printf("Error: index out of bounds in fx, fr.\n");
 			return;
 		}
 		

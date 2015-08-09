@@ -97,14 +97,15 @@ public:
 
   }
   
-  /*- Set functions ---*/
+  /*- SET FUNCTIONS ---*/
 
-  /*- Get functions ---*/
+
+  /*- GET FUNCTIONS ---*/
   
   // get tension components at the (iglob)th global basis node
   void getTens(int iglob, double &taus, double &taup, double &q){
     if (iglob >= nglob){
-      printf("Error: index out of bounds.\n");
+      printf("Error: index out of bounds in taus, taup, q.\n");
       return;
     }
 

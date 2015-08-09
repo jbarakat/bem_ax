@@ -122,18 +122,22 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 	double MCxx, MCxr, MCrx, MCrr;			// complementary Green's function
 	
 	double  Ising;											// singular integral subtracted off
-	double  I1   ,  I2   ,  I3 ,  I4 ;	// four integrals (sums to the singular integral)
-	double *L1   , *L2   , *L3 , *L4 ;	// Lagrange polynomials for additional integrals
-	double *z1   , *z2   , *z3 , *z4 ;	// parameters for additional integrals
-	double  zsp  ,  zsm  ; 							// 1 + zsing and 1 - zsing
+	double  IR0  ,  IR1  ,  IS0,  IS1;	// four integrals (sums to the singular integral)
+	double *LR0  , *LR1  , *LS0, *LS1;	// Lagrange polynomials for additional integrals
+	double *zR0  , *zR1  , *zS0, *zS1;	// parameters for additional integrals
+	double *lR0  , *lR1  , *lS0, *lS1;	// parameters for additional integrals
+//	double  zsp  ,  zsm  ; 							// 1 + zsing and 1 - zsing
 	double *zqsng, *wqsng; 							// singular quadrature abscissas and weights
-	double  cf1  ,  cf2  ,  cf3,  cf4;	// coefficients of singular integrals
+	double  cR0  ,  cR1  ,  cS0,  cS1;	// coefficients of singular integrals
 
 	int     ising;											// indicator for singular element
 	int     nsing;											// number of quadrature points for singular kernels
 	double  zsing;											// singular point on the [-1,1] interval
 	double  lsing;											// singular point on the polygonal interval
-	double  logZ ;
+	double  lD0  ,  lD1  ;							/* positive deviation of singular point from
+																			 * lower and upper bound */
+	double  logz ;
+	double  logl ;
 
 	double *dfx , *dfr ;								// traction components
 	double  vx  ,  vr  ;								// velocity components
@@ -162,14 +166,18 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
   zqsng   = (double*) malloc(   nsing       * sizeof(double));
   wqsng   = (double*) malloc(   nsing       * sizeof(double));
 	L       = (double*) malloc(   nlocl*nquad * sizeof(double));
-	L1      = (double*) malloc(   nlocl*nquad * sizeof(double));
-	L2      = (double*) malloc(   nlocl*nquad * sizeof(double));
-	L3      = (double*) malloc(   nlocl*nsing * sizeof(double));
-	L4      = (double*) malloc(   nlocl*nsing * sizeof(double));
-	z1      = (double*) malloc(   nquad       * sizeof(double));
-	z2      = (double*) malloc(   nquad       * sizeof(double));
-	z3      = (double*) malloc(   nsing       * sizeof(double));
-	z4      = (double*) malloc(   nsing       * sizeof(double));
+	LR0     = (double*) malloc(   nlocl*nquad * sizeof(double));
+	LR1     = (double*) malloc(   nlocl*nquad * sizeof(double));
+	LS0     = (double*) malloc(   nlocl*nsing * sizeof(double));
+	LS1     = (double*) malloc(   nlocl*nsing * sizeof(double));
+	zR0     = (double*) malloc(   nquad       * sizeof(double));
+	zR1     = (double*) malloc(   nquad       * sizeof(double));
+	zS0     = (double*) malloc(   nsing       * sizeof(double));
+	zS1     = (double*) malloc(   nsing       * sizeof(double));
+	lR0     = (double*) malloc(   nquad       * sizeof(double));
+	lR1     = (double*) malloc(   nquad       * sizeof(double));
+	lS0     = (double*) malloc(   nsing       * sizeof(double));
+	lS1     = (double*) malloc(   nsing       * sizeof(double));
   zlocl   = (double*) malloc(   nlocl       * sizeof(double));
   xg      = (double*) malloc(   ngeom       * sizeof(double));
   rg      = (double*) malloc(   ngeom       * sizeof(double));
@@ -355,43 +363,65 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 				lsing = lM + lD*zsing;
 				
 				/* prepare for singular quadrature
-				 *  integrals 1,2 are regular
-				 *  integrals 3,4 are singular */
-				zsp   = 1 + zsing;
-				zsm   = 1 - zsing;
+				 *  integrals R0,R1 are regular
+				 *  integrals S0,S1 are singular */
+				lD0   = lsing - l0   ;
+				lD1   = l1    - lsing;
 
-				if (fabs(zsp) < 1e-8){
-					cf1 = 0;
-					cf3 = 0;
+		//		zsp   = 1 + zsing;
+		//		zsm   = 1 - zsing;
+
+				if (fabs(lD0) < 1e-8){
+					cR0 = 0;
+					cS0 = 0;
 				}
 				else {
-					cf1 = -  zsp*gsl_sf_log(zsp);
-					cf3 = -2*zsp;
+					cR0 = -  lD0*gsl_sf_log(lD0);
+					cS0 = -2*lD0;
+					
+		//			cR0 = -  zsp*gsl_sf_log(zsp);
+		//			cS0 = -2*zsp;
 				}
 
-				if (fabs(zsm) < 1e-8) {
-					cf2 = 0;
-					cf4 = 0;
+				if (fabs(lD1) < 1e-8) {
+					cR1 = 0;
+					cS1 = 0;
 				}
 				else {
-					cf2 = -  zsm*gsl_sf_log(zsm);
-					cf4 = -2*zsm;
+					cR1 = -  lD1*gsl_sf_log(lD1);
+					cS1 = -2*lD1;
+					
+		//			cR1 = -  zsm*gsl_sf_log(zsm);
+		//			cS1 = -2*zsm;
 				}
 
 				for (k = 0; k < nquad; k++){ // regular quadrature
-					z1[k] = 0.5*(-zsm + zsp*zquad[k]);
-					z2[k] = 0.5*( zsp + zsm*zquad[k]);
+					lR0[k] = lsing - 0.5*lD0*(1 + zquad[k]);
+					lR1[k] = lsing + 0.5*lD1*(1 + zquad[k]);
+
+					zR0[k] = (lR0[k] - lM)/lD;
+					zR1[k] = (lR1[k] - lM)/lD;
+					
+		//			zR0[k] = 0.5*(-zsm + zsp*zquad[k]);
+		//			zR1[k] = 0.5*( zsp + zsm*zquad[k]);
+					
 				}
 
 				for (k = 0; k < nsing; k++){ // singular quadrature
-					z3[k] = zsing - zsp*zqsng[k];
-					z4[k] = zsing + zsm*zqsng[k];
+					lS0[k] = lsing - lD0*zqsng[k];
+					lS1[k] = lsing + lD1*zqsng[k];
+
+					zS0[k] = (lS0[k] - lM)/lD;
+					zS1[k] = (lS1[k] - lM)/lD;
+
+		//			zS0[k] = zsing - zsp*zqsng[k];
+		//			zS1[k] = zsing + zsm*zqsng[k];
 				}
 
-				lagrange(nlocl-1, nquad, zlocl, z1, L1);
-				lagrange(nlocl-1, nquad, zlocl, z2, L2);
-				lagrange(nlocl-1, nsing, zlocl, z3, L3);
-				lagrange(nlocl-1, nsing, zlocl, z4, L4);
+				lagrange(nlocl-1, nquad, zlocl, zR0, LR0);
+				lagrange(nlocl-1, nquad, zlocl, zR1, LR1);
+				lagrange(nlocl-1, nsing, zlocl, zS0, LS0);
+				lagrange(nlocl-1, nsing, zlocl, zS1, LS1);
 			}
 			else
 				ising = 0; // non-singular element
@@ -421,7 +451,7 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 					z  = zquad[k];
 					l  = lM + lD*z;
 					dl = l  - l0;
-				
+
 					// interpolate to source point
 					xq   = ((  ax*dl +    bx)*dl + cx)*dl + x0;
 					rq   = ((  ar*dl +    br)*dl + cr)*dl + r0;
@@ -455,10 +485,11 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 					/* regularize diagonal components of the free-space
 					 * Green's function if near the singular point */
 					if (ising == 1){
-						logZ  = gsl_sf_log(fabs(z - zsing));
+					//	logz  = gsl_sf_log(fabs(z - zsing));
+						logl  = gsl_sf_log(fabs(l - lsing));
 
-						MRxx += 2*logZ;
-						MRrr += 2*logZ;
+						MRxx += 2*logl;
+						MRrr += 2*logl;
 
 					}
 
@@ -468,23 +499,27 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 					Mrx = MRrx + MCrx;
 					Mrr = MRrr + MCrr;
 					
-					printf("n = ");
-					printf("%d  ", n);
-					printf("l = ");
-					printf("%.4f  ", l);
-					printf("l0 = ");
-					printf("%.4f  ", l0);
-					printf("xq = ");
-					if (xq > 0)
-						printf(" ");
-					printf("%.4f  ", xq);
-					printf("rq = ");
-					printf("%.4f  ", rq);
-					printf("Mxx = ");
-					printf("%.4f  ", Mxx);
-					printf("Mxr = ");
-					printf("%.4f  ", Mxr);
-					printf("\n");
+//					printf("n = ");
+//					printf("%d  ", n);
+//			//		printf("l = ");
+//			//		printf("%.4f  ", l);
+//			//		printf("l0 = ");
+//			//		printf("%.4f  ", l0);
+//					printf("xq = ");
+//					if (xq > 0)
+//						printf(" ");
+//					printf("%.4f  ", xq);
+//					printf("rq = ");
+//					printf("%.4f  ", rq);
+//					printf("Mxx = ");
+//					printf("%.4f  ", Mxx);
+//					printf("Mxr = ");
+//					printf("%.4f  ", Mxr);
+//					printf("Mrx = ");
+//					printf("%.4f  ", Mrx);
+//					printf("Mrr = ");
+//					printf("%.4f  ", Mrr);
+//					printf("\n");
 		
 					// increment the integrals
 					Axx = w*Mxx*Lq;
@@ -498,57 +533,61 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 				 * using logarithmic quadrature */
 				if (ising == 1){
 					// prepare for quadrature
-					I1 = 0; // regular integral
-					I2 = 0; // regular integral
-					I3 = 0; // singular integral
-					I4 = 0; // singular integral
+					IR0 = 0; // regular integral
+					IR1 = 0; // regular integral
+					IS0 = 0; // singular integral
+					IS1 = 0; // singular integral
 
 					// evaluate regular quadrature
 					for (k = 0; k < nquad; k++){ // loop over quadrature points
-						/*--------- first integral, I1 ----------*/
-						if (fabs(cf1) > 1e-8){
+						/*--------- first integral, IR0 ----------*/
+						if (fabs(cR0) > 1e-8){
 							// get Lagrange interpolating polynomial
-							Lq = L1[nquad*j + k];
+							Lq = LR0[nquad*j + k];
 							
 							// get metric coefficient
-							z  = z1[k];
-							l  = lM + lD*z;
+							l = lR0[k];
 							dl = l  - l0;
+
+						//	z  = zR0[k];
+						//	l  = lM + lD*z;
 		
 							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
 							drdl = (3.*ar*dl + 2.*br)*dl + cr;
 							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = lD*dsdl;
+							h = dsdl;
 
 							// get weight for kth node
 							w = h*wquad[k];
 
 							// increment integral
-							I1 += w*Lq;
+							IR0 += w*Lq;
 						}
 						
-						/*-------- second integral, I2 ----------*/
-						if (fabs(cf2) > 1e-8){
+						/*-------- second integral, IR1 ----------*/
+						if (fabs(cR1) > 1e-8){
 							// get Lagrange interpolating polynomial
-							Lq = L2[nquad*j + k];
+							Lq = LR1[nquad*j + k];
 
 							// get metric coefficient
-							z  = z2[k];
-							l  = lM + lD*z;
+							l = lR1[k];
 							dl = l  - l0;
+
+					//		z  = zR1[k];
+					//		l  = lM + lD*z;
 		
 							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
 							drdl = (3.*ar*dl + 2.*br)*dl + cr;
 							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = lD*dsdl;
+							h = dsdl;
 
 							// get weight for kth node
 							w = h*wquad[k];
 
 							// increment integral
-							I2 += w*Lq;
+							IR1 += w*Lq;
 						}
 					} // end of regular quadrature points
 
@@ -556,66 +595,70 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 					for (k = 0; k < nsing; k++){ // loop over quadrature points
 						// get singular kernel
 						z    = zqsng[k];
-						logZ = gsl_sf_log(z);
+						logz = gsl_sf_log(z);
 
-						/*--------- third integral, I3 ----------*/
-						if (fabs(cf3) > 1e-8){
+						/*--------- third integral, IS0 ----------*/
+						if (fabs(cS0) > 1e-8){
 							// get Lagrange interpolating polynomial
-							Lq = L3[nsing*j + k];
+							Lq = LS0[nsing*j + k];
 							
 							// get metric coefficient
-							z  = z3[k];
-							l  = lM + lD*z;
+							l = lS0[k];
 							dl = l  - l0;
+
+				//			z  = zS0[k];
+				//			l  = lM + lD*z;
 		
 							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
 							drdl = (3.*ar*dl + 2.*br)*dl + cr;
 							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = lD*dsdl;
+							h = dsdl;
 
 							// get weight for kth node
-							w = h*wquad[k];
+							w = h*wqsng[k];
 
 							// increment integral
-							I3 += w*logZ*Lq;
+							IS0 += w*logz*Lq;
 						}
 						
-						/*-------- second integral, I2 ----------*/
-						if (fabs(cf4) > 1e-8){
+						/*-------- fourth integral, IS1 ----------*/
+						if (fabs(cS1) > 1e-8){
 							// get Lagrange interpolating polynomial
-							Lq = L4[nsing*j + k];
+							Lq = LS1[nsing*j + k];
 
 							// get metric coefficient
-							z  = z4[k];
-							l  = lM + lD*z;
+							l = lS1[k];
 							dl = l  - l0;
+
+				//			z  = zS1[k];
+				//			l  = lM + lD*z;
 		
 							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
 							drdl = (3.*ar*dl + 2.*br)*dl + cr;
 							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = lD*dsdl;
+							h = dsdl;
 
 							// get weight for kth node
-							w = h*wquad[k];
+							w = h*wqsng[k];
 
 							// increment integral
-							I4 += w*logZ*Lq;
+							IS1 += w*logz*Lq;
 						}
 					} // end of singular quadrature points
 					
-					I1 *= cf1;
-					I2 *= cf2;
-					I3 *= cf3;
-					I4 *= cf4;
+					IR0 *= cR0;
+					IR1 *= cR1;
+					IS0 *= cS0;
+					IS1 *= cS1;
 
-					Ising = I1 + I2 + I3 + I4;
+					Ising = IR0 + IR1 + IS0 + IS1;
 
 					Axx += Ising;
 					Arr += Ising;
 
-				} // end of if statement
+				} // end of singular integral
 
 				// add 2x2 block of A
 				A[2*nglob*(2*m)   + (2*n  )] += Axx;
@@ -672,14 +715,18 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
   free(zqsng);
   free(wqsng);
 	free(L    );
-	free(L1   );
-	free(L2   );
-	free(L3   );
-	free(L4   );
-	free(z1   );
-	free(z2   );
-	free(z3   );
-	free(z4   );
+	free(LR0  );
+	free(LR1  );
+	free(LS0  );
+	free(LS1  );
+	free(zR0  );
+	free(zR1  );
+	free(zS0  );
+	free(zS1  );
+	free(lR0  );
+	free(lR1  );
+	free(lS0  );
+	free(lS1  );
   free(zlocl);
   free(xg   );
   free(rg   );

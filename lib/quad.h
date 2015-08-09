@@ -522,10 +522,10 @@ void singleLayer(const int IGF, int nquad, surface Stokes, double *A, double *df
 //					printf("\n");
 		
 					// increment the integrals
-					Axx = w*Mxx*Lq;
-					Axr = w*Mxr*Lq;
-					Arx = w*Mrx*Lq;
-					Arr = w*Mrr*Lq;
+					Axx += w*Mxx*Lq;
+					Axr += w*Mxr*Lq;
+					Arx += w*Mrx*Lq;
+					Arr += w*Mrr*Lq;
 
 				} // end of quadrature points
 

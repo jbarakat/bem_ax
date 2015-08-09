@@ -58,7 +58,7 @@ void testSingleLayer(){
 	double *A, *df, *v;
 
 	// interface parameters
-	double gamm = 0.2;
+	double gamm = 1;
 	double ES = 0.;
 	double ED = 0.;
 	double EB = 0.;

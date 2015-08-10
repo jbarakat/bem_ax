@@ -3,7 +3,7 @@ include ../Makefile.in
 #==============================================================================
 # all object files that must be linked into final executable
 OBJS = 
-OBJS += main.o 
+OBJS += run.o 
 OBJS += gauleg.o gaulog.o
 OBJS += bessel.o ellint.o
 OBJS += grnfcn.o
@@ -11,11 +11,11 @@ OBJS += interp.o
 
 #==============================================================================
 # rule for compiling everything
-all : main
+all : run
 
 #==============================================================================
 # rule for building executable from object files
-main : $(OBJS) $(LIBRARIES)
+run : $(OBJS) $(LIBRARIES)
 	$(LOADER) $(LOADOPTS) $(OBJS) \
 	$(LIBRARIES) -o $@
 	./$@

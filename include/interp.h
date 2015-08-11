@@ -19,8 +19,8 @@
 #define INTERP_H
 
 /* HEADER FILES */
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <math.h>
 #include <lapacke.h>
 #include <gsl/gsl_sf_trig.h>

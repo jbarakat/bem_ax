@@ -22,8 +22,6 @@
 #define GEOM_H
 
 /* HEADER FILES */
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
 #include "interp.h"
 
@@ -32,7 +30,7 @@ friend class stokes;
 friend class surface;
 private:
 	// number of nodes and elemennts
-	int nnode, nelem;
+	int     nnode , nelem  ;
 
 	// nodal coordinates
 	double *nodex , *noder ;
@@ -95,14 +93,14 @@ public:
 		}
 
 		// calculate geometric parameters
-		calcParams(N,      x,      r,
+		calcParams(N     , x     , r     ,
 		           splnax, splnbx, splncx,
 		           splnar, splnbr, splncr,
-		           poly,   arcl,
-							 area,   vlme, 
-							 curvs,  curvp, 
-		           tangx,  tangr,
-							 nrmlx,  nrmlr);
+		           poly  , arcl  ,
+							 area  , vlme  , 
+							 curvs , curvp , 
+		           tangx , tangr ,
+							 nrmlx , nrmlr );
 	}
 
 	// Destructor
@@ -114,20 +112,28 @@ public:
 	// calculate and set all quantities
 	void setGeomParams(int n, double *x, double *r){
 		int i;
+	  
+//		double *ax, *bx, *cx;
+//		double *ar, *br, *cr;
+//		double *l , *s ;
+//		double  A ,  V ;
+//		double *ks, *kp;
+//		double *tx, *tr;
+//		double *nx, *nr;
 		
 		for (i = 0; i < n+1; i++){
 			nodex[i] = x[i];
 			noder[i] = r[i];
 		}
 
-		calcParams(n,      x,      r,
+		calcParams(n     , nodex , noder ,
 		           splnax, splnbx, splncx,
 		           splnar, splnbr, splncr,
-		           poly,   arcl,
-							 area,   vlme, 
-							 curvs,  curvp, 
-		           tangx,  tangr,
-							 nrmlx,  nrmlr);
+		           poly  , arcl  ,
+							 area  , vlme  , 
+							 curvs , curvp , 
+		           tangx , tangr ,
+							 nrmlx , nrmlr );
 	}
 
 	// set number of geometric nodes
@@ -646,7 +652,7 @@ public:
 
 			ks[i]   = -(dxdl*d2rdl2 - d2xdl2*drdl)/pow(dsdl, 3);
 			kp[i]   =  dxdl/(ri*dsdl);
-			
+
 			tx[i]   =  dxdl/dsdl;
 			tr[i]   =  drdl/dsdl;
 			

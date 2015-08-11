@@ -17,8 +17,6 @@
 #define QUAD_H
 
 /* HEADER FILES */
-#include <stdlib.h>
-#include <stdio.h>
 #include "surface.h"
 #include "grnfcn.h"
 #include "gauleg.h"
@@ -266,15 +264,11 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 			}
 		}
 	}
-	
-	
-
 
 
 	/*---------------------------------------------*/
 	/*- ASSEMBLE MATRIX OF INFLUENCE COEFFICIENTS -*/
 	/*---------------------------------------------*/
-
 
 	for (m = 0; m < nglob; m++){				/* ROWS: loop over global element
 																			 * nodes (collocation points) */
@@ -669,79 +663,79 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 
 
 
-	/*------ FOR DEBUGGING -------*/
-
-	printf("\nzlocl = ");
-	for (i = 0; i < nlocl; i++){
-    if (zlocl[i] >= 0)
-      printf(" ");
-		printf("%.4f ", zlocl[i]);
-	}
-	printf("\n");
-
-	printf("\nzquad = ");
-	for (i = 0; i < nquad; i++){
-    if (zquad[i] >= 0)
-      printf(" ");
-		printf("%.4f ", zquad[i]);
-	}
-	printf("\n");
-
-	printf("\nwquad = ");
-	for (i = 0; i < nquad; i++){
-    if (wquad[i] >= 0)
-      printf(" ");
-		printf("%.4f ", wquad[i]);
-	}
-	printf("\n");
-	printf("\n");
-
-	printf("L = \n");
-  for (i = 0; i < nlocl; i++){    	// rows = polynomial
-    for (j = 0; j < nquad; j++){    // columns = grid point
-      if (L[i*nquad+j] >= 0)
-        printf(" ");
-      printf("%.4f ", L[i*nquad + j]);
-    }   
-    printf("\n");
-  }
-	printf("\n");
-
-  printf("A = \n");
-  for (i = 0; i < 2*nglob; i++){
-    for (j = 0; j < 2*nglob; j++){
-      if (A[2*nglob*i + j] >= 0 && A[2*nglob*i + j] < 10) 
-        printf(" ");
-      printf("%.4f ", A[2*nglob*i + j]);
-    }   
-    printf("\n");
-  }
-  printf("\n");
-
-  printf("Df = \n");
-  for (i = 0; i < nglob; i++){
-    for (j = 0; j < 2; j++){
-      if (Df[2*i+j] >= 0 && Df[2*i+j] < 10) 
-        printf(" ");
-      printf("%.4f", Df[2*i+j]);
-      printf(" ");
-    }   
-    printf("\n");
-  }
-  printf("\n");
-
-  printf("v = \n");
-  for (i = 0; i < nglob; i++){
-    for (j = 0; j < 2; j++){
-      if (v[2*i+j] >= 0 && v[2*i+j] < 10) 
-        printf(" ");
-      printf("%.4f", v[2*i+j]);
-      printf(" ");
-    }   
-    printf("\n");
-  }
-
-	/*--------------------------*/
+//	/*------ FOR DEBUGGING -------*/
+//
+//	printf("\nzlocl = ");
+//	for (i = 0; i < nlocl; i++){
+//    if (zlocl[i] >= 0)
+//      printf(" ");
+//		printf("%.4f ", zlocl[i]);
+//	}
+//	printf("\n");
+//
+//	printf("\nzquad = ");
+//	for (i = 0; i < nquad; i++){
+//    if (zquad[i] >= 0)
+//      printf(" ");
+//		printf("%.4f ", zquad[i]);
+//	}
+//	printf("\n");
+//
+//	printf("\nwquad = ");
+//	for (i = 0; i < nquad; i++){
+//    if (wquad[i] >= 0)
+//      printf(" ");
+//		printf("%.4f ", wquad[i]);
+//	}
+//	printf("\n");
+//	printf("\n");
+//
+//	printf("L = \n");
+//  for (i = 0; i < nlocl; i++){    	// rows = polynomial
+//    for (j = 0; j < nquad; j++){    // columns = grid point
+//      if (L[i*nquad+j] >= 0)
+//        printf(" ");
+//      printf("%.4f ", L[i*nquad + j]);
+//    }   
+//    printf("\n");
+//  }
+//	printf("\n");
+//
+//  printf("A = \n");
+//  for (i = 0; i < 2*nglob; i++){
+//    for (j = 0; j < 2*nglob; j++){
+//      if (A[2*nglob*i + j] >= 0 && A[2*nglob*i + j] < 10) 
+//        printf(" ");
+//      printf("%.4f ", A[2*nglob*i + j]);
+//    }   
+//    printf("\n");
+//  }
+//  printf("\n");
+//
+//  printf("Df = \n");
+//  for (i = 0; i < nglob; i++){
+//    for (j = 0; j < 2; j++){
+//      if (Df[2*i+j] >= 0 && Df[2*i+j] < 10) 
+//        printf(" ");
+//      printf("%.4f", Df[2*i+j]);
+//      printf(" ");
+//    }   
+//    printf("\n");
+//  }
+//  printf("\n");
+//
+//  printf("v = \n");
+//  for (i = 0; i < nglob; i++){
+//    for (j = 0; j < 2; j++){
+//      if (v[2*i+j] >= 0 && v[2*i+j] < 10) 
+//        printf(" ");
+//      printf("%.4f", v[2*i+j]);
+//      printf(" ");
+//    }   
+//    printf("\n");
+//  }
+//
+//	/*--------------------------*/
 
 
 

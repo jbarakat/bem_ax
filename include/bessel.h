@@ -30,8 +30,8 @@
 #define BESSEL_H
 
 /* HEADER FILES */
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
+#include <cstdio>
 #include <lapacke.h>
 #include <cblas.h>
 #include <gsl/gsl_sf_bessel.h>
@@ -54,32 +54,32 @@ extern "C" void zbesi_(double*, double*, double*, int*, int*, double*, double*, 
 extern "C" void zbesk_(double*, double*, double*, int*, int*, double*, double*, int*, int*);
 
 /* PROTOTYPES */
-double besselJ(int, double);
-double besselJ(double, double);
+double         besselJ(int, double);
+double         besselJ(double, double);
 double complex besselJ(int, double complex);
 double complex besselJ(double, double complex);
-void besselJArray(int, int, double, double*);
-void besselJArray(int, int, double complex, double complex*);
+void           besselJArray(int, int, double, double*);
+void           besselJArray(int, int, double complex, double complex*);
 
-double besselY(int, double);
-double besselY(double, double);
+double         besselY(int, double);
+double         besselY(double, double);
 double complex besselY(int, double complex);
 double complex besselY(double, double complex);
-void besselYArray(int, int, double, double*);
-void besselYArray(int, int, double complex, double complex*);
+void           besselYArray(int, int, double, double*);
+void           besselYArray(int, int, double complex, double complex*);
 
-double besselI(int, double);
-double besselI(double, double);
+double         besselI(int, double);
+double         besselI(double, double);
 double complex besselI(int, double complex);
 double complex besselI(double, double complex);
-void besselIArray(int, int, double, double*);
-void besselIArray(int, int, double complex, double complex*);
+void           besselIArray(int, int, double, double*);
+void           besselIArray(int, int, double complex, double complex*);
 
-double besselK(int, double);
-double besselK(double, double);
+double         besselK(int, double);
+double         besselK(double, double);
 double complex besselK(int, double complex);
 double complex besselK(double, double complex);
-void besselKArray(int, int, double, double*);
-void besselKArray(int, int, double complex, double complex*);
+void           besselKArray(int, int, double, double*);
+void           besselKArray(int, int, double complex, double complex*);
 
 #endif

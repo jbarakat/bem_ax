@@ -248,7 +248,7 @@ public:
 					d2xdl2 =  6.*ax*dl + 2.*bx          ;
 					d2rdl2 =  6.*ar*dl + 2.*br          ;
 					dsdl   = sqrt(dxdl*dxdl + drdl*drdl);
-
+					
 					// calculate curvatures
 					ks[n]  = -(dxdl*d2rdl2 - d2xdl2*drdl)/pow(dsdl, 3);
 					kp[n]  =   dxdl/(r[n]*dsdl);
@@ -288,7 +288,7 @@ public:
 					// surface tension force
 					fs[n] = 0;
 					fn[n] = -(ks[n]*tenss[n] + kp[n]*tensp[n]);
-					
+
 					// add buoyance force (assume drho = 1, acceleration due to gravity = 1)
 					double rhod = 1.;
 					double rhoa = 0.;

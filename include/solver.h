@@ -24,7 +24,7 @@
 
 /* HEADER FILES */
 #include "quad.h"
-
+#include <vector>
 
 /* PROTOTYPES */
 
@@ -45,12 +45,12 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
 
 	double area, vlme;
 	
-	double * v ;
-	double * vx, * vr, * vn;
-	double *Dfx, *Dfr;
-
-	double * x, * r;
-	double *nx, *nr;
+//	double * v ;
+//	double * vx, * vr, * vn;
+//	double *Dfx, *Dfr;
+//
+//	double * x, * r;
+//	double *nx, *nr;
 
 	int    IGF;
 	int    ISURF;
@@ -62,15 +62,33 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
   nlocl = Surface.getNLocl();
   nglob = Surface.getNGlob();
 
-	// allocate memory
-	v   = (double*) malloc( 2*nglob * sizeof(double));
-	vx  = (double*) calloc(   ngeom , sizeof(double));
-	vr  = (double*) calloc(   ngeom , sizeof(double));
-	vn  = (double*) calloc(   ngeom , sizeof(double));
-	x   = (double*) malloc(   ngeom * sizeof(double));
-	r   = (double*) malloc(   ngeom * sizeof(double));
-	nx  = (double*) malloc(   ngeom * sizeof(double));
-	nr  = (double*) malloc(   ngeom * sizeof(double));
+	// allocate memory (for performance)
+//	v .reserve(2*nglob);
+//	vx.reserve(  ngeom);
+//	vr.reserve(  ngeom);
+//	vn.reserve(  ngeom);
+//	x .reserve(  ngeom);
+//	r .reserve(  ngeom);
+//	nx.reserve(  ngeom);
+//	nr.reserve(  ngeom);
+	
+	// initialize vectors
+	std::vector<double> v  (2*nglob);
+	std::vector<double> vx (  ngeom), vr (ngeom), vn(ngeom);
+	std::vector<double> Dfx(  ngeom), Dfr(ngeom);
+	std::vector<double> x  (  ngeom), r  (ngeom);
+	std::vector<double> nx (  ngeom), nr (ngeom);
+
+
+//	// allocate memory
+//	v   = (double*) malloc( 2*nglob * sizeof(double));
+//	vx  = (double*) calloc(   ngeom , sizeof(double));
+//	vr  = (double*) calloc(   ngeom , sizeof(double));
+//	vn  = (double*) calloc(   ngeom , sizeof(double));
+//	x   = (double*) malloc(   ngeom * sizeof(double));
+//	r   = (double*) malloc(   ngeom * sizeof(double));
+//	nx  = (double*) malloc(   ngeom * sizeof(double));
+//	nr  = (double*) malloc(   ngeom * sizeof(double));
 
 
   /*-----------------------------------------------------*/
@@ -88,9 +106,11 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
 		Surface.setVel(i, 0., 0.);
 	}
 	
-	// get initial node coordinates and normal
-	Surface.getNode(x , r );
-	Surface.getNrml(nx, nr);
+	// get initial geometry
+	Surface.getNode(x .data(), r .data());
+	Surface.getNrml(nx.data(), nr.data());
+	Surface.getArea(area);
+	Surface.getVlme(vlme);
 	
 	
   /*-----------------------------------------------------*/
@@ -98,9 +118,10 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
   /*-----------------------------------------------------*/
 	
 	for (istep = 0; istep < nstep; istep++){
-	
+		printf("%d\n",istep);
+		
 		/*-- Step 1: Solve the boundary integral equation. --*/
-		singleLayer(IGF, nquad, Surface, v);
+		singleLayer(IGF, nquad, Surface, v.data());
 
 		// NOTE: FOR SINGLE LAYER POTENTIAL, THERE IS NO NEED
 		// TO CALCULATE A MATRIX INVERSE
@@ -125,16 +146,33 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
 			// advect geometric nodes using forward Euler scheme
 			x [i] += nx[i]*vn[i]*dt;
 			r [i] += nr[i]*vn[i]*dt;
+
+			// NEED TO PROTECT AGAINST NEGATIVE RADIUS!!!!
+			// MAYBE REDISTRIBUTE POINTS??
 			
+			if (r[i] < 0){
+				for (j = 0; j < nelem; j++){
+					printf("r[%d] = %.4f\n", j, r[j]);
+				}
+			}
+
+
 			// NOTE: SHOULD ALSO USE BACKWARD EULER SCHEME TO CHECK
 			// ERROR.
 
 		}
 	
 		/*-- Step 3: Update surface fields. -----------------*/
-		Surface.setGeomParams(ngeom, x, r);
-		Surface.getNrml(nx, nr);
-	
+		Surface.setGeomParams(nelem, x.data(), r.data());
+		
+		Surface.getNrml(nx.data(), nr.data());
+		Surface.getArea(area);
+		Surface.getVlme(vlme);
+
+		// CHECK VOLUME
+
+
+
 		// NOTE: FOR NOW, DON'T RECALCULATE TENSION
 		// AND MOMENTS, BECAUSE WE'RE USING A DROP.
 		
@@ -142,15 +180,15 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
 		// CONCENTRATION FIELD HERE.
 		
 		
-	// free memory	
-	free(v );
-	free(vx);
-	free(vr);
-	free(vn);
-	free(x );
-	free(r );
-	free(nx);
-	free(nr);
+//	// free memory	
+//	free(v );
+//	free(vx);
+//	free(vr);
+//	free(vn);
+//	free(x );
+//	free(r );
+//	free(nx);
+//	free(nr);
 	}
 }
 

@@ -15,8 +15,8 @@
 #define GAULOG_H
 
 /* HEADER FILES */
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 
 /* PROTOTYPES */
 void gaulog(int n, double * X, double * W);

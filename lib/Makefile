@@ -17,7 +17,7 @@ all : run
 # rule for building executable from object files
 run : $(OBJS) $(LIBRARIES)
 	$(LOADER) $(LOADOPTS) $(OBJS) \
-	$(LIBRARIES) -o $@
+	$(LIBRARIES) -o $@ -lstdc++
 	./$@
 
 #==============================================================================

@@ -19,6 +19,7 @@
 #define INTERP_H
 
 /* HEADER FILES */
+#include <iostream>
 #include <cstdlib>
 #include <cstdio>
 #include <math.h>

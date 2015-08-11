@@ -30,6 +30,7 @@
 #define BESSEL_H
 
 /* HEADER FILES */
+#include <iostream>
 #include <cstdlib>
 #include <cstdio>
 #include <lapacke.h>

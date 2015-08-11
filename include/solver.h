@@ -23,15 +23,22 @@
 #define SOLVER_H
 
 /* HEADER FILES */
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <string>
 #include "quad.h"
 #include <vector>
 
-/* PROTOTYPES */
+using namespace std;
 
+/* PROTOTYPES */
+void writeNode(int, int, double*, double*, string);
 
 /* IMPLEMENTATIONS */
 
-void timeInt(int nstep, int nquad, double dt, surface Surface){
+/* Time integration */
+void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
   /*-----------------------------------------------------*/
   /*----------------------- SETUP -----------------------*/
@@ -73,11 +80,11 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
 //	nr.reserve(  ngeom);
 	
 	// initialize vectors
-	std::vector<double> v  (2*nglob);
-	std::vector<double> vx (  ngeom), vr (ngeom), vn(ngeom);
-	std::vector<double> Dfx(  ngeom), Dfr(ngeom);
-	std::vector<double> x  (  ngeom), r  (ngeom);
-	std::vector<double> nx (  ngeom), nr (ngeom);
+	vector<double> v  (2*nglob);
+	vector<double> vx (  ngeom), vr (ngeom), vn(ngeom);
+	vector<double> Dfx(  ngeom), Dfr(ngeom);
+	vector<double> x  (  ngeom), r  (ngeom);
+	vector<double> nx (  ngeom), nr (ngeom);
 
 
 //	// allocate memory
@@ -170,6 +177,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
 		Surface.getVlme(vlme);
 
 		// CHECK VOLUME
+		writeNode(istep, ngeom, x.data(), r.data(), opath);
 
 
 
@@ -192,6 +200,43 @@ void timeInt(int nstep, int nquad, double dt, surface Surface){
 	}
 }
 
+//void writeNode(int n, double *x, double*r){
+void writeNode(int istep, int nnode, double *x, double *r, string path){
+	// declare variables
+	int i;
+	ostringstream num;
+	ofstream file;
+	string id, fn, line;
+
+	// get timestep
+	num << istep;
+	if (istep < 10)
+		id = "0000" + num.str();
+	else if (istep < 100)
+		id = "000"  + num.str();
+	else if (istep < 1000)
+		id = "00"   + num.str();
+	else if (istep < 10000)
+		id = "0"    + num.str();
+	
+	// define filename
+	fn = path + "nodexr" + id + ".txt";
+	
+	// write to file
+	file.open(fn.c_str());
+	for (i = 0; i < nnode; i++){
+		ostringstream xs, rs;
+		xs << fixed << setprecision(8) << x[i];
+		rs << fixed << setprecision(8) << r[i];
+		line = xs.str() + " " + rs.str();
+		
+		if (x[i] > 0)
+			line = " " + line;
+
+		file << line << endl;
+	}
+	file.close();
+}
 
 
 

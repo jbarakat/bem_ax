@@ -34,7 +34,7 @@ LIBRARIES += $(BESSEL_LIB)
 COMMON_INC = -I $(WORK_DIR)/include
 LAPACKE_INC = -I $(LAPACK_DIR)/lapacke/include
 GSL_INC = -I $(GSL_DIR)/ 
-#BOOST_INC = -I $(BOOST_DIR)/install/include/boost/
+#BOOST_INC = -I $(BOOST_DIR)/
 
 INCLUDES =
 INCLUDES += $(COMMON_INC) $(LAPACKE_INC)

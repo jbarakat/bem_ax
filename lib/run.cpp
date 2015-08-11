@@ -6,10 +6,11 @@
 //#include <cstdlib>
 //#include <cstdio>
 #include <complex.h>
-//#include <boost/math/special_functions>
+//#include <boost/math/special_functions/bernoulli.hpp>
 #include "solver.h"
 #include <math.h>
 #include <vector>
+#include <string>
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_sf_log.h>
 #include <gsl/gsl_complex.h>
@@ -47,6 +48,8 @@ int main(){
 	double          lamb, gamm;
 	double          ES, ED, EB, ET;
 
+	string          opath = "output/";
+
   /*-----------------------------------------------------*/
   /*----------------- INITIAL CONDITION -----------------*/
   /*-----------------------------------------------------*/	
@@ -56,7 +59,7 @@ int main(){
 
 	// choose number of timesteps and size of timestep
 	nstep = 100;
-	dt    = 0.001;
+	dt    = 0.1;
 
 	// choose number of quadrature points
 	nquad = 6;
@@ -105,8 +108,8 @@ int main(){
   /*-----------------------------------------------------*/
   /*------------------- TIME EVOLUTION ------------------*/
   /*-----------------------------------------------------*/
-	
-	timeInt(nstep, nquad, dt, drop);
+
+	timeInt(nstep, nquad, dt, drop, opath);
 	
 	return(0);
 }

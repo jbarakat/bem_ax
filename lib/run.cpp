@@ -58,18 +58,18 @@ int main(){
 	// WILL BE PART OF AN INPUT FILE.
 
 	// choose number of timesteps and size of timestep
-	nstep = 100;
-	dt    = 0.1;
+	nstep = 20;
+	dt    = 0.00001;
 
 	// choose number of quadrature points
 	nquad = 6;
 
 	// get number of boundary elements
-	nelem = 40;
+	nelem = 5;
 	nnode = nelem + 1;
 
 	// get number of native elements
-	nlocl = 3;
+	nlocl = 2;
 
 	// allocate memory (for performance)
 	x.reserve(nnode);

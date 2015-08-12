@@ -54,8 +54,6 @@
  *            cylindrical tube
  */
 void singleLayer(const int IGF, int nquad, surface Surface, double *v){
-
-	/* NOTE: A is a 2*nglob x 2*nglob matrix */
 	
 	if (IGF != 0 && IGF != 1){
 		printf("Error: IGF can only take values of 0 or 1.\n");
@@ -294,9 +292,9 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 			if (m >= i*(nlocl-1) && m <= (i+1)*(nlocl-1)){
 				ising = 1; // singular element
 
-				/* As the (x,r) --> (xq,rq), the diagonal components
-				 * of the free-space Green's function contain a logarithmic
-				 * singularity:
+				/* As (x,r) --> (xq,rq), the diagonal components of the
+				 * free-space Green's function become logarithmically
+				 * singular:
 				 * 
 				 *  Mxx ~ Mrr ~ -2*log{[x - xq)^2 + (r - rq)^2]^(1/2)}
 				 *
@@ -322,31 +320,19 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 				lD0   = lsing - l0   ;
 				lD1   = l1    - lsing;
 
-		//		zsp   = 1 + zsing;
-		//		zsm   = 1 - zsing;
+				cfR0 = 0;
+				cfR1 = 0;
+				cfS0 = 0;
+				cfS1 = 0;
 
-				if (fabs(lD0) < 1e-8){
-					cfR0 = 0;
-					cfS0 = 0;
-				}
-				else {
+				if (j != 0){ 				// singular point NOT on the lower geometric node
 					cfR0 = -  lD0*gsl_sf_log(lD0);
 					cfS0 = -2*lD0;
-					
-		//			cfR0 = -  zsp*gsl_sf_log(zsp);
-		//			cfS0 = -2*zsp;
 				}
 
-				if (fabs(lD1) < 1e-8) {
-					cfR1 = 0;
-					cfS1 = 0;
-				}
-				else {
+				if (j != nlocl-1){	// singular point NOT on the upper geometric node
 					cfR1 = -  lD1*gsl_sf_log(lD1);
 					cfS1 = -2*lD1;
-					
-		//			cfR1 = -  zsm*gsl_sf_log(zsm);
-		//			cfS1 = -2*zsm;
 				}
 
 				for (k = 0; k < nquad; k++){ // regular quadrature
@@ -355,10 +341,6 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 
 					zR0[k] = (lR0[k] - lM)/lD;
 					zR1[k] = (lR1[k] - lM)/lD;
-					
-		//			zR0[k] = 0.5*(-zsm + zsp*zquad[k]);
-		//			zR1[k] = 0.5*( zsp + zsm*zquad[k]);
-					
 				}
 
 				for (k = 0; k < nsing; k++){ // singular quadrature
@@ -367,9 +349,6 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 
 					zS0[k] = (lS0[k] - lM)/lD;
 					zS1[k] = (lS1[k] - lM)/lD;
-
-		//			zS0[k] = zsing - zsp*zqsng[k];
-		//			zS1[k] = zsing + zsm*zqsng[k];
 				}
 
 				lagrange(nlocl-1, nquad, zlocl, zR0, LR0);
@@ -439,9 +418,8 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 					/* regularize diagonal components of the free-space
 					 * Green's function if near the singular point */
 					if (ising == 1){
-					//	logz  = gsl_sf_log(fabs(z - zsing));
 						logl  = gsl_sf_log(fabs(l - lsing));
-
+						
 						MRxx += 2*logl;
 						MRrr += 2*logl;
 
@@ -452,29 +430,7 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 					Mxr = MRxr + MCxr;
 					Mrx = MRrx + MCrx;
 					Mrr = MRrr + MCrr;
-					
-//					printf("n = ");
-//					printf("%d  ", n);
-//			//		printf("l = ");
-//			//		printf("%.4f  ", l);
-//			//		printf("l0 = ");
-//			//		printf("%.4f  ", l0);
-//					printf("xq = ");
-//					if (xq > 0)
-//						printf(" ");
-//					printf("%.4f  ", xq);
-//					printf("rq = ");
-//					printf("%.4f  ", rq);
-//					printf("Mxx = ");
-//					printf("%.4f  ", Mxx);
-//					printf("Mxr = ");
-//					printf("%.4f  ", Mxr);
-//					printf("Mrx = ");
-//					printf("%.4f  ", Mrx);
-//					printf("Mrr = ");
-//					printf("%.4f  ", Mrr);
-//					printf("\n");
-		
+
 					// increment the integrals
 					Axx += w*Mxx*Lq;
 					Axr += w*Mxr*Lq;
@@ -495,54 +451,44 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 					// evaluate regular quadrature
 					for (k = 0; k < nquad; k++){ // loop over quadrature points
 						/*--------- first integral, IR0 ----------*/
-						if (fabs(cfR0) > 1e-8){
-							// get Lagrange interpolating polynomial
-							Lq = LR0[nquad*j + k];
-							
-							// get metric coefficient
-							l = lR0[k];
-							dl = l  - l0;
+						// get Lagrange interpolating polynomial
+						Lq = LR0[nquad*j + k];
+						
+						// get metric coefficient
+						l  = lR0[k];
+						dl = l  - l0;
 
-						//	z  = zR0[k];
-						//	l  = lM + lD*z;
-		
-							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
-							drdl = (3.*ar*dl + 2.*br)*dl + cr;
-							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
+						dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
+						drdl = (3.*ar*dl + 2.*br)*dl + cr;
+						dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = dsdl;
+						h = dsdl;
 
-							// get weight for kth node
-							w = h*wquad[k];
+						// get weight for kth node
+						w = h*wquad[k];
 
-							// increment integral
-							IR0 += w*Lq;
-						}
+						// increment integral
+						IR0 += w*Lq;
 						
 						/*-------- second integral, IR1 ----------*/
-						if (fabs(cfR1) > 1e-8){
-							// get Lagrange interpolating polynomial
-							Lq = LR1[nquad*j + k];
+						// get Lagrange interpolating polynomial
+						Lq = LR1[nquad*j + k];
 
-							// get metric coefficient
-							l = lR1[k];
-							dl = l  - l0;
-
-					//		z  = zR1[k];
-					//		l  = lM + lD*z;
+						// get metric coefficient
+						l  = lR1[k];
+						dl = l  - l0;
 		
-							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
-							drdl = (3.*ar*dl + 2.*br)*dl + cr;
-							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
+						dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
+						drdl = (3.*ar*dl + 2.*br)*dl + cr;
+						dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = dsdl;
+						h = dsdl;
 
-							// get weight for kth node
-							w = h*wquad[k];
+						// get weight for kth node
+						w = h*wquad[k];
 
-							// increment integral
-							IR1 += w*Lq;
-						}
+						// increment integral
+						IR1 += w*Lq;
 					} // end of regular quadrature points
 
 					// evaluate singular quadrature
@@ -552,54 +498,45 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 						logz = gsl_sf_log(z);
 
 						/*--------- third integral, IS0 ----------*/
-						if (fabs(cfS0) > 1e-8){
-							// get Lagrange interpolating polynomial
-							Lq = LS0[nsing*j + k];
-							
-							// get metric coefficient
-							l = lS0[k];
-							dl = l  - l0;
+						// get Lagrange interpolating polynomial
+						Lq = LS0[nsing*j + k];
+						
+						// get metric coefficient
+						l = lS0[k];
+						dl = l  - l0;
 
-				//			z  = zS0[k];
-				//			l  = lM + lD*z;
-		
-							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
-							drdl = (3.*ar*dl + 2.*br)*dl + cr;
-							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
+						dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
+						drdl = (3.*ar*dl + 2.*br)*dl + cr;
+						dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = dsdl;
+						h = dsdl;
 
-							// get weight for kth node
-							w = h*wqsng[k];
+						// get weight for kth node
+						w = h*wqsng[k];
 
-							// increment integral
-							IS0 += w*logz*Lq;
-						}
+						// increment integral
+						IS0 += w*logz*Lq;
+
 						
 						/*-------- fourth integral, IS1 ----------*/
-						if (fabs(cfS1) > 1e-8){
-							// get Lagrange interpolating polynomial
-							Lq = LS1[nsing*j + k];
+						// get Lagrange interpolating polynomial
+						Lq = LS1[nsing*j + k];
 
-							// get metric coefficient
-							l = lS1[k];
-							dl = l  - l0;
-
-				//			z  = zS1[k];
-				//			l  = lM + lD*z;
+						// get metric coefficient
+						l = lS1[k];
+						dl = l  - l0;
 		
-							dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
-							drdl = (3.*ar*dl + 2.*br)*dl + cr;
-							dsdl = sqrt(dxdl*dxdl + drdl*drdl);
+						dxdl = (3.*ax*dl + 2.*bx)*dl + cx;
+						drdl = (3.*ar*dl + 2.*br)*dl + cr;
+						dsdl = sqrt(dxdl*dxdl + drdl*drdl);
 
-							h = dsdl;
+						h = dsdl;
 
-							// get weight for kth node
-							w = h*wqsng[k];
+						// get weight for kth node
+						w = h*wqsng[k];
 
-							// increment integral
-							IS1 += w*logz*Lq;
-						}
+						// increment integral
+						IS1 += w*logz*Lq;
 					} // end of singular quadrature points
 					
 					IR0 *= cfR0;
@@ -615,14 +552,23 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 				} // end of singular integral
 
 				// add 2x2 block of A
+				if(isnan(A[2*nglob*(2*m)   + (2*n  )]) == 1)
+					 printf("\n PROBLEM HERE, index is %d, Axx = %.4f \n", j, A[2*nglob*(2*m) + 2*n]);
+					
 				A[2*nglob*(2*m)   + (2*n  )] += Axx;
 				A[2*nglob*(2*m)   + (2*n+1)] += Axr;
 				A[2*nglob*(2*m+1) + (2*n  )] += Arx;
 				A[2*nglob*(2*m+1) + (2*n+1)] += Arr;
-				
-			} // end of local element nodes
-		} // end of boundary elements
-	} // end of global element nodes
+
+				if(isnan(A[2*nglob*(2*m)   + (2*n  )]) == 1)
+		      // isnan(A[2*nglob*(2*m)   + (2*n+1)]) == 1 ||
+          // isnan(A[2*nglob*(2*m+1) + (2*n  )]) == 1 ||
+          // isnan(A[2*nglob*(2*m+1) + (2*n+1)]) == 1)
+					 printf("\n PROBLEM HERE, index is %d, Axx = %.4f \n", j, A[2*nglob*(2*m) + 2*n]);
+					
+			} // end of local element nodes (index j)
+		} // end of boundary elements (index i)
+	} // end of global element nodes (index m)
 
 
 	
@@ -700,42 +646,42 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 //    printf("\n");
 //  }
 //	printf("\n");
-//
-//  printf("A = \n");
-//  for (i = 0; i < 2*nglob; i++){
-//    for (j = 0; j < 2*nglob; j++){
-//      if (A[2*nglob*i + j] >= 0 && A[2*nglob*i + j] < 10) 
-//        printf(" ");
-//      printf("%.4f ", A[2*nglob*i + j]);
-//    }   
-//    printf("\n");
-//  }
-//  printf("\n");
-//
+
+  printf("A = \n");
+  for (i = 0; i < 2*nglob; i++){
+    for (j = 0; j < 2*nglob; j++){
+      if (A[2*nglob*i + j] >= 0 && A[2*nglob*i + j] < 10) 
+        printf(" ");
+      printf("%.2f ", A[2*nglob*i + j]);
+    }   
+    printf("\n");
+  }
+  printf("\n");
+
 //  printf("Df = \n");
 //  for (i = 0; i < nglob; i++){
 //    for (j = 0; j < 2; j++){
 //      if (Df[2*i+j] >= 0 && Df[2*i+j] < 10) 
 //        printf(" ");
-//      printf("%.4f", Df[2*i+j]);
+//      printf("%.2f", Df[2*i+j]);
 //      printf(" ");
 //    }   
 //    printf("\n");
 //  }
 //  printf("\n");
 //
-//  printf("v = \n");
-//  for (i = 0; i < nglob; i++){
-//    for (j = 0; j < 2; j++){
-//      if (v[2*i+j] >= 0 && v[2*i+j] < 10) 
-//        printf(" ");
-//      printf("%.4f", v[2*i+j]);
-//      printf(" ");
-//    }   
-//    printf("\n");
-//  }
-//
-//	/*--------------------------*/
+  printf("v = \n");
+  for (i = 0; i < nglob; i++){
+    for (j = 0; j < 2; j++){
+      if (v[2*i+j] >= 0 && v[2*i+j] < 10) 
+        printf(" ");
+      printf("%.2f", v[2*i+j]);
+      printf(" ");
+    }   
+    printf("\n");
+  }
+
+	/*--------------------------*/
 
 
 

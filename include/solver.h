@@ -125,7 +125,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
   /*-----------------------------------------------------*/
 	
 	for (istep = 0; istep < nstep; istep++){
-		printf("%d\n",istep);
+		cout << "ts = " << istep << endl;
 		
 		/*-- Step 1: Solve the boundary integral equation. --*/
 		singleLayer(IGF, nquad, Surface, v.data());

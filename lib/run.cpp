@@ -58,14 +58,14 @@ int main(){
 	// WILL BE PART OF AN INPUT FILE.
 
 	// choose number of timesteps and size of timestep
-	nstep = 20;
-	dt    = 0.00001;
+	nstep = 1000;
+	dt    = 0.001;
 
 	// choose number of quadrature points
 	nquad = 6;
 
 	// get number of boundary elements
-	nelem = 5;
+	nelem = 40;
 	nnode = nelem + 1;
 
 	// get number of native elements

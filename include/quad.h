@@ -164,8 +164,9 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	nsing = 6;
 
 	// allocate memory
-	A       = (double*) malloc( 4*nglob*nglob * sizeof(double));
-	Df      = (double*) malloc( 2*nglob       * sizeof(double));
+	A       = (double*) calloc( 4*nglob*nglob , sizeof(double));
+	Df      = (double*) calloc( 2*nglob       , sizeof(double));
+
 	Dfx     = (double*) malloc(   nglob       * sizeof(double));
 	Dfr     = (double*) malloc(   nglob       * sizeof(double));
   zquad   = (double*) malloc(   nquad       * sizeof(double));
@@ -646,18 +647,18 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 //    printf("\n");
 //  }
 //	printf("\n");
-
-  printf("A = \n");
-  for (i = 0; i < 2*nglob; i++){
-    for (j = 0; j < 2*nglob; j++){
-      if (A[2*nglob*i + j] >= 0 && A[2*nglob*i + j] < 10) 
-        printf(" ");
-      printf("%.2f ", A[2*nglob*i + j]);
-    }   
-    printf("\n");
-  }
-  printf("\n");
-
+//
+//  printf("A = \n");
+//  for (i = 0; i < 2*nglob; i++){
+//    for (j = 0; j < 2*nglob; j++){
+//      if (A[2*nglob*i + j] >= 0 && A[2*nglob*i + j] < 10) 
+//        printf(" ");
+//      printf("%.2f ", A[2*nglob*i + j]);
+//    }   
+//    printf("\n");
+//  }
+//  printf("\n");
+//
 //  printf("Df = \n");
 //  for (i = 0; i < nglob; i++){
 //    for (j = 0; j < 2; j++){
@@ -670,18 +671,18 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 //  }
 //  printf("\n");
 //
-  printf("v = \n");
-  for (i = 0; i < nglob; i++){
-    for (j = 0; j < 2; j++){
-      if (v[2*i+j] >= 0 && v[2*i+j] < 10) 
-        printf(" ");
-      printf("%.2f", v[2*i+j]);
-      printf(" ");
-    }   
-    printf("\n");
-  }
-
-	/*--------------------------*/
+//  printf("v = \n");
+//  for (i = 0; i < nglob; i++){
+//    for (j = 0; j < 2; j++){
+//      if (v[2*i+j] >= 0 && v[2*i+j] < 10) 
+//        printf(" ");
+//      printf("%.2f", v[2*i+j]);
+//      printf(" ");
+//    }   
+//    printf("\n");
+//  }
+//
+//	/*--------------------------*/
 
 
 

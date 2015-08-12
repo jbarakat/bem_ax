@@ -132,20 +132,25 @@ public:
   /* Function to calculate the force resultants normal and tangential
    * (in the meridional direction) to a free surface with constitutive
    * tensions and moments. The force resultants are evaluated at the
-	 * basis nodes (collocation points) of the surface. */
-  void calcForce(double *fx, double *fr){
+	 * basis nodes (collocation points) of the surface. 
+	 *
+	 * The function also returns the surface geometric parameters
+	 * evaluated at the collocation points: the principal curvatures,
+	 * tangent vector, and normal vector. */
+  void calcForce(double *fx, double *fr,
+	               double *ks, double *kp,
+	               double *tx, double *tr,
+	               double *nx, double *nr){
 		// declare variables
-		int i, j, k, m, n;
+		int     i ,  j ,  n ;
 		double *x , *r ;
 		double *fs, *fn;
-		double *ks, *kp;
-		double *tx, *tr;
-		double *nx, *nr;
 		double  ax,  bx,  cx;
 		double  ar,  br,  cr;
 		double  x0,  x1;
 		double  r0,  r1;
-		double  l0,  l1,  lM,  lD;
+		double  l0,  l1;
+		double  lM,  lD;
 
 		double  dxdl  , drdl  , dsdl;
 		double  d2xdl2, d2rdl2;
@@ -159,12 +164,6 @@ public:
 		r     = (double*) malloc(nglob * sizeof(double));
 		fs    = (double*) malloc(nglob * sizeof(double));
 		fn    = (double*) malloc(nglob * sizeof(double));
-		tx    = (double*) malloc(nglob * sizeof(double));
-		tr    = (double*) malloc(nglob * sizeof(double));
-		nx    = (double*) malloc(nglob * sizeof(double));
-		nr    = (double*) malloc(nglob * sizeof(double));
-		ks    = (double*) malloc(nglob * sizeof(double));
-		kp    = (double*) malloc(nglob * sizeof(double));
 		zlocl = (double*) malloc(nlocl * sizeof(double));
 
 		/* calculate Gauss-Lobatto points on the
@@ -173,9 +172,12 @@ public:
 		for (i = 0; i < nlocl; i++){
 			zlocl[nlocl-i-1] = gsl_sf_cos(cf*i);
 		}
-		// REDUNDANT CALCULATION - MAYBE INCORPORATE INTO STOKES CLASS
+		// NOTE: THIS IS A REDUNDANT CALCULATION - MAYBE INCORPORATE INTO STOKES CLASS
 		// AS A MEMBER?? ONCE NLOCL IS KNOWN, IT IS STRAIGHTFORWARD TO
-		// CALCULATE NLOCL
+		// CALCULATE ZLOCL ON THE INTERVAL [-1,1]... THE SAME PROBLEM EXISTS IN QUAD.H
+		// WHERE WE NEED TO MAKE USE OF LISTS
+
+
 
 		/*----------------------------------------------*/
 		/*---------------     setup     ----------------*/
@@ -266,7 +268,9 @@ public:
 		
 
 		// WILL NEED TO CALCULATE THE LAGRANGE POLYNOMIALS
-		// FOR THE SPATIAL DERIVATIVE TERMS
+		// AAAAND THEIR DERIVATIVES FOR THE SPATIAL DERIVATIVE TERMS!
+		// (NOT FOR THE DROP, BUT FOR A BOUSSINESQ SURFACE FOR
+		// SURE).
 		//lagrange(nlocl-1, nquad, zlocl, zquad);
 
 		/* NOTE: Calculating the Lagrange polynomials here
@@ -293,7 +297,7 @@ public:
 					double rhod = 1.;
 					double rhoa = 0.;
 					double gac  = 1.;
-					fn[n] += (rhod - rhoa)*gac*x[n];
+					fn[n] -= (rhod - rhoa)*gac*x[n];
 					
 					// calculate x and r components
 					fx[n] = fs[n]*tx[n] + fn[n]*nx[n];
@@ -305,22 +309,40 @@ public:
 			}
 		}
 
-
-    // NEED LAGRANGE INTERPOLANT AAAAAND THEIR DERIVATIVES
-
+		// release memory
 		free(x    );
 		free(r    );
 		free(fs   );
 		free(fn   );
-		free(tx   );
-		free(tr   );
-		free(nx   );
-		free(nr   );
-		free(ks   );
-		free(kp   );
 		free(zlocl);
   }
 
+	/* Same as the previous function, but only returns the force components. */
+  void calcForce(double *fx, double *fr){
+		// declare variables
+		double *ks, *kp;
+		double *tx, *tr;
+		double *nx, *nr;
+		
+		// allocate memory
+		ks = (double*) malloc(nglob * sizeof(double));
+		kp = (double*) malloc(nglob * sizeof(double));
+		tx = (double*) malloc(nglob * sizeof(double));
+		tr = (double*) malloc(nglob * sizeof(double));
+		nx = (double*) malloc(nglob * sizeof(double));
+		nr = (double*) malloc(nglob * sizeof(double));
+
+		// calculate forces
+		calcForce(fx, fr, ks, kp, tx, tr, nx, nr);
+
+		// release memory
+		free(ks);
+		free(kp);
+		free(tx);
+		free(tr);
+		free(nx);
+		free(nr);
+	}
 };
 
 #endif

@@ -52,13 +52,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 	double area, vlme;
 	
-//	double * v ;
-//	double * vx, * vr, * vn;
-//	double *Dfx, *Dfr;
-//
-//	double * x, * r;
-//	double *nx, *nr;
-
 	int    IGF;
 	int    ISURF;
 	
@@ -69,16 +62,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
   nlocl = Surface.getNLocl();
   nglob = Surface.getNGlob();
 
-	// allocate memory (for performance)
-//	v .reserve(2*nglob);
-//	vx.reserve(  ngeom);
-//	vr.reserve(  ngeom);
-//	vn.reserve(  ngeom);
-//	x .reserve(  ngeom);
-//	r .reserve(  ngeom);
-//	nx.reserve(  ngeom);
-//	nr.reserve(  ngeom);
-	
 	// initialize vectors
 	vector<double> v  (2*nglob);
 	vector<double> vx (  ngeom), vr (ngeom), vn(ngeom);
@@ -87,6 +70,13 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	vector<double> nx (  ngeom), nr (ngeom);
 
 
+//	double * v ;
+//	double * vx, * vr, * vn;
+//	double *Dfx, *Dfr;
+//
+//	double * x, * r;
+//	double *nx, *nr;
+//
 //	// allocate memory
 //	v   = (double*) malloc( 2*nglob * sizeof(double));
 //	vx  = (double*) calloc(   ngeom , sizeof(double));
@@ -125,19 +115,20 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
   /*-----------------------------------------------------*/
 	
 	for (istep = 0; istep < nstep; istep++){
-		cout << "ts = " << istep << endl;
+		cout << "ts = " << istep << ", V = " << vlme << endl;
+		
+		// write to file before evolving system
+		writeNode(istep, ngeom, x.data(), r.data(), opath);
 		
 		/*-- Step 1: Solve the boundary integral equation. --*/
 		singleLayer(IGF, nquad, Surface, v.data());
 
 		// NOTE: FOR SINGLE LAYER POTENTIAL, THERE IS NO NEED
 		// TO CALCULATE A MATRIX INVERSE
+		
+		
+		// NOTE: NEED TO CHECK VOLUME
 
-
-		// write to file before evolving system
-		// ADD WRITE FUNCTION
-
-	
 		/*-- Step 2: Update surface velocity and boundary ---*
 		 *---------- shape using the kinematic condition. ---*/
 		
@@ -153,8 +144,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 			// advect geometric nodes using forward Euler scheme
 			x [i] += nx[i]*vn[i]*dt;
 			r [i] += nr[i]*vn[i]*dt;
-
-			// NEED TO PROTECT AGAINST NEGATIVE RADIUS!!!!
+			
+			// NOTE: NEED TO PROTECT AGAINST NEGATIVE RADIUS!!!!
 			// MAYBE REDISTRIBUTE POINTS??
 			
 			if (r[i] < 0){
@@ -176,8 +167,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		Surface.getArea(area);
 		Surface.getVlme(vlme);
 
-		// CHECK VOLUME
-		writeNode(istep, ngeom, x.data(), r.data(), opath);
 
 
 

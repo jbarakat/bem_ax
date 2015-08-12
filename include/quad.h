@@ -93,6 +93,9 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	double lamb;												// viscosity ratio
 	
 	double *xc, *rc;										// collocation points
+	double *ks, *kp;										// principal curvatures
+	double *tx, *tr;										// tangent components
+	double *nx, *nr;										// normal components
 	
 	double  ax,  bx, cx;								// spline coefficients
 	double  ar,  br, cr;
@@ -143,7 +146,7 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	double  lsing;											// singular point on the polygonal interval
 	double  lD0  ,  lD1  ;							/* positive deviation of singular point from
 																			 * lower and upper bound */
-	double  logz ;
+	double  logz ;											// logarithms for singular quadrature
 	double  logl ;
 
 	double *A   , *Df  ;								// single layer operator and density
@@ -167,13 +170,25 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	A       = (double*) calloc( 4*nglob*nglob , sizeof(double));
 	Df      = (double*) calloc( 2*nglob       , sizeof(double));
 
+  xc      = (double*) malloc(   nglob       * sizeof(double));
+  rc      = (double*) malloc(   nglob       * sizeof(double));
 	Dfx     = (double*) malloc(   nglob       * sizeof(double));
 	Dfr     = (double*) malloc(   nglob       * sizeof(double));
+	ks      = (double*) malloc(   nglob       * sizeof(double));
+	ks      = (double*) malloc(   nglob       * sizeof(double));
+	kp      = (double*) malloc(   nglob       * sizeof(double));
+	tx      = (double*) malloc(   nglob       * sizeof(double));
+	tr      = (double*) malloc(   nglob       * sizeof(double));
+	nx      = (double*) malloc(   nglob       * sizeof(double));
+	nr      = (double*) malloc(   nglob       * sizeof(double));
+
+  zlocl   = (double*) malloc(   nlocl       * sizeof(double));
   zquad   = (double*) malloc(   nquad       * sizeof(double));
   wquad   = (double*) malloc(   nquad       * sizeof(double));
+	L       = (double*) malloc(   nlocl*nquad * sizeof(double));
+
   zqsng   = (double*) malloc(   nsing       * sizeof(double));
   wqsng   = (double*) malloc(   nsing       * sizeof(double));
-	L       = (double*) malloc(   nlocl*nquad * sizeof(double));
 	LR0     = (double*) malloc(   nlocl*nquad * sizeof(double));
 	LR1     = (double*) malloc(   nlocl*nquad * sizeof(double));
 	LS0     = (double*) malloc(   nlocl*nsing * sizeof(double));
@@ -186,9 +201,6 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	lR1     = (double*) malloc(   nquad       * sizeof(double));
 	lS0     = (double*) malloc(   nsing       * sizeof(double));
 	lS1     = (double*) malloc(   nsing       * sizeof(double));
-  zlocl   = (double*) malloc(   nlocl       * sizeof(double));
-  xc      = (double*) malloc(   nglob       * sizeof(double));
-  rc      = (double*) malloc(   nglob       * sizeof(double));
 
 	// get area and volume
 	area  = Surface.getArea();
@@ -202,7 +214,18 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	for (i = 0; i < nlocl; i++){
 		zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
 	}
-		
+	
+	
+	
+
+	/*-----------------------------------------------*/
+	// NOTE: THIS STUFF CAN BE MOVED OUTSIDE THE FUNCTION...
+	// SHOULDN'T HAVE TO RECALCULATE THE GAUSS QUADRATURE
+	// POINTS, THE SINGULAR QUADRATURE POINTS, OR THE
+	// LAGRANGE POLYNOMIALS ON THE REGULAR QUADRATURE
+	// POINTS EEEEVERY TIME WE SOLVE THE BIE!!
+
+
 	/* get Gauss-Legendre abscissas and weights on the
 	 * interval [-1,1] */
 	gauleg(nquad, zquad, wquad);
@@ -221,6 +244,12 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	 *  (Gauss-Legendre) grid point, defined
 	 *  on the interval [-1,1], */
 
+	/*-----------------------------------------------*/
+	
+	
+
+
+	
 	/* calculate coordinates of collocation points
 	 * (i.e., the global basis nodes */
 	for (i = 0; i < nelem; i++){			// loop over global elements
@@ -284,7 +313,7 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 			Surface.getPoly(i+1,  l1);
 			
 			Surface.getSpln(i  ,  ax ,  bx , cx ,
-			                     ar ,  br , cr );
+			                      ar ,  br , cr );
 			
 			lM = 0.5*(l1 + l0);
 			lD = 0.5*(l1 - l0);
@@ -403,6 +432,16 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 					gf_axR(x   , r   , xq  , rq  ,
 					       MRxx, MRxr, MRrx, MRrr);
 
+					/* regularize diagonal components of the free-space
+					 * Green's function if near the singular point */
+					if (ising == 1){
+						logl  = gsl_sf_log(fabs(l - lsing));
+						
+						MRxx += 2*logl;
+						MRrr += 2*logl;
+
+					}
+
 					// evaluate complementary Green's function
 					if (IGF == 1){				/* stokeslet bounded externally
 					                       * by a cylindrical tube */
@@ -416,17 +455,7 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 						MCrr = 0;
 					}
 
-					/* regularize diagonal components of the free-space
-					 * Green's function if near the singular point */
-					if (ising == 1){
-						logl  = gsl_sf_log(fabs(l - lsing));
-						
-						MRxx += 2*logl;
-						MRrr += 2*logl;
-
-					}
-
-					// calculate total Green's function
+					// add free-space and complementary Green's functions
 					Mxx = MRxx + MCxx;
 					Mxr = MRxr + MCxr;
 					Mrx = MRrx + MCrx;
@@ -553,31 +582,24 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 				} // end of singular integral
 
 				// add 2x2 block of A
-				if(isnan(A[2*nglob*(2*m)   + (2*n  )]) == 1)
-					 printf("\n PROBLEM HERE, index is %d, Axx = %.4f \n", j, A[2*nglob*(2*m) + 2*n]);
-					
 				A[2*nglob*(2*m)   + (2*n  )] += Axx;
 				A[2*nglob*(2*m)   + (2*n+1)] += Axr;
 				A[2*nglob*(2*m+1) + (2*n  )] += Arx;
 				A[2*nglob*(2*m+1) + (2*n+1)] += Arr;
-
-				if(isnan(A[2*nglob*(2*m)   + (2*n  )]) == 1)
-		      // isnan(A[2*nglob*(2*m)   + (2*n+1)]) == 1 ||
-          // isnan(A[2*nglob*(2*m+1) + (2*n  )]) == 1 ||
-          // isnan(A[2*nglob*(2*m+1) + (2*n+1)]) == 1)
-					 printf("\n PROBLEM HERE, index is %d, Axx = %.4f \n", j, A[2*nglob*(2*m) + 2*n]);
 					
 			} // end of local element nodes (index j)
 		} // end of boundary elements (index i)
 	} // end of global element nodes (index m)
-
 
 	
 	/*---------------------------------------------*/
 	/*------- CALCULATE SINGLE LAYER DENSITY ------*/
 	/*---------------------------------------------*/
 
-	Surface.calcForce(Dfx, Dfr);
+	Surface.calcForce(Dfx, Dfr,
+	                   ks,  kp,
+										 tx,  tr,
+										 nx,  nr);
 	for (i = 0; i < nglob; i++){ // loop over global element nodes
 		Df[2*i  ] = Dfx[i];
 		Df[2*i+1] = Dfr[i];
@@ -692,13 +714,25 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	// release memory
 	free(A    );
 	free(Df   );
+
+  free(xc   );
+  free(rc   );
 	free(Dfx  );
 	free(Dfr  );
+	free(ks   );
+	free(kp   );
+	free(tx   );
+	free(tr   );
+	free(nx   );
+	free(nr   );
+
+  free(zlocl);
   free(zquad);
   free(wquad);
+	free(L    );
+
   free(zqsng);
   free(wqsng);
-	free(L    );
 	free(LR0  );
 	free(LR1  );
 	free(LS0  );
@@ -711,9 +745,6 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	free(lR1  );
 	free(lS0  );
 	free(lS1  );
-  free(zlocl);
-  free(xc   );
-  free(rc   );
 }
 
 

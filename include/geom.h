@@ -112,14 +112,6 @@ public:
 	// calculate and set all quantities
 	void setGeomParams(int n, double *x, double *r){
 		int i;
-	  
-//		double *ax, *bx, *cx;
-//		double *ar, *br, *cr;
-//		double *l , *s ;
-//		double  A ,  V ;
-//		double *ks, *kp;
-//		double *tx, *tr;
-//		double *nx, *nr;
 		
 		for (i = 0; i < n+1; i++){
 			nodex[i] = x[i];

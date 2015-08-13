@@ -53,6 +53,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	int    nlocl, nglob;
 
 	double nx  , nr  ;
+	double vx  , vr  , vn;
 	double area, vlme;
 	double thetmax, lmax, lmin;
 	
@@ -70,8 +71,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	// initialize vectors
 	vector<double> x  (ngeom), r  (ngeom);
 //	vector<double> nx (ngeom), nr (ngeom);
-	vector<double> Dfx(ngeom), Dfr(ngeom);
-	vector<double> vx (ngeom), vr (ngeom), vn(ngeom);
+//	vector<double> Dfx(ngeom), Dfr(ngeom);
+//	vector<double> vx (ngeom), vr (ngeom), vn(ngeom);
 	vector<double> v  (2*nglob);
 
 
@@ -89,18 +90,19 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 	// set surface velocity
 	for (i = 0; i < nglob; i++){
-		vx[i    ] = 0.;
-		vr[i    ] = 0.;
+    Surface.setVel(i, 0.0, 0.0);
+	//	vx[i    ] = 0.;
+	//	vr[i    ] = 0.;
 		v [2*i  ] = 0.;
 		v [2*i+1] = 0.;
 	}
-	Surface.setVel(nelem, nlocl-1, vx.data(), vr.data());
+	//Surface.setVel(nelem, nlocl-1, vx.data(), vr.data());
 	
 	// get initial geometry
 	Surface.getNode(x .data(), r .data());
 //	Surface.getNrml(nx.data(), nr.data());
-	Surface.getArea(area);
-	Surface.getVlme(vlme);
+	area = Surface.getArea();
+	vlme = Surface.getVlme();
 
 	// extrema for node redistribution
 	thetmax = M_PI/8;
@@ -135,6 +137,10 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 			// get global index
 			n = i*(nlocl - 1);
 
+      // get normal at the ith geometric node
+      Surface.getNrml(i, nx, nr);
+
+      // get velocity at the ith node
 			// START BACK FROM HERE
 			// NEED TO REMOVE THE VX, VR, VN VECTORS LOCALLY
 			// MAKE USE OF THE STOKES.H CLASS, HAVE THE FIELDS
@@ -142,13 +148,13 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 
 			// calculate surface velocity
-			vx[i]  = v[2*n  ];
-			vr[i]  = v[2*n+1];
-			vn[i]  = vx[i]*nx[i] + vr[i]*nr[i];
+			vx  = v[2*n  ];
+			vr  = v[2*n+1];
+			vn  = vx*nx + vr*nr;
 			
 			// advect geometric nodes using forward Euler scheme
-			x [i] += nx[i]*vn[i]*dt;
-			r [i] += nr[i]*vn[i]*dt;
+			x[i] += nx*vn*dt;
+			r[i] += nr*vn*dt;
 			
 			// NOTE: NEED TO PROTECT AGAINST NEGATIVE RADIUS!!!!
 			// MAYBE REDISTRIBUTE POINTS??
@@ -182,8 +188,9 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		// IF ISTOP == 1, BREAK LOOP //
 
 		/*-- Step 5: Get parameters for next timestep  ------*/
+    // NOTE: NEED TO FIX THIS STUFF!!!
 		x.resize(nnode);
-		Surface.getNrml(nx.data(), nr.data());
+    r.resize(nnode);
 		Surface.getArea(area);
 		Surface.getVlme(vlme);
 

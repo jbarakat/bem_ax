@@ -56,30 +56,31 @@ private:
 	/* Check number of boundary elements and resize all
 	 * containers accordingly */
 	void checkNElem(int n){
-		if (n != nelem){
+    int k = n + 1;
+		if (n != nelem || n != nodex.size()){
 			// set number of nodes and elements
-			nelem = n    ;
-			nnode = n + 1;
+			nelem = n;
+			nnode = k;
 			
 			// resize containers
-			nodex .resize(nnode  );
-			noder .resize(nnode  );
-			splnax.resize(nnode-1);
-			splnbx.resize(nnode  );
-			splncx.resize(nnode-1);
-			splnar.resize(nnode-1);
-			splnbr.resize(nnode  );
-			splncr.resize(nnode-1);
-			poly  .resize(nnode  );
-			arcl  .resize(nnode  );
-			nodex .resize(nnode  );
-			noder .resize(nnode  );
-			curvs .resize(nnode  );
-			curvp .resize(nnode  );
-			tangx .resize(nnode  );
-			tangr .resize(nnode  );
-			nrmlx .resize(nnode  );
-			nrmlr .resize(nnode  );
+			nodex .resize(k  );
+			noder .resize(k  );
+			splnax.resize(k-1);
+			splnbx.resize(k  );
+			splncx.resize(k-1);
+			splnar.resize(k-1);
+			splnbr.resize(k  );
+			splncr.resize(k-1);
+			poly  .resize(k  );
+			arcl  .resize(k  );
+			nodex .resize(k  );
+			noder .resize(k  );
+			curvs .resize(k  );
+			curvp .resize(k  );
+			tangx .resize(k  );
+			tangr .resize(k  );
+			nrmlx .resize(k  );
+			nrmlr .resize(k  );
 		}
 	}
 

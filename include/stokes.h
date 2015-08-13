@@ -61,24 +61,42 @@ private:
 	 * local subelements and resize all
 	 * containers accordingly */
 	void checkNElem(int n, int m){
+    int k = n*m + 1;
+
 		if (n != nelem || m != nlocl-1){
 			// update geometric parameters
 			geom::checkNElem(n);
 			
 			/* set number of local and global
 			 * basis nodes */
-			nlocl = m   + 1;
-			nglob = n*m + 1;
+			nlocl = m + 1;
+			nglob = k;
 			
 			// resize containers
-			dispx.resize(nglob);
-			dispr.resize(nglob);
-			velx .resize(nglob);
-			velr .resize(nglob);
-			trctx.resize(nglob);
-			trctr.resize(nglob);
-			conc .resize(nglob);
-		}
+			dispx.resize(k);
+			dispr.resize(k);
+			velx .resize(k);
+			velr .resize(k);
+			trctx.resize(k);
+			trctr.resize(k);
+			conc .resize(k);
+    }
+    else if (k != dispx.size() || 
+             k != dispr.size() || 
+             k != velx .size() || 
+             k != velr .size() || 
+             k != trctx.size() || 
+             k != trctr.size() || 
+             k != conc .size()){
+			// resize containers
+			dispx.resize(k);
+			dispr.resize(k);
+			velx .resize(k);
+			velr .resize(k);
+			trctx.resize(k);
+			trctr.resize(k);
+			conc .resize(k);
+    }
 	}
 
 public:
@@ -145,34 +163,57 @@ public:
 	}
 
 	/*- SET FUNCTIONS ---*/
+
+  // set all transport fields (density functions)
+  void setStokesParams(int n,                   // element index
+                       int m,                   // subelement index
+                       double *ux, double *ur,  // displacement
+                       double *vx, double *vr,  // velocity
+                       double *fx, double *fr,  // traction
+                       double *c ){             // concentration
+    // check number of elements
+    checkNElem(n, m);
+
+    int i;
+
+    for (i = 0; i < nglob; i++){
+      dispx[i] = ux[i];
+      dispr[i] = ur[i];
+      velx [i] = vx[i];
+      velr [i] = vr[i];
+      trctx[i] = fx[i];
+      trctr[i] = fr[i];
+      conc [i] = c [i];
+    }
+  }
 	
-//	/* set velocity of the (ielem)th local basis node
-//	 * of the (ilocl)th boundary element */
-//	void setVel(int ielem, int ilocl, double vx, double vr){
-//		if ((ielem + 1)*ilocl >= nglob){
-//			printf("Error: index out of bounds in vx, vr.\n");
-//			return;
-//		}
-//		
-//		int iglob;
-//		
-//		// get index of the global basis node
-//		iglob = ielem*(nlocl - 1) + ilocl;
-//		
-//		velx[iglob] = vx;
-//		velr[iglob] = vr;
-//	}
-//
-//	// set velocity at the (iglob)th global basis node
-//	void setVel(int iglob, double vx, double vr){
-//		if (iglob >= nglob){
-//			printf("Error: index out of bounds in vx, vr.\n");
-//			return;
-//		}
-//		
-//		velx[iglob] = vx;
-//		velr[iglob] = vr;
-//	}
+	/* set velocity of the (ielem)th local basis node
+	 * of the (ilocl)th boundary element */
+	void setVel(int ielem, int ilocl, double vx, double vr){
+		if ((ielem + 1)*ilocl >= nglob){
+			printf("Error: index out of bounds in vx, vr.\n");
+			return;
+		}
+	  
+		int iglob;
+		
+		// get index of the global basis node
+		iglob = ielem*(nlocl - 1) + ilocl;
+		
+		velx[iglob] = vx;
+		velr[iglob] = vr;
+	}
+
+	// set velocity at the (iglob)th global basis node
+	void setVel(int iglob, double vx, double vr){
+		if (iglob >= nglob){
+			printf("Error: index out of bounds in vx, vr.\n");
+			return;
+		}
+		
+		velx[iglob] = vx;
+		velr[iglob] = vr;
+	}
 
 	// set velocity at all global basis nodes
 	void setVel(int n, int m, double *vx, double *vr){

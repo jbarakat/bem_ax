@@ -54,17 +54,31 @@ private:
    * local subelements and resize all
    * containers accordingly */
   void checkNElem(int n, int m){ 
+    int k = n*m + 1;
+
     if (n != nelem || m != nlocl-1){
       // update geometric parameters
       stokes::checkNElem(n,m);
           
       // resize containers
-      tenss.resize(nglob);
-      tensp.resize(nglob);
-      tensn.resize(nglob);
-      mmnts.resize(nglob);
-      mmntp.resize(nglob);
-    }   
+      tenss.resize(k);
+      tensp.resize(k);
+      tensn.resize(k);
+      mmnts.resize(k);
+      mmntp.resize(k);
+    }
+    else if (k != tenss.size() ||
+             k != tensp.size() ||
+             k != tensn.size() ||
+             k != mmnts.size() ||
+             k != mmntp.size()){
+      // resize containers
+      tenss.resize(k);
+      tensp.resize(k);
+      tensn.resize(k);
+      mmnts.resize(k);
+      mmntp.resize(k);
+    }
   }
  
 public:
@@ -72,6 +86,7 @@ public:
   
   
   /* IMPLEMENTATIONS */
+
 
 	/*- CONSTRUCTORS ----*/
   surface() : stokes() {
@@ -83,6 +98,28 @@ public:
           double *x, double *r) : stokes(1, N, M, lamb, x, r) {
     // set constitutive model
     model = id;
+
+		// set tensions and moments
+		setSurfParams(N, M, gamm, ES, ED, EB, ET);
+  }
+	
+	/*- DESTRUCTOR ------*/
+	~surface(){
+	}
+  
+  /*- SET FUNCTIONS ---*/
+  
+	// set all internal tensions and moments
+	void setSurfParams(int n,                 // element index
+                     int m,                 // subelement index
+                     double gamm,           // mean tension
+                     double ES, double ED,  // moduli for tensions
+                     double EB, double ET){ // moduli for moments
+    // declare variables
+    int i;
+
+		// check number of elements and subelements
+		checkNElem(n, m);
 		
 		// set elastic constants
 		shear = ES;
@@ -92,49 +129,6 @@ public:
 
 		// set mean tension
 		tensM = gamm;
-	
-		/* resize containers
-		 * (nodes already allocated
-		 *  in STOKES constructor) */
-    tenss.resize(nglob);
-    tensp.resize(nglob);
-    tensn.resize(nglob);
-    mmnts.resize(nglob);
-    mmntp.resize(nglob);
-
-		// set tensions and moments
-		setTensMmnt(N, M);
-  }
-	
-	/*- DESTRUCTOR ------*/
-	~surface(){
-	}
-  
-  /*- SET FUNCTIONS ---*/
-
-	// set all parameters
-	void setAll(int n, int m, double *x, double *r){
-		// check number of elements and subelements
-		checkNElem(n, m);
-		
-		// set geometric parameters
-		setGeomParams(n, x, r);
-
-		// set kinematic and dynamic fields
-	// NOTE: STILL NEED TO ADD THIS SET FUNCTION!!
-
-		// set internal tensions and moments
-		setTensMmnt(n, m);
-
-	}
-	
-	// set all tensions and moments
-	void setTensMmnt(int n, int m){
-    // declare variables
-    int i;
-
-		// check number of elements and subelements
-		checkNElem(n, m);
 
     if (model == 0){ // drop w/constant surface tension
       for (i = 0; i < nglob; i++){
@@ -150,7 +144,7 @@ public:
       for (i = 0; i < nglob; i++){
          
         // NEED TO FINISH THIS
-
+    
       }
     }
     
@@ -161,10 +155,18 @@ public:
 
       }
     }
-
+    
     // ADD IF STATMENTS FOR id == 3 (vesicle w/non-constant area)
     // and id == 4 (red blood cell)
 	}
+
+  // set parameters for a drop
+  void setSurfParams(int n, int m, double gamm){
+    if (model != 0 || model != 1)
+      printf("Error: not enough parameters given for the surface constitutive model\n");
+
+    setSurfParams(n, m, gamm, 0.0, 0.0, 0.0, 0.0);
+  }
 
   /*- GET FUNCTIONS ---*/
   

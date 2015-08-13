@@ -111,6 +111,22 @@ public:
 	}
   
   /*- SET FUNCTIONS ---*/
+
+	// set all parameters
+	void setAll(int n, int m, double *x, double *r){
+		// check number of elements and subelements
+		checkNElem(n, m);
+		
+		// set geometric parameters
+		setGeomParams(n, x, r);
+
+		// set kinematic and dynamic fields
+	// NOTE: STILL NEED TO ADD THIS SET FUNCTION!!
+
+		// set internal tensions and moments
+		setTensMmnt(n, m);
+
+	}
 	
 	// set all tensions and moments
 	void setTensMmnt(int n, int m){

@@ -33,6 +33,7 @@
 using namespace std;
 
 /* PROTOTYPES */
+void checkAngle(surface, double, int &);
 void writeNode(int, int, double*, double*, string);
 
 /* IMPLEMENTATIONS */
@@ -51,11 +52,12 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	int    nelem, ngeom;
 	int    nlocl, nglob;
 
+	double nx  , nr  ;
 	double area, vlme;
+	double thetmax, lmax, lmin;
 	
 	int    IGF;
 	int    ISURF;
-	int    ISTOP;
 	
   /* get number of boundary elements,
    * geometric nodes, and basis nodes 
@@ -67,7 +69,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 	// initialize vectors
 	vector<double> x  (ngeom), r  (ngeom);
-	vector<double> nx (ngeom), nr (ngeom);
+//	vector<double> nx (ngeom), nr (ngeom);
 	vector<double> Dfx(ngeom), Dfr(ngeom);
 	vector<double> vx (ngeom), vr (ngeom), vn(ngeom);
 	vector<double> v  (2*nglob);
@@ -96,9 +98,14 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	
 	// get initial geometry
 	Surface.getNode(x .data(), r .data());
-	Surface.getNrml(nx.data(), nr.data());
+//	Surface.getNrml(nx.data(), nr.data());
 	Surface.getArea(area);
 	Surface.getVlme(vlme);
+
+	// extrema for node redistribution
+	thetmax = M_PI/8;
+	// lmax = 
+	// lmin =
 	
 	
   /*-----------------------------------------------------*/
@@ -127,7 +134,13 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		for (i = 0; i < ngeom; i++){
 			// get global index
 			n = i*(nlocl - 1);
-	
+
+			// START BACK FROM HERE
+			// NEED TO REMOVE THE VX, VR, VN VECTORS LOCALLY
+			// MAKE USE OF THE STOKES.H CLASS, HAVE THE FIELDS
+			// STORED THERE AND DON'T BOTHER WITH HAVING THE LOCAL FIELDS
+
+
 			// calculate surface velocity
 			vx[i]  = v[2*n  ];
 			vr[i]  = v[2*n+1];
@@ -152,24 +165,30 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 		}
 
-		/*-- CHECK ANGLE AND SPACINGS --*/
+		/*-- Step 3: Update surface fields. -----------------*/
+		Surface.setGeomParams(nelem, x.data(), r.data());
+		// NOTE: WOULD HAVE TO UPDATE STOKES.H DISPLACEMENT,
+		// VELOCITY, TRACTION, AND SURFACTANT CONCENTRATION FIELDS HERE
+		Surface.setTensMmnt(nelem, nlocl-1);
+
+		/*-- Step 4: Check node separation and subtended angle
+		 *---------- and redistribute nodes accordingly -----*/
+		checkAngle(Surface, thetmax, istop);
+
+		if (istop == 1)
+			exit; // DON'T KNOW WHAT TO DO HERE
 	
 		// THEN CHECK ISTOP
 		// IF ISTOP == 1, BREAK LOOP //
 
-	
-		/*-- Step 3: Update surface fields. -----------------*/
-		Surface.setGeomParams(nelem, x.data(), r.data());
-		Surface.setTensMmnt(nelem, nlocl-1);
-		
+		/*-- Step 5: Get parameters for next timestep  ------*/
+		x.resize(nnode);
 		Surface.getNrml(nx.data(), nr.data());
 		Surface.getArea(area);
 		Surface.getVlme(vlme);
 
 
 
-		// NOTE: WOULD HAVE TO UPDATE STOKES.H DISPLACEMENT,
-		// VELOCITY, TRACTION, AND SURFACTANT CONCENTRATION FIELDS
 		
 	}
 }
@@ -182,13 +201,30 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
  * If i = 0, add another point. If i > 0, remove
  * the middle point and add two evenly spaced
  * points. */
-void checkAngle  (surface Surface, double thetmax, double &istop){
+void checkAngle  (surface Surface, double thetmax, int &istop){
 	// declare variables
-  int     i;
+  int     i,  j,  j1;
+	int     i0, i1;
   int     nelem, nnode;
-	double *s , *ks, *kp;
-	double  ax,  bx,  cx;
-	double  ar,  br,  cr;
+	int     counter;
+
+	double *s , *l ;
+	double *ks, *kp;
+	double *ax, *bx, *cx;
+	double *ar, *br, *cr;
+
+	double  axM, bxM, cxM;
+	double  arM, brM, crM;
+	double  ax0, bx0, cx0;
+	double  ar0, br0, cr0;
+	double  ax1, bx1, cx1;
+	double  ar1, br1, cr1;
+
+	double  xM, rM, lM;
+	double  x0, r0, l0;
+	double  x1, r1, l1;
+
+	double  dlM, dl0, dl1;	
 	double  Dthet;
 
 	// constants
@@ -196,21 +232,40 @@ void checkAngle  (surface Surface, double thetmax, double &istop){
 
 	// initialize
 	istop = 0;
+	counter = 0;
 
   // get number of geometric elements and nodes
   nelem = Surface.getNElem();
   nnode = nelem + 1;
+	
+	/* initialize containers for node coordinates
+	 * (these may be resized) */
+	vector<double> x(nnode), r(nnode);
 
 	// allocate memory
-  s  = (double*) malloc(nnode * sizeof(double));
-  ks = (double*) malloc(nnode * sizeof(double));
-  kp = (double*) malloc(nnode * sizeof(double));
+  s  = (double*) malloc( nnode    * sizeof(double));
+  l  = (double*) malloc( nnode    * sizeof(double));
+  ks = (double*) malloc( nnode    * sizeof(double));
+  kp = (double*) malloc( nnode    * sizeof(double));
+  ax = (double*) malloc((nnode-1) * sizeof(double));
+  bx = (double*) malloc( nnode    * sizeof(double));
+  cx = (double*) malloc((nnode-1) * sizeof(double));
+  ar = (double*) malloc((nnode-1) * sizeof(double));
+  br = (double*) malloc( nnode    * sizeof(double));
+  cr = (double*) malloc((nnode-1) * sizeof(double));
 
-	// get meridional arc length and principal curvatures
+	// get geometric parameters
+  Surface.getNode(x.data(), r.data());
   Surface.getArcl(s);
+  Surface.getPoly(l);
   Surface.getCurv(ks, kp);
+	Surface.getSpln(ax, bx, cx,
+	                ar, br, cr);
 
-  for (i = 0; i < nnode; i++){
+  for (i = 0; i < nelem; i++){
+		i0 = i - 1;
+		i1 = i + 1;
+
   	if (i == 0){
 			Dthet = 2*s[1]*ks[0];
 			Dthet = fabs(Dthet);
@@ -222,25 +277,94 @@ void checkAngle  (surface Surface, double thetmax, double &istop){
 
 		if (Dthet > PIH){
 			cout << "checkAngle: an arc is excessive at " <<
-			  (i+1) << "th index" << endl;
+				(i+1) << "th index" << endl;
 			
 			istop = 1;
 			return;
 		}
 
 		if (Dthet > thetmax){
-		
-			// START BACK UP FROM HERE
-		
+			counter++;
+
+			// resize containers
+			nelem++;
+			nnode++;
+			x.resize(nnode);
+			r.resize(nnode);
+
+			if (i == 0){	// add a new point
+
+				// get spline coefficients
+				axM = ax[i]; bxM = bx[i]; cxM = cx[i];
+				arM = ar[i]; brM = br[i]; crM = cr[i];
+
+				// get midpoint
+				 lM = (l[i] + l[i+1])/2.0;
+				dlM = lM - l[i];
+				 xM = ((axM*dlM + bxM)*dlM + cxM)*dlM + x[i];
+				 rM = ((arM*dlM + brM)*dlM + crM)*dlM + r[i];
+
+				// add point
+				for (j = nnode; j > 1; j--){
+					j1    = j+1;
+					x[j1] = x[j];
+					r[j1] = r[j];
+				}
+				x[1] = xM;
+				r[1] = rM;
+
+			}
+			else {				/* remove the middle point and add
+			               * two evenly spaced points */
+				// get spline coefficients
+				ax0 = ax[i0]; bx0 = bx[i0]; cx0 = cx[i0];
+				ar0 = ar[i0]; br0 = br[i0]; cr0 = cr[i0];
+				ax1 = ax[i ]; bx1 = bx[i ]; cx1 = cx[i ];
+				ar1 = ar[i ]; br1 = br[i ]; cr1 = cr[i ];
+
+				// compute new points
+				 l0 = (l[i0] + 2.0*l[i])/3.0; 
+				dl0 = l0 - l[i];
+				 x0 = ((ax0*dl0 + bx0)*dl0 + cx0)*dl0 + x[i0];
+				 r0 = ((ar0*dl0 + br0)*dl0 + cr0)*dl0 + r[i0];
+
+				 l1 = (2.0*l[i] + l[i1])/3.0; 
+				dl1 = l1 - l[i];
+				 x1 = ((ax1*dl1 + bx1)*dl1 + cx1)*dl1 + x[i ];
+				 r1 = ((ar1*dl1 + br1)*dl1 + cr1)*dl1 + r[i ];
+
+				for(j = nnode; j > i; j--){
+					j1    = j+1;
+					x[j1] = x[j];
+					r[j1] = r[j];
+				}
+				x[i]   = x1;
+				r[i]   = r1;
+
+				x[i-1] = x0;
+				r[i-1] = r0;
+			}
+
+			// update surface geometry
+			Surface.setGeomParams(nelem, x.data(), r.data());
 		}
-		
-		
 	}
-	
+
+	if (counter > 0)
+		cout << counter << " nodes added. Total of "
+			<< nelem << " boundary elements." << endl;
+
 	// free memory
-	free(s );
+	free(s ); 
+	free(l );
 	free(ks);
 	free(kp);
+	free(ax);
+	free(bx);
+	free(cx);
+	free(ar);
+	free(br);
+	free(cr);
 }
 
 /* Redistribute nodes on the contour if two nodes 

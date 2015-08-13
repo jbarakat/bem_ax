@@ -57,35 +57,29 @@ private:
 	 *       corresponds to the phase into
 	 *       which the normal vector points. */
 
-
-
-
-//	// indicator for type of boundary
-//	int     type ;
-//	/*       = RIGID  (rigid boundary)
-//	 *       = FLUID  (fluid-fluid interface) */
-//
-//	/* local and global number of basis nodes 
-//	 * for density function interpolation */
-//	int     nlocl,  nglob;
-//	
-//	// displacement
-//	double *dispx, *dispr;
-//
-//	// velocity
-//	double *velx , *velr ;
-//
-//	// traction
-//	double *trctx, *trctr;
-//
-//	// concentration
-//	double *conc ;
-//
-//	// viscosity ratio
-//	double  visc ;
-//	/* NOTE: By convention, the denominator
-//	 *       corresponds to the phase into
-//	 *       which the normal vector points. */
+	/* Check number of boundary elements and
+	 * local subelements and resize all
+	 * containers accordingly */
+	void checkNElem(int n, int m){
+		if (n != nelem || m != nlocl-1){
+			// update geometric parameters
+			geom::checkNElem(n);
+			
+			/* set number of local and global
+			 * basis nodes */
+			nlocl = m   + 1;
+			nglob = n*m + 1;
+			
+			// resize containers
+			dispx.resize(nglob);
+			dispr.resize(nglob);
+			velx .resize(nglob);
+			velr .resize(nglob);
+			trctx.resize(nglob);
+			trctr.resize(nglob);
+			conc .resize(nglob);
+		}
+	}
 
 public:
 
@@ -94,7 +88,9 @@ public:
 	
 	/* IMPLEMENTATIONS */
 
-	// Constructors
+
+
+	/*- CONSTRUCTORS-----*/
 	stokes() : geom() {
 	}
 
@@ -134,54 +130,48 @@ public:
 		trctr.resize(nglob);
 		conc .resize(nglob);
 
-//		/* allocate memory for pointer arrays
-//		 * and initialize to zero */
-//		dispx = (double*) calloc(nglob, sizeof(double));
-//		dispr = (double*) calloc(nglob, sizeof(double));
-//		velx  = (double*) calloc(nglob, sizeof(double));
-//		velr  = (double*) calloc(nglob, sizeof(double));
-//		trctx = (double*) calloc(nglob, sizeof(double));
-//		trctr = (double*) calloc(nglob, sizeof(double));
-//		conc  = (double*) calloc(nglob, sizeof(double));
-
 		// initialize viscosity ratio
 		visc = lamb;
 	}
 
-	// Destructor
+	/*- DESTRUCTOR ------*/
+	~stokes(){
+	}
 
 	/*- SET FUNCTIONS ---*/
 	
-	/* set velocity of the (ielem)th local basis node
-	 * of the (ilocl)th boundary element */
-	void setVel(int ielem, int ilocl, double vx, double vr){
-		if ((ielem + 1)*ilocl >= nglob){
-			printf("Error: index out of bounds in vx, vr.\n");
-			return;
-		}
-
-		int iglob;
-		
-		// get index of the global basis node
-		iglob = ielem*(nlocl - 1) + ilocl;
-
-		velx[iglob] = vx;
-		velr[iglob] = vr;
-	}
-
-	// set velocity at the (iglob)th global basis node
-	void setVel(int iglob, double vx, double vr){
-		if (iglob >= nglob){
-			printf("Error: index out of bounds in vx, vr.\n");
-			return;
-		}
-		
-		velx[iglob] = vx;
-		velr[iglob] = vr;
-	}
+//	/* set velocity of the (ielem)th local basis node
+//	 * of the (ilocl)th boundary element */
+//	void setVel(int ielem, int ilocl, double vx, double vr){
+//		if ((ielem + 1)*ilocl >= nglob){
+//			printf("Error: index out of bounds in vx, vr.\n");
+//			return;
+//		}
+//		
+//		int iglob;
+//		
+//		// get index of the global basis node
+//		iglob = ielem*(nlocl - 1) + ilocl;
+//		
+//		velx[iglob] = vx;
+//		velr[iglob] = vr;
+//	}
+//
+//	// set velocity at the (iglob)th global basis node
+//	void setVel(int iglob, double vx, double vr){
+//		if (iglob >= nglob){
+//			printf("Error: index out of bounds in vx, vr.\n");
+//			return;
+//		}
+//		
+//		velx[iglob] = vx;
+//		velr[iglob] = vr;
+//	}
 
 	// set velocity at all global basis nodes
-	void setVel(double *vx, double *vr){
+	void setVel(int n, int m, double *vx, double *vr){
+		checkNElem(n, m);
+		
 		int iglob;
 
 		if (vx == NULL || vr == NULL){

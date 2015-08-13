@@ -44,7 +44,7 @@ public:
   
   /* IMPLEMENTATIONS */
 
-	/*- Constructors -*/
+	/*- CONSTRUCTORS ----*/
   surface() : stokes() {
   }
 
@@ -96,6 +96,10 @@ public:
     // and id == 4 (red blood cell)
 
   }
+	
+	/*- DESTRUCTOR ------*/
+	~surface(){
+	}
   
   /*- SET FUNCTIONS ---*/
 

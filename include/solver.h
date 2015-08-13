@@ -56,36 +56,19 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	int    ISURF;
 	
   /* get number of boundary elements,
-   * geometric nodes, and basis nodes */
+   * geometric nodes, and basis nodes 
+	 * (local and global) */
   nelem = Surface.getNElem();
   ngeom = nelem + 1;
   nlocl = Surface.getNLocl();
   nglob = Surface.getNGlob();
 
 	// initialize vectors
+	vector<double> x  (ngeom), r  (ngeom);
+	vector<double> nx (ngeom), nr (ngeom);
+	vector<double> Dfx(ngeom), Dfr(ngeom);
+	vector<double> vx (ngeom), vr (ngeom), vn(ngeom);
 	vector<double> v  (2*nglob);
-	vector<double> vx (  ngeom), vr (ngeom), vn(ngeom);
-	vector<double> Dfx(  ngeom), Dfr(ngeom);
-	vector<double> x  (  ngeom), r  (ngeom);
-	vector<double> nx (  ngeom), nr (ngeom);
-
-
-//	double * v ;
-//	double * vx, * vr, * vn;
-//	double *Dfx, *Dfr;
-//
-//	double * x, * r;
-//	double *nx, *nr;
-//
-//	// allocate memory
-//	v   = (double*) malloc( 2*nglob * sizeof(double));
-//	vx  = (double*) calloc(   ngeom , sizeof(double));
-//	vr  = (double*) calloc(   ngeom , sizeof(double));
-//	vn  = (double*) calloc(   ngeom , sizeof(double));
-//	x   = (double*) malloc(   ngeom * sizeof(double));
-//	r   = (double*) malloc(   ngeom * sizeof(double));
-//	nx  = (double*) malloc(   ngeom * sizeof(double));
-//	nr  = (double*) malloc(   ngeom * sizeof(double));
 
 
   /*-----------------------------------------------------*/
@@ -100,8 +83,12 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 	// set surface velocity
 	for (i = 0; i < nglob; i++){
-		Surface.setVel(i, 0., 0.);
+		vx[i    ] = 0.;
+		vr[i    ] = 0.;
+		v [2*i  ] = 0.;
+		v [2*i+1] = 0.;
 	}
+	Surface.setVel(nelem, nlocl-1, vx.data(), vr.data());
 	
 	// get initial geometry
 	Surface.getNode(x .data(), r .data());
@@ -176,20 +163,37 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		// NOTE #2: ALSO, WOULD HAVE TO UPDATE SURFACTANT
 		// CONCENTRATION FIELD HERE.
 		
-		
-//	// free memory	
-//	free(v );
-//	free(vx);
-//	free(vr);
-//	free(vn);
-//	free(x );
-//	free(r );
-//	free(nx);
-//	free(nr);
 	}
 }
 
-//void writeNode(int n, double *x, double*r){
+/*- NODE REDISTRIBUTION ---*/
+
+/* Redistribute nodes on the contour if the angle 
+ * subtended by an arc is too large. */
+void checkAngle  (surface Surface, double thetmax){
+	// declare variables
+	double *s, *ks, *kp;
+
+	// allocate memory
+
+	// get meridional arc length and curvature
+
+
+
+}
+
+/* Redistribute nodes on the contour if two nodes 
+ * are too close or too far apart. */
+void checkSpacing(surface Surface, double lmin, double lmax){
+	// declare variables
+	
+
+
+}
+
+/*- WRITE FUNCTIONS -------*/
+
+/* Write geometric coordinates to file */
 void writeNode(int istep, int nnode, double *x, double *r, string path){
 	// declare variables
 	int i;

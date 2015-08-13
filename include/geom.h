@@ -32,7 +32,7 @@ class geom {
 friend class stokes;
 friend class surface;
 private:
-	// number of nodes and elemennts
+	// number of nodes and elements
 	int            nnode , nelem  ;
 
 	// nodal coordinates
@@ -52,13 +52,44 @@ private:
 	vector<double> curvs , curvp ;
 	vector<double> tangx , tangr ;
 	vector<double> nrmlx , nrmlr ;
+	
+	/* Check number of boundary elements and resize all
+	 * containers accordingly */
+	void checkNElem(int n){
+		if (n != nelem){
+			// set number of nodes and elements
+			nelem = n    ;
+			nnode = n + 1;
+			
+			// resize containers
+			nodex .resize(nnode  );
+			noder .resize(nnode  );
+			splnax.resize(nnode-1);
+			splnbx.resize(nnode  );
+			splncx.resize(nnode-1);
+			splnar.resize(nnode-1);
+			splnbr.resize(nnode  );
+			splncr.resize(nnode-1);
+			poly  .resize(nnode  );
+			arcl  .resize(nnode  );
+			nodex .resize(nnode  );
+			noder .resize(nnode  );
+			curvs .resize(nnode  );
+			curvp .resize(nnode  );
+			tangx .resize(nnode  );
+			tangr .resize(nnode  );
+			nrmlx .resize(nnode  );
+			nrmlr .resize(nnode  );
+		}
+	}
+
 
 public:
 	/* PROTOTYPES */
 	
 	/* IMPLEMENTATIONS */
 
-	// Constructors
+	/*- CONSTRUCTORS ----*/
 	geom(){
 	}
 
@@ -97,65 +128,43 @@ public:
 
 
 		// calculate geometric parameters
-		calcParams(N            , x            , r            ,
-		           splnax.data(), splnbx.data(), splncx.data(),
-		           splnar.data(), splnbr.data(), splncr.data(),
-		           poly  .data(), arcl  .data(),
-							 area         , vlme         , 
-							 curvs .data(), curvp .data(), 
-		           tangx .data(), tangr .data(),
-							 nrmlx .data(), nrmlr .data());
+		calcGeomParams(N            , x            , r            ,
+		               splnax.data(), splnbx.data(), splncx.data(),
+		               splnar.data(), splnbr.data(), splncr.data(),
+		               poly  .data(), arcl  .data(),
+		    					 area         , vlme         , 
+		    					 curvs .data(), curvp .data(), 
+		               tangx .data(), tangr .data(),
+		    					 nrmlx .data(), nrmlr .data());
 	}
 
-	// Destructor
-//	~geom(){
-//	}
+	/*- DESTRUCTOR ------*/
+	~geom(){
+	}
 	
 	/*- SET FUNCTIONS ---*/
 
 	// calculate and set all quantities
 	void setGeomParams(int n, double *x, double *r){
 		int i;
-
-		if (n != nelem){
-			// set number of nodes and elements
-			nelem = n    ;
-			nnode = n + 1;
-			
-			// resize containers
-			nodex .resize(nnode  );
-			noder .resize(nnode  );
-			splnax.resize(nnode-1);
-			splnbx.resize(nnode  );
-			splncx.resize(nnode-1);
-			splnar.resize(nnode-1);
-			splnbr.resize(nnode  );
-			splncr.resize(nnode-1);
-			poly  .resize(nnode  );
-			arcl  .resize(nnode  );
-			nodex .resize(nnode  );
-			noder .resize(nnode  );
-			curvs .resize(nnode  );
-			curvp .resize(nnode  );
-			tangx .resize(nnode  );
-			tangr .resize(nnode  );
-			nrmlx .resize(nnode  );
-			nrmlr .resize(nnode  );
-		}
 		
+		// check number of elements
+		checkNElem(n);
+		
+		// set all parameters
 		for (i = 0; i < n+1; i++){
 			nodex[i] = x[i];
 			noder[i] = r[i];
 		}
 
-		calcParams(n            , x            , r            ,
-		           splnax.data(), splnbx.data(), splncx.data(),
-		           splnar.data(), splnbr.data(), splncr.data(),
-		           poly  .data(), arcl  .data(),
-							 area         , vlme         , 
-							 curvs .data(), curvp .data(), 
-		           tangx .data(), tangr .data(),
-							 nrmlx .data(), nrmlr .data());
+		calcGeomParams(n            , x            , r            ,
+		               splnax.data(), splnbx.data(), splncx.data(),
+		               splnar.data(), splnbr.data(), splncr.data(),
+		               poly  .data(), arcl  .data(),
+				    			 area         , vlme         , 
+				    			 curvs .data(), curvp .data(), 
+		               tangx .data(), tangr .data(),
+				    			 nrmlx .data(), nrmlr .data());
 	}
 
 	// set number of geometric nodes
@@ -507,14 +516,14 @@ public:
 
 	/* Function to calculate geometric parameters for a given set of N+1
 	 * nodal coordinates (x,r) */
-	void calcParams(int      N, double *x,  double * r,	/* <--- inputs  */
-									double *ax, double *bx, double *cx,	/* <--- outputs */
-									double *ar, double *br, double *cr,	/* <------|     */
-									double * l, double * s,             /* <------|     */
-									double & A, double & V,             /* <------|     */
-									double *ks, double *kp,             /* <------|     */
-									double *tx, double *tr,							/* <------|     */
-									double *nx, double *nr ){						/* <------|     */
+	void calcGeomParams(int      N, double *x,  double * r,	/* <--- inputs  */
+	     								double *ax, double *bx, double *cx,	/* <--- outputs */
+	     								double *ar, double *br, double *cr,	/* <------|     */
+	     								double * l, double * s,             /* <------|     */
+	     								double & A, double & V,             /* <------|     */
+	     								double *ks, double *kp,             /* <------|     */
+	     								double *tx, double *tr,							/* <------|     */
+	     								double *nx, double *nr ){						/* <------|     */
 		// declare variables
 		int i,j, n;
 		int na, nt;

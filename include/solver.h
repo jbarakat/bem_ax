@@ -91,7 +91,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
   /*-----------------------------------------------------*/
   /*-------------------- INITIALIZE ---------------------*/
   /*-----------------------------------------------------*/
-	
+
 	IGF = 1;   // tube Green's function
 	IGF = 0;   // free-space Green's function
 

@@ -73,7 +73,6 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	// NEED TO GET RADIUS OF TUBE!
 	// (NEED A SMARTER WAY TO GET THIS)
 	double rtube = 2.;
-	
 
 
 

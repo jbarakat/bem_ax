@@ -95,7 +95,7 @@ int main(){
 	surface drop(model, nelem, nlocl,
 	             lamb, gamm, ES, ED, EB, ET, 
 				       x.data(), r.data());
-	
+
 //	double *xp, *rp;
 //	xp = &x[0];
 //	rp = &r[0];

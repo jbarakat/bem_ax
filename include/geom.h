@@ -22,33 +22,36 @@
 #define GEOM_H
 
 /* HEADER FILES */
+#include <vector>
 #include <math.h>
 #include "interp.h"
+
+using namespace std;
 
 class geom {
 friend class stokes;
 friend class surface;
 private:
 	// number of nodes and elemennts
-	int     nnode , nelem  ;
+	int            nnode , nelem  ;
 
 	// nodal coordinates
-	double *nodex , *noder ;
+	vector<double> nodex , noder ;
 
 	// cubic spline coefficients
-	double *splnax, *splnbx, *splncx;
-	double *splnar, *splnbr, *splncr;
+	vector<double> splnax, splnbx, splncx;
+	vector<double> splnar, splnbr, splncr;
 
 	// meridional and polygonal arc lengths
-	double *arcl  , *poly  ;
+	vector<double> arcl  , poly  ;
 	
 	// area and volume
-	double  area  ,  vlme  ;
+	double         area  , vlme  ;
 
 	// curvatures, tangent and normal vectors
-	double *curvs , *curvp ;
-	double *tangx , *tangr ;
-	double *nrmlx , *nrmlr ;
+	vector<double> curvs , curvp ;
+	vector<double> tangx , tangr ;
+	vector<double> nrmlx , nrmlr ;
 
 public:
 	/* PROTOTYPES */
@@ -63,28 +66,28 @@ public:
 		int i;
 
 		// assign nummber of nodes and boundary elements
+		nelem = N    ;
 		nnode = N + 1;
-		nelem = N;
-
-		// allocate memory for pointer arrays
-		nodex  = (double*) malloc( nnode      * sizeof(double));
-		noder  = (double*) malloc( nnode      * sizeof(double));
-		splnax = (double*) malloc((nnode - 1) * sizeof(double));
-		splnbx = (double*) malloc( nnode      * sizeof(double));
-		splncx = (double*) malloc((nnode - 1) * sizeof(double));
-		splnar = (double*) malloc((nnode - 1) * sizeof(double));
-		splnbr = (double*) malloc( nnode      * sizeof(double));
-		splncr = (double*) malloc((nnode - 1) * sizeof(double));
-		poly   = (double*) malloc( nnode      * sizeof(double));
-		arcl   = (double*) malloc( nnode      * sizeof(double));
-		nodex  = (double*) malloc( nnode      * sizeof(double));
-		noder  = (double*) malloc( nnode      * sizeof(double));
-		curvs  = (double*) malloc( nnode      * sizeof(double));
-		curvp  = (double*) malloc( nnode      * sizeof(double));
-		tangx  = (double*) malloc( nnode      * sizeof(double));
-		tangr  = (double*) malloc( nnode      * sizeof(double));
-		nrmlx  = (double*) malloc( nnode      * sizeof(double));
-		nrmlr  = (double*) malloc( nnode      * sizeof(double));
+		
+		// resize containers
+		nodex .resize(nnode  );
+		noder .resize(nnode  );
+		splnax.resize(nnode-1);
+		splnbx.resize(nnode  );
+		splncx.resize(nnode-1);
+		splnar.resize(nnode-1);
+		splnbr.resize(nnode  );
+		splncr.resize(nnode-1);
+		poly  .resize(nnode  );
+		arcl  .resize(nnode  );
+		nodex .resize(nnode  );
+		noder .resize(nnode  );
+		curvs .resize(nnode  );
+		curvp .resize(nnode  );
+		tangx .resize(nnode  );
+		tangr .resize(nnode  );
+		nrmlx .resize(nnode  );
+		nrmlr .resize(nnode  );
 		
 		// set nodal coordinates
 		for (i = 0; i < nnode; i++){
@@ -92,15 +95,16 @@ public:
 			noder[i] = r[i];
 		}
 
+
 		// calculate geometric parameters
-		calcParams(N     , x     , r     ,
-		           splnax, splnbx, splncx,
-		           splnar, splnbr, splncr,
-		           poly  , arcl  ,
-							 area  , vlme  , 
-							 curvs , curvp , 
-		           tangx , tangr ,
-							 nrmlx , nrmlr );
+		calcParams(N            , x            , r            ,
+		           splnax.data(), splnbx.data(), splncx.data(),
+		           splnar.data(), splnbr.data(), splncr.data(),
+		           poly  .data(), arcl  .data(),
+							 area         , vlme         , 
+							 curvs .data(), curvp .data(), 
+		           tangx .data(), tangr .data(),
+							 nrmlx .data(), nrmlr .data());
 	}
 
 	// Destructor
@@ -112,20 +116,46 @@ public:
 	// calculate and set all quantities
 	void setGeomParams(int n, double *x, double *r){
 		int i;
+
+		if (n != nelem){
+			// set number of nodes and elements
+			nelem = n    ;
+			nnode = n + 1;
+			
+			// resize containers
+			nodex .resize(nnode  );
+			noder .resize(nnode  );
+			splnax.resize(nnode-1);
+			splnbx.resize(nnode  );
+			splncx.resize(nnode-1);
+			splnar.resize(nnode-1);
+			splnbr.resize(nnode  );
+			splncr.resize(nnode-1);
+			poly  .resize(nnode  );
+			arcl  .resize(nnode  );
+			nodex .resize(nnode  );
+			noder .resize(nnode  );
+			curvs .resize(nnode  );
+			curvp .resize(nnode  );
+			tangx .resize(nnode  );
+			tangr .resize(nnode  );
+			nrmlx .resize(nnode  );
+			nrmlr .resize(nnode  );
+		}
 		
 		for (i = 0; i < n+1; i++){
 			nodex[i] = x[i];
 			noder[i] = r[i];
 		}
 
-		calcParams(n     , nodex , noder ,
-		           splnax, splnbx, splncx,
-		           splnar, splnbr, splncr,
-		           poly  , arcl  ,
-							 area  , vlme  , 
-							 curvs , curvp , 
-		           tangx , tangr ,
-							 nrmlx , nrmlr );
+		calcParams(n            , x            , r            ,
+		           splnax.data(), splnbx.data(), splncx.data(),
+		           splnar.data(), splnbr.data(), splncr.data(),
+		           poly  .data(), arcl  .data(),
+							 area         , vlme         , 
+							 curvs .data(), curvp .data(), 
+		           tangx .data(), tangr .data(),
+							 nrmlx .data(), nrmlr .data());
 	}
 
 	// set number of geometric nodes
@@ -142,13 +172,13 @@ public:
 
 	// get all quantities at all geometric nodes
 	void getGeomParams(int    &n , double *x,  double *r,
-	            double *ax, double *bx, double *cx,
-							double *ar, double *br, double *cr,
-							double *l , double *s ,
-							double &A , double &V,
-							double *ks, double *kp,
-							double *tx, double *tr,
-							double *nx, double *nr){
+	                   double *ax, double *bx, double *cx,
+						         double *ar, double *br, double *cr,
+						         double *l , double *s ,
+						         double &A , double &V ,
+						         double *ks, double *kp,
+						         double *tx, double *tr,
+						         double *nx, double *nr){
 		int i;
 
 		if (x  == NULL || r  == NULL ||
@@ -203,13 +233,13 @@ public:
 	
 	// get all quantities at the ith geometric node
 	void getGeomParams(int i, int &n, double &x , double &r,
-	            double &ax,    double &bx, double &cx,
-							double &ar,    double &br, double &cr,
-							double &l ,    double &s ,
-							double &A,     double &V ,
-							double &ks,    double &kp,
-							double &tx,    double &tr,
-							double &nx,    double &nr){
+	                   double &ax,    double &bx, double &cx,
+		       				   double &ar,    double &br, double &cr,
+		       				   double &l ,    double &s ,
+		       				   double &A,     double &V ,
+		       				   double &ks,    double &kp,
+		       				   double &tx,    double &tr,
+		       				   double &nx,    double &nr){
 		if (i >= nnode){
 			printf("Error: index out of bounds.\n");
 			return;

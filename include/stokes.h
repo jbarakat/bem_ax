@@ -31,31 +31,61 @@ class stokes: public geom {
 friend class surface;
 private:
 	// indicator for type of boundary
-	int     type ;
-	/*       = RIGID  (rigid boundary)
-	 *       = FLUID  (fluid-fluid interface) */
+	int            type ;
+	/*              = RIGID  (rigid boundary)
+	 *              = FLUID  (fluid-fluid interface) */
 
 	/* local and global number of basis nodes 
 	 * for density function interpolation */
-	int     nlocl,  nglob;
+	int            nlocl, nglob;
 	
 	// displacement
-	double *dispx, *dispr;
+	vector<double> dispx, dispr;
 
 	// velocity
-	double *velx , *velr ;
+	vector<double> velx , velr ;
 
 	// traction
-	double *trctx, *trctr;
+	vector<double> trctx, trctr;
 
 	// concentration
-	double *conc ;
+	vector<double> conc ;
 
 	// viscosity ratio
-	double  visc ;
+	double         visc ;
 	/* NOTE: By convention, the denominator
 	 *       corresponds to the phase into
 	 *       which the normal vector points. */
+
+
+
+
+//	// indicator for type of boundary
+//	int     type ;
+//	/*       = RIGID  (rigid boundary)
+//	 *       = FLUID  (fluid-fluid interface) */
+//
+//	/* local and global number of basis nodes 
+//	 * for density function interpolation */
+//	int     nlocl,  nglob;
+//	
+//	// displacement
+//	double *dispx, *dispr;
+//
+//	// velocity
+//	double *velx , *velr ;
+//
+//	// traction
+//	double *trctx, *trctr;
+//
+//	// concentration
+//	double *conc ;
+//
+//	// viscosity ratio
+//	double  visc ;
+//	/* NOTE: By convention, the denominator
+//	 *       corresponds to the phase into
+//	 *       which the normal vector points. */
 
 public:
 
@@ -95,15 +125,24 @@ public:
 		nlocl = M + 1;
 		nglob = N*M + 1;
 
-		/* allocate memory for pointer arrays
-		 * and initialize to zero */
-		dispx = (double*) calloc(nglob, sizeof(double));
-		dispr = (double*) calloc(nglob, sizeof(double));
-		velx  = (double*) calloc(nglob, sizeof(double));
-		velr  = (double*) calloc(nglob, sizeof(double));
-		trctx = (double*) calloc(nglob, sizeof(double));
-		trctr = (double*) calloc(nglob, sizeof(double));
-		conc  = (double*) calloc(nglob, sizeof(double));
+		// resize containers
+		dispx.resize(nglob);
+		dispr.resize(nglob);
+		velx .resize(nglob);
+		velr .resize(nglob);
+		trctx.resize(nglob);
+		trctr.resize(nglob);
+		conc .resize(nglob);
+
+//		/* allocate memory for pointer arrays
+//		 * and initialize to zero */
+//		dispx = (double*) calloc(nglob, sizeof(double));
+//		dispr = (double*) calloc(nglob, sizeof(double));
+//		velx  = (double*) calloc(nglob, sizeof(double));
+//		velr  = (double*) calloc(nglob, sizeof(double));
+//		trctx = (double*) calloc(nglob, sizeof(double));
+//		trctr = (double*) calloc(nglob, sizeof(double));
+//		conc  = (double*) calloc(nglob, sizeof(double));
 
 		// initialize viscosity ratio
 		visc = lamb;

@@ -172,14 +172,31 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
  * subtended by an arc is too large. */
 void checkAngle  (surface Surface, double thetmax){
 	// declare variables
+  int     i;
+  int     nelem, nnode;
 	double *s, *ks, *kp;
 
+  // get number of geometric elements and nodes
+  nelem = Surface.getNElem();
+  nnode = nelem + 1;
+
 	// allocate memory
+  s  = (double*) malloc(nnode * sizeof(double));
+  ks = (double*) malloc(nnode * sizeof(double));
+  kp = (double*) malloc(nnode * sizeof(double));
 
-	// get meridional arc length and curvature
+	// get meridional arc length and principal curvatures
+  Surface.getArcl(s);
+  Surface.getCurv(ks, kp);
 
+  for (i = 0; i < nnode; i++){
+    if (i == 0){
+       
+    }
+    else {
 
-
+    }
+  }
 }
 
 /* Redistribute nodes on the contour if two nodes 

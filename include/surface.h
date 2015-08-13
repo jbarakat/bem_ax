@@ -8,6 +8,11 @@
  *  Mollman, John Wiley & Sons (1982)
  *  
  * PARAMETERS
+ *  gamm  [input]			mean tension
+ *  ES    [input]			shear modulus
+ *  ED    [input]			dilatational modulus
+ *  EB    [input]			bending modulus
+ *  ET    [input]			twisting modulus
  *  tau   [output]		in-plane tensions
  *  q     [output]		transverse shear tension
  *  m			[output]		moments
@@ -30,13 +35,37 @@ private:
    *  = 4  (red blood cell - Skalak model) */
   
   // in-plane tensions
-  double *tenss, *tensp;
+  vector<double> tenss, tensp;
 
   // transverse shear tensions
-  double *tensn;
+  vector<double> tensn;
 
   // moments
-  double *mmnts, *mmntp;
+  vector<double> mmnts, mmntp;
+
+	// elastic constants
+	double shear, dilat;
+	double bendg, twist;
+
+	// mean tension
+	double tensM;
+  
+  /* Check number of boundary elements and
+   * local subelements and resize all
+   * containers accordingly */
+  void checkNElem(int n, int m){ 
+    if (n != nelem || m != nlocl-1){
+      // update geometric parameters
+      stokes::checkNElem(n,m);
+          
+      // resize containers
+      tenss.resize(nglob);
+      tensp.resize(nglob);
+      tensn.resize(nglob);
+      mmnts.resize(nglob);
+      mmntp.resize(nglob);
+    }   
+  }
  
 public:
   /* PROTOTYPES */
@@ -52,31 +81,56 @@ public:
           double lamb, double gamm,
           double ES, double ED, double EB, double ET,
           double *x, double *r) : stokes(1, N, M, lamb, x, r) {
-    // declare variables
-    int i, j;
-
     // set constitutive model
     model = id;
+		
+		// set elastic constants
+		shear = ES;
+		dilat = ED;
+		bendg = EB;
+		twist = ET;
 
-    /* allocate memory for pointer arrays
-     * and initialize to zero */
-    tenss = (double*) calloc(nglob, sizeof(double));
-    tensp = (double*) calloc(nglob, sizeof(double));
-    tensn = (double*) calloc(nglob, sizeof(double));
-    mmnts = (double*) calloc(nglob, sizeof(double));
-    mmntp = (double*) calloc(nglob, sizeof(double));
+		// set mean tension
+		tensM = gamm;
+	
+		/* resize containers
+		 * (nodes already allocated
+		 *  in STOKES constructor) */
+    tenss.resize(nglob);
+    tensp.resize(nglob);
+    tensn.resize(nglob);
+    mmnts.resize(nglob);
+    mmntp.resize(nglob);
 
-    if (id == 0){ // drop w/constant surface tension
+		// set tensions and moments
+		setTensMmnt(N, M);
+  }
+	
+	/*- DESTRUCTOR ------*/
+	~surface(){
+	}
+  
+  /*- SET FUNCTIONS ---*/
+	
+	// set all tensions and moments
+	void setTensMmnt(int n, int m){
+    // declare variables
+    int i;
+
+		// check number of elements and subelements
+		checkNElem(n, m);
+
+    if (model == 0){ // drop w/constant surface tension
       for (i = 0; i < nglob; i++){
-        tenss[i] = gamm;
-        tensp[i] = gamm;
+        tenss[i] = tensM;
+        tensp[i] = tensM;
         tensn[i] = 0;
         mmnts[i] = 0;
         mmnts[i] = 0;
       }
     }
     
-    if (id == 1){ // drop w/varying surface tension
+    if (model == 1){ // drop w/varying surface tension
       for (i = 0; i < nglob; i++){
          
         // NEED TO FINISH THIS
@@ -84,7 +138,7 @@ public:
       }
     }
     
-    if (id == 2){ // vesicle w/constant surface area
+    if (model == 2){ // vesicle w/constant surface area
       for (i = 0; i < nglob; i++){
         
         // NEED TO FINISH THIS
@@ -94,15 +148,7 @@ public:
 
     // ADD IF STATMENTS FOR id == 3 (vesicle w/non-constant area)
     // and id == 4 (red blood cell)
-
-  }
-	
-	/*- DESTRUCTOR ------*/
-	~surface(){
 	}
-  
-  /*- SET FUNCTIONS ---*/
-
 
   /*- GET FUNCTIONS ---*/
   

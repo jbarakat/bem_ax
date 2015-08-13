@@ -45,8 +45,9 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
   /*-----------------------------------------------------*/
 
 	// declare variables
+	int    i, j, n;
 	int    istep;
-	int    i, j, k, m, n;
+	int    istop;
 	int    nelem, ngeom;
 	int    nlocl, nglob;
 
@@ -54,6 +55,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	
 	int    IGF;
 	int    ISURF;
+	int    ISTOP;
 	
   /* get number of boundary elements,
    * geometric nodes, and basis nodes 
@@ -80,6 +82,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 	ISURF = 2; // vesicle
 	ISURF = 0; // drop
+
+	istop = 0;
 
 	// set surface velocity
 	for (i = 0; i < nglob; i++){
@@ -116,6 +120,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		
 		// NOTE: NEED TO CHECK VOLUME
 
+
 		/*-- Step 2: Update surface velocity and boundary ---*
 		 *---------- shape using the kinematic condition. ---*/
 		
@@ -146,9 +151,16 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 			// ERROR.
 
 		}
+
+		/*-- CHECK ANGLE AND SPACINGS --*/
+	
+		// THEN CHECK ISTOP
+		// IF ISTOP == 1, BREAK LOOP //
+
 	
 		/*-- Step 3: Update surface fields. -----------------*/
 		Surface.setGeomParams(nelem, x.data(), r.data());
+		Surface.setTensMmnt(nelem, nlocl-1);
 		
 		Surface.getNrml(nx.data(), nr.data());
 		Surface.getArea(area);
@@ -156,12 +168,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 
 
-
-		// NOTE: FOR NOW, DON'T RECALCULATE TENSION
-		// AND MOMENTS, BECAUSE WE'RE USING A DROP.
-		
-		// NOTE #2: ALSO, WOULD HAVE TO UPDATE SURFACTANT
-		// CONCENTRATION FIELD HERE.
+		// NOTE: WOULD HAVE TO UPDATE STOKES.H DISPLACEMENT,
+		// VELOCITY, TRACTION, AND SURFACTANT CONCENTRATION FIELDS
 		
 	}
 }
@@ -169,12 +177,25 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 /*- NODE REDISTRIBUTION ---*/
 
 /* Redistribute nodes on the contour if the angle 
- * subtended by an arc is too large. */
-void checkAngle  (surface Surface, double thetmax){
+ * subtended by an arc is too large.
+ *
+ * If i = 0, add another point. If i > 0, remove
+ * the middle point and add two evenly spaced
+ * points. */
+void checkAngle  (surface Surface, double thetmax, double &istop){
 	// declare variables
   int     i;
   int     nelem, nnode;
-	double *s, *ks, *kp;
+	double *s , *ks, *kp;
+	double  ax,  bx,  cx;
+	double  ar,  br,  cr;
+	double  Dthet;
+
+	// constants
+	const double PIH = 0.5*M_PI;
+
+	// initialize
+	istop = 0;
 
   // get number of geometric elements and nodes
   nelem = Surface.getNElem();
@@ -190,13 +211,36 @@ void checkAngle  (surface Surface, double thetmax){
   Surface.getCurv(ks, kp);
 
   for (i = 0; i < nnode; i++){
-    if (i == 0){
-       
-    }
-    else {
+  	if (i == 0){
+			Dthet = 2*s[1]*ks[0];
+			Dthet = fabs(Dthet);
+  	}
+  	else {
+			Dthet = (s[i+1] - s[i-1])*ks[i];
+			Dthet = fabs(Dthet);
+  	}
 
-    }
-  }
+		if (Dthet > PIH){
+			cout << "checkAngle: an arc is excessive at " <<
+			  (i+1) << "th index" << endl;
+			
+			istop = 1;
+			return;
+		}
+
+		if (Dthet > thetmax){
+		
+			// START BACK UP FROM HERE
+		
+		}
+		
+		
+	}
+	
+	// free memory
+	free(s );
+	free(ks);
+	free(kp);
 }
 
 /* Redistribute nodes on the contour if two nodes 
@@ -204,7 +248,7 @@ void checkAngle  (surface Surface, double thetmax){
 void checkSpacing(surface Surface, double lmin, double lmax){
 	// declare variables
 	
-
+	
 
 }
 

@@ -94,48 +94,17 @@ public:
 	}
 
 	geom(int N, double *x, double *r){
-		int i;
+		// initialize
+		nelem = 0;
+		nnode = 0;
 
-		// assign nummber of nodes and boundary elements
-		nelem = N    ;
-		nnode = N + 1;
-		
-		// resize containers
-		nodex .resize(nnode  );
-		noder .resize(nnode  );
-		splnax.resize(nnode-1);
-		splnbx.resize(nnode  );
-		splncx.resize(nnode-1);
-		splnar.resize(nnode-1);
-		splnbr.resize(nnode  );
-		splncr.resize(nnode-1);
-		poly  .resize(nnode  );
-		arcl  .resize(nnode  );
-		nodex .resize(nnode  );
-		noder .resize(nnode  );
-		curvs .resize(nnode  );
-		curvp .resize(nnode  );
-		tangx .resize(nnode  );
-		tangr .resize(nnode  );
-		nrmlx .resize(nnode  );
-		nrmlr .resize(nnode  );
-		
-		// set nodal coordinates
-		for (i = 0; i < nnode; i++){
-			nodex[i] = x[i];
-			noder[i] = r[i];
+		// error flags
+		if (N < 1){
+			printf("Error: cannot have fewer than 1 elements.\n");
+			return;
 		}
 
-
-		// calculate geometric parameters
-		calcGeomParams(N            , x            , r            ,
-		               splnax.data(), splnbx.data(), splncx.data(),
-		               splnar.data(), splnbr.data(), splncr.data(),
-		               poly  .data(), arcl  .data(),
-		    					 area         , vlme         , 
-		    					 curvs .data(), curvp .data(), 
-		               tangx .data(), tangr .data(),
-		    					 nrmlx .data(), nrmlr .data());
+		setGeomParams(N, x, r);
 	}
 
 	/*- DESTRUCTOR ------*/

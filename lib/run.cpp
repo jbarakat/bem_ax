@@ -65,11 +65,11 @@ int main(){
 	nquad = 12;
 
 	// get number of boundary elements
-	nelem = 50;
+	nelem = 40;
 	nnode = nelem + 1;
 
 	// get number of native elements
-	nlocl = 3;
+	nlocl = 2;
 
 	// allocate memory (for performance)
 	x.reserve(nnode);

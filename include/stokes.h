@@ -102,6 +102,11 @@ public:
 
 	stokes(int id, int N, int M, 
 	       double lamb, double *x, double *r) : geom(N, x, r) {
+		// initialize
+		nlocl = 0;
+		nglob = 0;
+
+		// error flags
 		if (id != 0 && id != 1){
 			printf("Error: id can only take values of 0 or 1.\n");
 			return;
@@ -117,6 +122,9 @@ public:
 		// set boundary type
 		type = id;
 
+		// set viscosity ratio
+		visc = lamb;
+
 		// set local and global number of basis nodes
 		nlocl = M + 1;
 		nglob = N*M + 1;
@@ -130,8 +138,6 @@ public:
 		trctr.resize(nglob);
 		conc .resize(nglob);
 
-		// initialize viscosity ratio
-		visc = lamb;
 	}
 
 	/*- DESTRUCTOR ------*/

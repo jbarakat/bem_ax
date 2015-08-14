@@ -170,6 +170,15 @@ public:
 
   /*- GET FUNCTIONS ---*/
   
+	// get mean tension
+	double getMeanTens(){
+		return(tensM);
+	}
+
+  void getMeanTens(double &gamm){
+		gamm = tensM;
+  }
+  
   // get tension components at the (iglob)th global basis node
   void getTens(int iglob, double &taus, double &taup, double &q){
     if (iglob >= nglob){

@@ -56,6 +56,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	double vx  , vr  , vn;
 	double area, vlme;
 	double thetmax, lmax, lmin;
+	double gamm;
 	
 	int    IGF;
 	int    ISURF;
@@ -87,6 +88,10 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	ISURF = 0; // drop
 
 	istop = 0;
+
+	if (ISURF == 0){
+		gamm = Surface.getMeanTens();
+	}
 
 	// set surface velocity
 	for (i = 0; i < nglob; i++){
@@ -175,7 +180,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		Surface.setGeomParams(nelem, x.data(), r.data());
 		// NOTE: WOULD HAVE TO UPDATE STOKES.H DISPLACEMENT,
 		// VELOCITY, TRACTION, AND SURFACTANT CONCENTRATION FIELDS HERE
-		Surface.setTensMmnt(nelem, nlocl-1);
+		Surface.setSurfParams(nelem, nlocl-1, gamm);
 
 		/*-- Step 4: Check node separation and subtended angle
 		 *---------- and redistribute nodes accordingly -----*/
@@ -189,8 +194,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 		/*-- Step 5: Get parameters for next timestep  ------*/
     // NOTE: NEED TO FIX THIS STUFF!!!
-		x.resize(nnode);
-    r.resize(nnode);
+		x.resize(ngeom);
+    r.resize(ngeom);
 		Surface.getArea(area);
 		Surface.getVlme(vlme);
 

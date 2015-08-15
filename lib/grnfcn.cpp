@@ -382,6 +382,7 @@ void gf_axC_ker(double x, double r, double x0, double r0, double rc, double s,
 
 	// change of integration coordinate
 	t = -gsl_sf_log(s);
+
 	
 	// evaluate trigonometric functions
 	Xt = X*t;

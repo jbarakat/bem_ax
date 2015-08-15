@@ -54,34 +54,32 @@ private:
 	vector<double> nrmlx , nrmlr ;
 	
 	/* Reserve enough memory for containers */
-	void resizeContainers(int n){
+	void reserveMemory(int n){
     int k = n + 1;
-		
-		// reserve memory
-		if (k > nodex.size()){
-			nodex .resize(k  );
-			noder .resize(k  );
-			splnax.resize(k-1);
-			splnbx.resize(k  );
-			splncx.resize(k-1);
-			splnar.resize(k-1);
-			splnbr.resize(k  );
-			splncr.resize(k-1);
-			poly  .resize(k  );
-			arcl  .resize(k  );
-			nodex .resize(k  );
-			noder .resize(k  );
-			curvs .resize(k  );
-			curvp .resize(k  );
-			tangx .resize(k  );
-			tangr .resize(k  );
-			nrmlx .resize(k  );
-			nrmlr .resize(k  );
-		}
 
 		// set number of nodes and elements
 		nelem = n;
 		nnode = k;
+		
+		// reserve memory
+		nodex .reserve(k  );
+		noder .reserve(k  );
+		splnax.reserve(k-1);
+		splnbx.reserve(k  );
+		splncx.reserve(k-1);
+		splnar.reserve(k-1);
+		splnbr.reserve(k  );
+		splncr.reserve(k-1);
+		poly  .reserve(k  );
+		arcl  .reserve(k  );
+		nodex .reserve(k  );
+		noder .reserve(k  );
+		curvs .reserve(k  );
+		curvp .reserve(k  );
+		tangx .reserve(k  );
+		tangr .reserve(k  );
+		nrmlx .reserve(k  );
+		nrmlr .reserve(k  );
 	}
 
 
@@ -140,7 +138,7 @@ public:
 		int i;
 		
 		// ensure enough space is allocated
-		resizeContainers(n);
+		reserveMemory(n);
 		
 		// set all parameters
 		for (i = 0; i < n+1; i++){

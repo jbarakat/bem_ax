@@ -49,36 +49,21 @@ private:
 
 	// mean tension
 	double tensM;
-  
-  /* Check number of boundary elements and
-   * local subelements and resize all
-   * containers accordingly */
-  void checkNElem(int n, int m){ 
+ 
+ 	/* Reserve memory for containers */
+  void resizeContainers(int n, int m){
     int k = n*m + 1;
 
-    if (n != nelem || m != nlocl-1){
-      // update geometric parameters
-      stokes::checkNElem(n,m);
-          
-      // resize containers
-      tenss.resize(k);
-      tensp.resize(k);
-      tensn.resize(k);
-      mmnts.resize(k);
-      mmntp.resize(k);
-    }
-    else if (k != tenss.size() ||
-             k != tensp.size() ||
-             k != tensn.size() ||
-             k != mmnts.size() ||
-             k != mmntp.size()){
-      // resize containers
-      tenss.resize(k);
-      tensp.resize(k);
-      tensn.resize(k);
-      mmnts.resize(k);
-      mmntp.resize(k);
-    }
+    stokes::resizeContainers(n,m);
+        
+    // reserve memroy
+		if (k > tenss.size()){
+			tenss.resize(k);
+			tensp.resize(k);
+			tensn.resize(k);
+			mmnts.resize(k);
+			mmntp.resize(k);
+		}
   }
  
 public:
@@ -98,6 +83,13 @@ public:
           double *x, double *r) : stokes(1, N, M, lamb, x, r) {
     // set constitutive model
     model = id;
+		
+		// resize containers
+    tenss.resize(nglob);
+    tensp.resize(nglob);
+    tensn.resize(nglob);
+    mmnts.resize(nglob);
+    mmntp.resize(nglob);
 
 		// set tensions and moments
 		setSurfParams(N, M, gamm, ES, ED, EB, ET);
@@ -105,6 +97,11 @@ public:
 	
 	/*- DESTRUCTOR ------*/
 	~surface(){
+	}
+
+	/*- UPDATE STORAGE --*/
+	void updateStorage(int n, int m){
+		resizeContainers(n, m);
 	}
   
   /*- SET FUNCTIONS ---*/
@@ -118,8 +115,8 @@ public:
     // declare variables
     int i;
 
-		// check number of elements and subelements
-		checkNElem(n, m);
+		// reserve memory
+		resizeContainers(n, m);
 		
 		// set elastic constants
 		shear = ES;
@@ -161,8 +158,13 @@ public:
 	}
 
   // set parameters for a drop
+  void setSurfParams(int n, int m){
+		if (model == 0)
+	    setSurfParams(n, m, tensM, 0.0, 0.0, 0.0, 0.0);
+  }
+
   void setSurfParams(int n, int m, double gamm){
-    if (model != 0 || model != 1)
+    if (model != 0 && model != 1)
       printf("Error: not enough parameters given for the surface constitutive model\n");
 
     setSurfParams(n, m, gamm, 0.0, 0.0, 0.0, 0.0);

@@ -53,7 +53,8 @@
  *  IGF = 1  Green's function bounded externally by a
  *            cylindrical tube
  */
-void singleLayer(const int IGF, int nquad, surface Surface, double *v){
+void singleLayer(const int IGF, int nquad, surface Surface,
+                 double *v, double *Df){
 	
 	if (IGF != 0 && IGF != 1){
 		printf("Error: IGF can only take values of 0 or 1.\n");
@@ -148,7 +149,7 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 	double  logz ;											// logarithms for singular quadrature
 	double  logl ;
 
-	double *A   , *Df  ;								// single layer operator and density
+	double *A   ;												// single layer operator and density
 	double *Dfx , *Dfr ;								// traction components
 	double  vx  ,  vr  ;								// velocity components
 
@@ -167,7 +168,6 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 
 	// allocate memory
 	A       = (double*) calloc( 4*nglob*nglob , sizeof(double));
-	Df      = (double*) calloc( 2*nglob       , sizeof(double));
 
   xc      = (double*) malloc(   nglob       * sizeof(double));
   rc      = (double*) malloc(   nglob       * sizeof(double));
@@ -712,7 +712,6 @@ void singleLayer(const int IGF, int nquad, surface Surface, double *v){
 
 	// release memory
 	free(A    );
-	free(Df   );
 
   free(xc   );
   free(rc   );

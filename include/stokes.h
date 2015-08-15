@@ -57,22 +57,15 @@ private:
 	 *       corresponds to the phase into
 	 *       which the normal vector points. */
 
-	/* Check number of boundary elements and
-	 * local subelements and resize all
-	 * containers accordingly */
-	void checkNElem(int n, int m){
+	/* Reserve enough space for containers */
+	void resizeContainers(int n, int m){
     int k = n*m + 1;
 
-		if (n != nelem || m != nlocl-1){
-			// update geometric parameters
-			geom::checkNElem(n);
-			
-			/* set number of local and global
-			 * basis nodes */
-			nlocl = m + 1;
-			nglob = k;
-			
-			// resize containers
+		// update geometric parameters
+		geom::resizeContainers(n);
+		
+		// reserve memory
+		if (k > dispx.size()){
 			dispx.resize(k);
 			dispr.resize(k);
 			velx .resize(k);
@@ -80,23 +73,13 @@ private:
 			trctx.resize(k);
 			trctr.resize(k);
 			conc .resize(k);
-    }
-    else if (k != dispx.size() || 
-             k != dispr.size() || 
-             k != velx .size() || 
-             k != velr .size() || 
-             k != trctx.size() || 
-             k != trctr.size() || 
-             k != conc .size()){
-			// resize containers
-			dispx.resize(k);
-			dispr.resize(k);
-			velx .resize(k);
-			velr .resize(k);
-			trctx.resize(k);
-			trctr.resize(k);
-			conc .resize(k);
-    }
+		}
+		
+		/* set number of local and global
+		 * basis nodes */
+		nlocl = m + 1;
+		nglob = k;
+		
 	}
 
 public:
@@ -120,9 +103,9 @@ public:
 
 	stokes(int id, int N, int M, 
 	       double lamb, double *x, double *r) : geom(N, x, r) {
-		// initialize
-		nlocl = 0;
-		nglob = 0;
+		// set number of local and global basis nodes
+		nlocl = M+1;
+		nglob = N*M+1;
 
 		// error flags
 		if (id != 0 && id != 1){
@@ -142,11 +125,7 @@ public:
 
 		// set viscosity ratio
 		visc = lamb;
-
-		// set local and global number of basis nodes
-		nlocl = M + 1;
-		nglob = N*M + 1;
-
+		
 		// resize containers
 		dispx.resize(nglob);
 		dispr.resize(nglob);
@@ -155,7 +134,6 @@ public:
 		trctx.resize(nglob);
 		trctr.resize(nglob);
 		conc .resize(nglob);
-
 	}
 
 	/*- DESTRUCTOR ------*/
@@ -171,8 +149,8 @@ public:
                        double *vx, double *vr,  // velocity
                        double *fx, double *fr,  // traction
                        double *c ){             // concentration
-    // check number of elements
-    checkNElem(n, m);
+    // reserve memory
+    resizeContainers(n, m);
 
     int i;
 
@@ -217,17 +195,63 @@ public:
 
 	// set velocity at all global basis nodes
 	void setVel(int n, int m, double *vx, double *vr){
-		checkNElem(n, m);
+		resizeContainers(n, m);
 		
 		int iglob;
 
 		if (vx == NULL || vr == NULL){
 			printf("Error: no memory allocated for vx, vr.\n");
+			return;
 		}
 
 		for (iglob = 0; iglob < nglob; iglob++){
 			 velx[iglob] = vx[iglob];
 			 velr[iglob] = vr[iglob];
+		}
+	}
+	
+	/* set traction of the (ielem)th local basis node
+	 * of the (ilocl)th boundary element */
+	void setTrct(int ielem, int ilocl, double fx, double fr){
+		if ((ielem + 1)*ilocl >= nglob){
+			printf("Error: index out of bounds in fx, fr.\n");
+			return;
+		}
+	  
+		int iglob;
+		
+		// get index of the global basis node
+		iglob = ielem*(nlocl - 1) + ilocl;
+		
+		trctx[iglob] = fx;
+		trctr[iglob] = fr;
+	}
+
+	// set traction at the (iglob)th global basis node
+	void setTrct(int iglob, double fx, double fr){
+		if (iglob >= nglob){
+			printf("Error: index out of bounds in fx, fr.\n");
+			return;
+		}
+		
+		trctx[iglob] = fx;
+		trctr[iglob] = fr;
+	}
+
+	// set traction at all global basis nodes
+	void setTrct(int n, int m, double *fx, double *fr){
+		resizeContainers(n, m);
+		
+		int iglob;
+
+		if (fx == NULL || fr == NULL){
+			printf("Error: no memory allocated for fx, fr.\n");
+			return;
+		}
+
+		for (iglob = 0; iglob < nglob; iglob++){
+			 trctx[iglob] = fx[iglob];
+			 trctr[iglob] = fr[iglob];
 		}
 	}
 

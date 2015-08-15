@@ -33,7 +33,8 @@
 using namespace std;
 
 /* PROTOTYPES */
-void checkAngle(surface, double, int &);
+void checkAngle(surface &, double, int &);
+void checkSpacing(surface &, double, double, double);
 void writeNode(int, int, double*, double*, string);
 
 /* IMPLEMENTATIONS */
@@ -71,10 +72,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 	// initialize vectors
 	vector<double> x  (ngeom), r  (ngeom);
-//	vector<double> nx (ngeom), nr (ngeom);
-//	vector<double> Dfx(ngeom), Dfr(ngeom);
-//	vector<double> vx (ngeom), vr (ngeom), vn(ngeom);
 	vector<double> v  (2*nglob);
+	vector<double> Df (2*nglob);
 
 
   /*-----------------------------------------------------*/
@@ -95,24 +94,24 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 	// set surface velocity
 	for (i = 0; i < nglob; i++){
-    Surface.setVel(i, 0.0, 0.0);
-	//	vx[i    ] = 0.;
-	//	vr[i    ] = 0.;
+    Surface.setVel (i, 0.0, 0.0);
 		v [2*i  ] = 0.;
 		v [2*i+1] = 0.;
+    
+		Surface.setTrct(i, 0.0, 0.0);
+		Df[2*i  ] = 0.;
+		Df[2*i+1] = 0.;
 	}
-	//Surface.setVel(nelem, nlocl-1, vx.data(), vr.data());
 	
 	// get initial geometry
 	Surface.getNode(x .data(), r .data());
-//	Surface.getNrml(nx.data(), nr.data());
 	area = Surface.getArea();
 	vlme = Surface.getVlme();
 
 	// extrema for node redistribution
 	thetmax = M_PI/8;
-	// lmax = 
-	// lmin =
+	lmax = 2.0*M_PI/nelem;
+	lmin = lmax/2.0;
 	
 	
   /*-----------------------------------------------------*/
@@ -122,15 +121,20 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	for (istep = 0; istep < nstep; istep++){
 		cout << "ts = " << istep << ", V = " << vlme << endl;
 		
+		/*-- Step 1: Solve the boundary integral equation. --*/
+		singleLayer(IGF, nquad, Surface, v.data(), Df.data());
+
+		// update kinematic and dynamic parameters
+		for (i = 0; i < nglob; i++){
+			Surface.setVel (i, v [2*i], v [2*i+1]);
+			Surface.setTrct(i, Df[2*i], Df[2*i+1]);
+		}
+
 		// write to file before evolving system
 		writeNode(istep, ngeom, x.data(), r.data(), opath);
 		
-		/*-- Step 1: Solve the boundary integral equation. --*/
-		singleLayer(IGF, nquad, Surface, v.data());
-
 		// NOTE: FOR SINGLE LAYER POTENTIAL, THERE IS NO NEED
 		// TO CALCULATE A MATRIX INVERSE
-		
 		
 		// NOTE: NEED TO CHECK VOLUME
 
@@ -145,13 +149,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
       // get normal at the ith geometric node
       Surface.getNrml(i, nx, nr);
 
-      // get velocity at the ith node
-			// START BACK FROM HERE
-			// NEED TO REMOVE THE VX, VR, VN VECTORS LOCALLY
-			// MAKE USE OF THE STOKES.H CLASS, HAVE THE FIELDS
-			// STORED THERE AND DON'T BOTHER WITH HAVING THE LOCAL FIELDS
-
-
 			// calculate surface velocity
 			vx  = v[2*n  ];
 			vr  = v[2*n+1];
@@ -161,16 +158,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 			x[i] += nx*vn*dt;
 			r[i] += nr*vn*dt;
 			
-			// NOTE: NEED TO PROTECT AGAINST NEGATIVE RADIUS!!!!
-			// MAYBE REDISTRIBUTE POINTS??
-			
-			if (r[i] < 0){
-				for (j = 0; j < nelem; j++){
-					printf("r[%d] = %.4f\n", j, r[j]);
-				}
-			}
-
-
 			// NOTE: SHOULD ALSO USE BACKWARD EULER SCHEME TO CHECK
 			// ERROR.
 
@@ -184,24 +171,31 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 		/*-- Step 4: Check node separation and subtended angle
 		 *---------- and redistribute nodes accordingly -----*/
-		checkAngle(Surface, thetmax, istop);
-
+		checkAngle  (Surface, thetmax, istop);
+		checkSpacing(Surface, lmin, lmax, thetmax);
+		
+		// check to break loop
 		if (istop == 1)
-			exit; // DON'T KNOW WHAT TO DO HERE
-	
-		// THEN CHECK ISTOP
-		// IF ISTOP == 1, BREAK LOOP //
-
+			return;
+		
+		
 		/*-- Step 5: Get parameters for next timestep  ------*/
-    // NOTE: NEED TO FIX THIS STUFF!!!
-		x.resize(ngeom);
-    r.resize(ngeom);
+ 		nelem = Surface.getNElem();
+ 		ngeom = nelem + 1;
+ 		nlocl = Surface.getNLocl();
+ 		nglob = Surface.getNGlob();
+		
 		Surface.getArea(area);
 		Surface.getVlme(vlme);
-
-
-
+	
+		x.resize(ngeom);
+    r.resize(ngeom);
+		Surface.getNode(x.data(), r.data());
 		
+		if (2*nglob > v.size()){
+			v .resize(2*nglob);
+			Df.resize(2*nglob);
+		}
 	}
 }
 
@@ -213,17 +207,13 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
  * If i = 0, add another point. If i > 0, remove
  * the middle point and add two evenly spaced
  * points. */
-void checkAngle  (surface Surface, double thetmax, int &istop){
+void checkAngle(surface &Surface, double thetmax, int &istop){
 	// declare variables
-  int     i,  j,  j1;
-	int     i0, i1;
-  int     nelem, nnode;
+  int     i, j, i0, i1, j1;
+  int     nelem, ngeom, nlocl;
 	int     counter;
 
-	double *s , *l ;
-	double *ks, *kp;
-	double *ax, *bx, *cx;
-	double *ar, *br, *cr;
+	double  ks , kp ;
 
 	double  axM, bxM, cxM;
 	double  arM, brM, crM;
@@ -232,11 +222,12 @@ void checkAngle  (surface Surface, double thetmax, int &istop){
 	double  ax1, bx1, cx1;
 	double  ar1, br1, cr1;
 
-	double  xM, rM, lM;
-	double  x0, r0, l0;
-	double  x1, r1, l1;
+	double  xM, rM, sM, lM, dlM; 
+	double  x0, r0, s0, l0, dl0;
+	double  x1, r1, s1, l1, dl1;
 
-	double  dlM, dl0, dl1;	
+	double  li, li0, li1;
+
 	double  Dthet;
 
 	// constants
@@ -248,104 +239,103 @@ void checkAngle  (surface Surface, double thetmax, int &istop){
 
   // get number of geometric elements and nodes
   nelem = Surface.getNElem();
-  nnode = nelem + 1;
+  ngeom = nelem + 1;
+  nlocl = Surface.getNLocl();
 	
 	/* initialize containers for node coordinates
 	 * (these may be resized) */
-	vector<double> x(nnode), r(nnode);
-
-	// allocate memory
-  s  = (double*) malloc( nnode    * sizeof(double));
-  l  = (double*) malloc( nnode    * sizeof(double));
-  ks = (double*) malloc( nnode    * sizeof(double));
-  kp = (double*) malloc( nnode    * sizeof(double));
-  ax = (double*) malloc((nnode-1) * sizeof(double));
-  bx = (double*) malloc( nnode    * sizeof(double));
-  cx = (double*) malloc((nnode-1) * sizeof(double));
-  ar = (double*) malloc((nnode-1) * sizeof(double));
-  br = (double*) malloc( nnode    * sizeof(double));
-  cr = (double*) malloc((nnode-1) * sizeof(double));
+	vector<double> x(ngeom), r(ngeom);
 
 	// get geometric parameters
   Surface.getNode(x.data(), r.data());
-  Surface.getArcl(s);
-  Surface.getPoly(l);
-  Surface.getCurv(ks, kp);
-	Surface.getSpln(ax, bx, cx,
-	                ar, br, cr);
 
+	// loop over boundary elements
   for (i = 0; i < nelem; i++){
 		i0 = i - 1;
 		i1 = i + 1;
 
   	if (i == 0){
-			Dthet = 2*s[1]*ks[0];
+			Surface.getArcl(1, sM);
+			Surface.getCurv(0, ks, kp);
+			Dthet = 2*sM*ks;
 			Dthet = fabs(Dthet);
   	}
   	else {
-			Dthet = (s[i+1] - s[i-1])*ks[i];
+			Surface.getArcl(i0, s0);
+			Surface.getArcl(i1, s1);
+			Surface.getCurv(i , ks, kp);
+			Dthet = (s1 - s0)*ks;
 			Dthet = fabs(Dthet);
   	}
 
 		if (Dthet > PIH){
-			cout << "checkAngle: an arc is excessive at " <<
+			cout << "checkAngle: an arc is excessive at the " <<
 				(i+1) << "th index" << endl;
 			
 			istop = 1;
 			return;
 		}
-
+		
 		if (Dthet > thetmax){
 			counter++;
 
 			// resize containers
 			nelem++;
-			nnode++;
-			x.resize(nnode);
-			r.resize(nnode);
+			ngeom++;
+			x.resize(ngeom);
+			r.resize(ngeom);
 
 			if (i == 0){	// add a new point
 
 				// get spline coefficients
-				axM = ax[i]; bxM = bx[i]; cxM = cx[i];
-				arM = ar[i]; brM = br[i]; crM = cr[i];
+				Surface.getSpln(i, axM, bxM, cxM,
+				                   arM, brM, crM);
 
 				// get midpoint
-				 lM = (l[i] + l[i+1])/2.0;
-				dlM = lM - l[i];
+				Surface.getPoly(i , li );
+				Surface.getPoly(i1, li1);
+
+				 lM = (li + li1)/2.0;
+				dlM = lM - li;
 				 xM = ((axM*dlM + bxM)*dlM + cxM)*dlM + x[i];
 				 rM = ((arM*dlM + brM)*dlM + crM)*dlM + r[i];
 
-				// add point
-				for (j = nnode; j > 1; j--){
+				// add new point
+				for (j = ngeom-1; j > 0; j--){
 					j1    = j+1;
 					x[j1] = x[j];
 					r[j1] = r[j];
 				}
 				x[1] = xM;
 				r[1] = rM;
-
 			}
 			else {				/* remove the middle point and add
 			               * two evenly spaced points */
 				// get spline coefficients
-				ax0 = ax[i0]; bx0 = bx[i0]; cx0 = cx[i0];
-				ar0 = ar[i0]; br0 = br[i0]; cr0 = cr[i0];
-				ax1 = ax[i ]; bx1 = bx[i ]; cx1 = cx[i ];
-				ar1 = ar[i ]; br1 = br[i ]; cr1 = cr[i ];
+				Surface.getSpln(i0, ax0, bx0, cx0,
+				                    ar0, br0, cr0);
+				Surface.getSpln(i , ax1, bx1, cx1,
+				                    ar1, br1, cr1);
 
 				// compute new points
-				 l0 = (l[i0] + 2.0*l[i])/3.0; 
-				dl0 = l0 - l[i];
+				Surface.getPoly(i0, li0);
+				Surface.getPoly(i , li );
+
+				 l0 = (li0 + 2.0*li)/3.0; 
+				dl0 = l0 - li;
 				 x0 = ((ax0*dl0 + bx0)*dl0 + cx0)*dl0 + x[i0];
 				 r0 = ((ar0*dl0 + br0)*dl0 + cr0)*dl0 + r[i0];
 
-				 l1 = (2.0*l[i] + l[i1])/3.0; 
-				dl1 = l1 - l[i];
+				Surface.getPoly(i , li );
+				Surface.getPoly(i1, li1);
+
+				 l1 = (2.0*li + li1)/3.0; 
+				dl1 = l1 - li;
 				 x1 = ((ax1*dl1 + bx1)*dl1 + cx1)*dl1 + x[i ];
 				 r1 = ((ar1*dl1 + br1)*dl1 + cr1)*dl1 + r[i ];
 
-				for(j = nnode; j > i; j--){
+				// add new points
+				for(j = ngeom-1; j > i-1; j--){
 					j1    = j+1;
 					x[j1] = x[j];
 					r[j1] = r[j];
@@ -357,41 +347,145 @@ void checkAngle  (surface Surface, double thetmax, int &istop){
 				r[i-1] = r0;
 			}
 
-			// update surface geometry
+			// update geometry
+			Surface.updateStorage(nelem, nlocl-1);
 			Surface.setGeomParams(nelem, x.data(), r.data());
 		}
 	}
 
 	if (counter > 0)
-		cout << counter << " nodes added. Total of "
+		cout << counter << " node(s) added. Total of "
 			<< nelem << " boundary elements." << endl;
-
-	// free memory
-	free(s ); 
-	free(l );
-	free(ks);
-	free(kp);
-	free(ax);
-	free(bx);
-	free(cx);
-	free(ar);
-	free(br);
-	free(cr);
 }
 
 /* Redistribute nodes on the contour if two nodes 
- * are too close or too far apart. */
-void checkSpacing(surface Surface, double lmin, double lmax){
+ * are too close or too far apart. 
+ * 
+ * If a segment is too long, add a point in the middle.
+ * If a segment is too short, remove the ith and (i+1)th
+ * points and replace with a midpoint. */
+void checkSpacing(surface &Surface, double lmin, double lmax, double thetmax){
 	// declare variables
+  int     i, j, i1, j1;
+  int     nelem, ngeom, nlocl;
+	int     counter;
+
+	double  ax, bx, cx;
+	double  ar, br, cr;
+
+	double  xM, rM, lM; 
+
+	double  li, li1;
+	double  Dl, dl;
+
+
+	// initialize
+	counter = 0;
+
+  // get number of geometric elements and nodes
+  nelem = Surface.getNElem();
+  ngeom = nelem + 1;
+  nlocl = Surface.getNLocl();
 	
+	/* initialize containers for node coordinates
+	 * (these may be resized) */
+	vector<double> x(ngeom), r(ngeom);
+
+	// get geometric parameters
+  Surface.getNode(x.data(), r.data());
+
+	// loop over boundary elements
+  for (i = 0; i < nelem; i++){
+		i1 = i + 1;
 	
+		// get separation
+		Surface.getArcl(i , li );
+		Surface.getArcl(i1, li1);
+
+		Dl = li1 - li;
+		
+		// check if segment exceeds maximum separation
+		if (Dl > lmax){
+			counter++;
+
+			// resize containers
+			nelem++;
+			ngeom++;
+			x.resize(ngeom);
+			r.resize(ngeom);
+
+			// get midpoint
+			Surface.getSpln(i, ax, bx, cx,
+			                   ar, br, cr);
+			lM = 0.5*(li1 + li);
+			dl = lM - li;
+			xM = ((ax*dl + bx)*dl + cx)*dl + x[i];
+			rM = ((ar*dl + br)*dl + cr)*dl + r[i];
+		
+			// add new point
+			for(j = ngeom-1; j > i-1; j--){
+				j1    = j+1;
+				x[j1] = x[j];
+				r[j1] = r[j];
+			}
+			x[i]   = xM;
+			r[i]   = rM;
+			
+			// update geometry
+			Surface.updateStorage(nelem, nlocl-1);
+			Surface.setGeomParams(nelem, x.data(), r.data());
+		}
+		
+//		// check if segment falls below minimum separation
+//		if (Dl < lmin){
+//			counter--;
+//
+//			/* don't resize containers yet, but do 
+//			 * update number of elements and nodes */
+//			nelem--;
+//			ngeom--;
+//
+//			// get midpoint
+//			Surface.getSpln(i, ax, bx, cx,
+//			                   ar, br, cr);
+//			lM = 0.5*(li1 + li);
+//			dl = lM - li;
+//			xM = ((ax*dl + bx)*dl + cx)*dl + x[i];
+//			rM = ((ar*dl + br)*dl + cr)*dl + r[i];
+//
+//			// replace two points with midpoint
+//			for (j = i; j < ngeom+1; j++){
+//				j1 = j+1;
+//				x[j] = x[j1];
+//				r[j] = r[j1];
+//			}
+//			x[i-1] = xM;
+//			r[i-1] = rM;
+//
+//			// resize containers
+//			x.resize(ngeom);
+//			r.resize(ngeom);
+//
+//			// update geometry
+//			Surface.updateStorage(nelem, nlocl-1);
+//			Surface.setGeomParams(nelem, x.data(), r.data());
+//		}
+	}
+	
+	if (counter > 0)
+		cout << counter << " node(s) added. Total of "
+			<< nelem << " boundary elements." << endl;
+	
+	if (counter < 0)
+		cout << -counter << " node(s) removed. Total of "
+			<< nelem << " boundary elements." << endl;
 
 }
 
 /*- WRITE FUNCTIONS -------*/
 
 /* Write geometric coordinates to file */
-void writeNode(int istep, int nnode, double *x, double *r, string path){
+void writeNode(int istep, int ngeom, double *x, double *r, string path){
 	// declare variables
 	int i;
 	ostringstream num;
@@ -414,7 +508,7 @@ void writeNode(int istep, int nnode, double *x, double *r, string path){
 	
 	// write to file
 	file.open(fn.c_str());
-	for (i = 0; i < nnode; i++){
+	for (i = 0; i < ngeom; i++){
 		ostringstream xs, rs;
 		xs << fixed << setprecision(8) << x[i];
 		rs << fixed << setprecision(8) << r[i];

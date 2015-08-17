@@ -100,8 +100,34 @@ public:
 	}
 
 	/*- UPDATE STORAGE --*/
-	void updateStorage(int n, int m){
-		resizeContainers(n, m);
+//	void updateStorage(int n, int m){
+//		resizeContainers(n, m);
+//	}
+
+	/*- PUSH/POP BACK ---*/
+
+	void surfPushBack(){
+    tenss.push_back(0.0);
+    tensp.push_back(0.0);
+    tensn.push_back(0.0);
+    mmnts.push_back(0.0);
+    mmntp.push_back(0.0);
+	}
+  
+	void surfPushBack(double n){
+    tenss.push_back(n);
+    tensp.push_back(n);
+    tensn.push_back(n);
+    mmnts.push_back(n);
+    mmntp.push_back(n);
+	}
+  
+	void surfPopBack(){
+    tenss.pop_back();
+    tensp.pop_back();
+    tensn.pop_back();
+    mmnts.pop_back();
+    mmntp.pop_back();
 	}
   
   /*- SET FUNCTIONS ---*/
@@ -115,8 +141,8 @@ public:
     // declare variables
     int i;
 
-		// reserve memory
-		resizeContainers(n, m);
+//		// reserve memory
+//		resizeContainers(n, m);
 		
 		// set elastic constants
 		shear = ES;

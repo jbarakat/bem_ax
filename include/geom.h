@@ -133,14 +133,79 @@ public:
 	~geom(){
 	}
 	
+	/*- PUSH/POP BACK ---*/
+
+	void geomPushBack(){
+		nodex .push_back(0);
+		noder .push_back(0);
+		splnax.push_back(0);
+		splnbx.push_back(0);
+		splncx.push_back(0);
+		splnar.push_back(0);
+		splnbr.push_back(0);
+		splncr.push_back(0);
+		poly  .push_back(0);
+		arcl  .push_back(0);
+		nodex .push_back(0);
+		noder .push_back(0);
+		curvs .push_back(0);
+		curvp .push_back(0);
+		tangx .push_back(0);
+		tangr .push_back(0);
+		nrmlx .push_back(0);
+		nrmlr .push_back(0);
+	}
+	
+	void geomPushBack(double n){
+		nodex .push_back(n);
+		noder .push_back(n);
+		splnax.push_back(n);
+		splnbx.push_back(n);
+		splncx.push_back(n);
+		splnar.push_back(n);
+		splnbr.push_back(n);
+		splncr.push_back(n);
+		poly  .push_back(n);
+		arcl  .push_back(n);
+		nodex .push_back(n);
+		noder .push_back(n);
+		curvs .push_back(n);
+		curvp .push_back(n);
+		tangx .push_back(n);
+		tangr .push_back(n);
+		nrmlx .push_back(n);
+		nrmlr .push_back(n);
+	}
+
+	void geomPopBack(){
+		nodex .pop_back();
+		noder .pop_back();
+		splnax.pop_back();
+		splnbx.pop_back();
+		splncx.pop_back();
+		splnar.pop_back();
+		splnbr.pop_back();
+		splncr.pop_back();
+		poly  .pop_back();
+		arcl  .pop_back();
+		nodex .pop_back();
+		noder .pop_back();
+		curvs .pop_back();
+		curvp .pop_back();
+		tangx .pop_back();
+		tangr .pop_back();
+		nrmlx .pop_back();
+		nrmlr .pop_back();
+	}
+	
 	/*- SET FUNCTIONS ---*/
 
 	// calculate and set all quantities
 	void setGeomParams(int n, double *x, double *r){
 		int i;
 		
-		// ensure enough space is allocated
-		resizeContainers(n);
+//		// ensure enough space is allocated
+//		resizeContainers(n);
 		
 		// set all parameters
 		for (i = 0; i < n+1; i++){

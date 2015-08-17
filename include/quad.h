@@ -208,22 +208,20 @@ void singleLayer(const int IGF, int nquad, surface Surface,
 	// get viscosity ratio
 	lamb  = Surface.getVisc();
 
+	/*-----------------------------------------------*/
+	// NOTE: THIS STUFF CAN BE MOVED OUTSIDE THE FUNCTION...
+	// SHOULDN'T HAVE TO RECALCULATE THE FUNCTION INTERPOLATION
+	// POINTS (GAUSS-LOBATTO GRID), THE GAUSS QUADRATURE
+	// POINTS, THE SINGULAR QUADRATURE POINTS, OR THE
+	// LAGRANGE POLYNOMIALS ON THE REGULAR QUADRATURE
+	// POINTS EEEEVERY TIME WE SOLVE THE BIE!!
+
+
 	// calculate Gauss-Lobatto points on the interval [-1,1]
 	cf = M_PI/(nlocl-1);
 	for (i = 0; i < nlocl; i++){
 		zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
 	}
-	
-	
-	
-
-	/*-----------------------------------------------*/
-	// NOTE: THIS STUFF CAN BE MOVED OUTSIDE THE FUNCTION...
-	// SHOULDN'T HAVE TO RECALCULATE THE GAUSS QUADRATURE
-	// POINTS, THE SINGULAR QUADRATURE POINTS, OR THE
-	// LAGRANGE POLYNOMIALS ON THE REGULAR QUADRATURE
-	// POINTS EEEEVERY TIME WE SOLVE THE BIE!!
-
 
 	/* get Gauss-Legendre abscissas and weights on the
 	 * interval [-1,1] */

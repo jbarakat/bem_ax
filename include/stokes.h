@@ -140,6 +140,39 @@ public:
 	~stokes(){
 	}
 
+	/*- PUSH/POP BACK ---*/
+
+	void stksPushBack(){
+		dispx.push_back(0);
+		dispr.push_back(0);
+		velx .push_back(0);
+		velr .push_back(0);
+		trctx.push_back(0);
+		trctr.push_back(0);
+		conc .push_back(0);
+	}
+
+	void stksPushBack(double n){
+		dispx.push_back(n);
+		dispr.push_back(n);
+		velx .push_back(n);
+		velr .push_back(n);
+		trctx.push_back(n);
+		trctr.push_back(n);
+		conc .push_back(n);
+	}
+
+	void stksPopBack(){
+		dispx.pop_back();
+		dispr.pop_back();
+		velx .pop_back();
+		velr .pop_back();
+		trctx.pop_back();
+		trctr.pop_back();
+		conc .pop_back();
+	}
+
+
 	/*- SET FUNCTIONS ---*/
 
   // set all transport fields (density functions)
@@ -149,8 +182,8 @@ public:
                        double *vx, double *vr,  // velocity
                        double *fx, double *fr,  // traction
                        double *c ){             // concentration
-    // reserve memory
-    resizeContainers(n, m);
+   // // reserve memory
+   // resizeContainers(n, m);
 
     int i;
 
@@ -256,7 +289,7 @@ public:
 	}
 
 	/*- GET FUNCTIONS ---*/
-
+  
 	// get local number of basis nodes
 	int getNLocl(){
 		int n = nlocl;

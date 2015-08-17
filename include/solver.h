@@ -128,6 +128,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		for (i = 0; i < nglob; i++){
 			Surface.setVel (i, v [2*i], v [2*i+1]);
 			Surface.setTrct(i, Df[2*i], Df[2*i+1]);
+
+			// SHOULD ALSO SET DISPLACEMENT AND CONCENTRATION FIELDS
 		}
 
 		// write to file before evolving system
@@ -171,8 +173,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 		/*-- Step 4: Check node separation and subtended angle
 		 *---------- and redistribute nodes accordingly -----*/
-		checkAngle  (Surface, thetmax, istop);
-		checkSpacing(Surface, lmin, lmax, thetmax);
+	//	checkAngle  (Surface, thetmax, istop);
+	//	checkSpacing(Surface, lmin, lmax, thetmax);
 		
 		// check to break loop
 		if (istop == 1)
@@ -210,25 +212,24 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 void checkAngle(surface &Surface, double thetmax, int &istop){
 	// declare variables
   int     i, j, i0, i1, j1;
-  int     nelem, ngeom, nlocl;
+  int     nelem, ngeom;
+	int     nlocl, nglob;
 	int     counter;
+	double  Dthet;
 
 	double  ks , kp ;
-
 	double  axM, bxM, cxM;
 	double  arM, brM, crM;
 	double  ax0, bx0, cx0;
 	double  ar0, br0, cr0;
 	double  ax1, bx1, cx1;
 	double  ar1, br1, cr1;
-
 	double  xM, rM, sM, lM, dlM; 
 	double  x0, r0, s0, l0, dl0;
 	double  x1, r1, s1, l1, dl1;
-
 	double  li, li0, li1;
 
-	double  Dthet;
+	double  cf, *zlocl;
 
 	// constants
 	const double PIH = 0.5*M_PI;
@@ -241,13 +242,37 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
   nelem = Surface.getNElem();
   ngeom = nelem + 1;
   nlocl = Surface.getNLocl();
-	
-	/* initialize containers for node coordinates
-	 * (these may be resized) */
-	vector<double> x(ngeom), r(ngeom);
+  nglob = Surface.getNGlob();
 
-	// get geometric parameters
-  Surface.getNode(x.data(), r.data());
+	// allocate memory
+	zlocl = (double*) malloc (nelem * sizeof(double));
+
+  // calculate Gauss-Lobatto points on the interval [-1,1]
+  cf = M_PI/(nlocl-1);
+  for (i = 0; i < nlocl; i++){
+    zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
+  }
+
+	
+	/* initialize containers (may be resized) */
+	vector<double> x   (ngeom), r   (ngeom);
+
+	vector<double> ux  (nglob), ur  (nglob);
+	vector<double> vx  (nglob), vr  (nglob);
+	vector<double> fx  (nglob), fr  (nglob);
+	vector<double> c   (nglob)             ;
+
+	vector<double> taus(nglob), taup(nglob);
+	vector<double> q   (nglob)             ;
+	vector<double> ms  (nglob), mp  (nglob);
+
+	// get node coordinates and basis functions
+  Surface.getNode(x .data(), r .data());
+	Surface.getVel (vx.data(), vx.data());
+	Surface.getTrct(fx.data(), fx.data());
+
+	// WILL ALSO NEED TO UPDATE DISPLACEMENT AND
+	// CONCENTRATION
 
 	// loop over boundary elements
   for (i = 0; i < nelem; i++){
@@ -280,12 +305,26 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 			counter++;
 
 			// resize containers
-			nelem++;
-			ngeom++;
-			x.resize(ngeom);
-			r.resize(ngeom);
+			x.push_back(0.0);
+			r.push_back(0.0);
 
-			if (i == 0){	// add a new point
+			for (j = 0; j < nlocl-1; j++){
+				ux  .push_back(0.0);
+				ur  .push_back(0.0);
+				vx  .push_back(0.0);
+				vr  .push_back(0.0);
+				fx  .push_back(0.0);
+				fr  .push_back(0.0);
+				c   .push_back(0.0);
+
+				taus.push_back(0.0);
+				taup.push_back(0.0);
+				q   .push_back(0.0);
+				ms  .push_back(0.0);
+				mp  .push_back(0.0);
+			}
+
+			if (i == 0){	// add a new node at the midpoint
 
 				// get spline coefficients
 				Surface.getSpln(i, axM, bxM, cxM,
@@ -300,17 +339,53 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 				 xM = ((axM*dlM + bxM)*dlM + cxM)*dlM + x[i];
 				 rM = ((arM*dlM + brM)*dlM + crM)*dlM + r[i];
 
+				// interpolate stokes fields to midpoint
+
+				// ALSO NEED TO INTERPOLATE TO NEW LOCAL POINTS CREATED WITHIN EACH ELEMENT
+				// START FROM HERE
+
+
+
+
 				// add new point
-				for (j = ngeom-1; j > 0; j--){
+				for (j = ngeom; j > 0; j--){
 					j1    = j+1;
 					x[j1] = x[j];
 					r[j1] = r[j];
 				}
 				x[1] = xM;
 				r[1] = rM;
+	
+				// update geometric nodes
+				nelem++;
+				ngeom++;
+				nglob = nelem*(nlocl-1) + 1;
+				Surface.geomPushBack();
+				Surface.setNNode(ngeom);
+				Surface.setNElem(nelem);
+				Surface.setGeomParams(nelem, x.data(), r.data());
+
+				// interpolate stokes fields
+				
+
+
+				// update stokes
+				for (j = 0; j < nlocl-1; j++){
+					Surface.stksPushBack();
+					Surface.surfPushBack();
+				}
+
+
+
+
+
+
+				// calculate surface tensions and moments
+
+
 			}
-			else {				/* remove the middle point and add
-			               * two evenly spaced points */
+			else {				/* remove the middle node and add
+			               * two evenly spaced nodes */
 				// get spline coefficients
 				Surface.getSpln(i0, ax0, bx0, cx0,
 				                    ar0, br0, cr0);
@@ -335,7 +410,7 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 				 r1 = ((ar1*dl1 + br1)*dl1 + cr1)*dl1 + r[i ];
 
 				// add new points
-				for(j = ngeom-1; j > i-1; j--){
+				for(j = ngeom; j > i-1; j--){
 					j1    = j+1;
 					x[j1] = x[j];
 					r[j1] = r[j];
@@ -345,17 +420,25 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 
 				x[i-1] = x0;
 				r[i-1] = r0;
+				
+				// update geometric nodes
+				nelem++;
+				ngeom++;
+				Surface.geomPushBack();
+				Surface.setGeomParams(nelem, x.data(), r.data());
 			}
 
-			// update geometry
-			Surface.updateStorage(nelem, nlocl-1);
-			Surface.setGeomParams(nelem, x.data(), r.data());
+	//		Surface.updateStorage(nelem, nlocl-1);
 		}
 	}
 
-	if (counter > 0)
+	if (counter > 0){
+		// LAUNCH PUSHBACK FUNCTIONS FOR AS MANY TIMES AS NEEDED
+		// THEN UPDATE SURFACE GEOMETRY HERE
+		
 		cout << counter << " node(s) added. Total of "
 			<< nelem << " boundary elements." << endl;
+	}
 }
 
 /* Redistribute nodes on the contour if two nodes 
@@ -364,6 +447,9 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
  * If a segment is too long, add a point in the middle.
  * If a segment is too short, remove the ith and (i+1)th
  * points and replace with a midpoint. */
+
+ // WORK ON THIS AFTER YOU'RE DONE WITH checkAngle
+
 void checkSpacing(surface &Surface, double lmin, double lmax, double thetmax){
 	// declare variables
   int     i, j, i1, j1;
@@ -432,7 +518,7 @@ void checkSpacing(surface &Surface, double lmin, double lmax, double thetmax){
 			r[i]   = rM;
 			
 			// update geometry
-			Surface.updateStorage(nelem, nlocl-1);
+//			Surface.updateStorage(nelem, nlocl-1);
 			Surface.setGeomParams(nelem, x.data(), r.data());
 		}
 		

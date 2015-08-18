@@ -174,14 +174,24 @@ public:
 
 
 	/*- SET FUNCTIONS ---*/
+	
+	// set number of local basis nodes
+	void setNLocl(int n){
+		nlocl = n;
+	}
+	
+	// set number of global basis nodes
+	void setNGlob(int n){
+		nglob = n;
+	}
 
   // set all transport fields (density functions)
-  void setStokesParams(int n,                   // element index
-                       int m,                   // subelement index
-                       double *ux, double *ur,  // displacement
-                       double *vx, double *vr,  // velocity
-                       double *fx, double *fr,  // traction
-                       double *c ){             // concentration
+  void setStksParams(int n,                   // element index
+                     int m,                   // subelement index
+                     double *ux, double *ur,  // displacement
+                     double *vx, double *vr,  // velocity
+                     double *fx, double *fr,  // traction
+                     double *c ){             // concentration
    // // reserve memory
    // resizeContainers(n, m);
 
@@ -198,7 +208,7 @@ public:
     }
   }
 	
-	/* set velocity of the (ielem)th local basis node
+	/* set velocity at the (ielem)th local basis node
 	 * of the (ilocl)th boundary element */
 	void setVel(int ielem, int ilocl, double vx, double vr){
 		if ((ielem + 1)*ilocl >= nglob){
@@ -243,7 +253,7 @@ public:
 		}
 	}
 	
-	/* set traction of the (ielem)th local basis node
+	/* set traction at the (ielem)th local basis node
 	 * of the (ilocl)th boundary element */
 	void setTrct(int ielem, int ilocl, double fx, double fr){
 		if ((ielem + 1)*ilocl >= nglob){
@@ -310,7 +320,49 @@ public:
 		n = nglob;
 	}
 	
-	/* get velocity of the (ielem)th local basis node
+	/* get displacement at the (ielem)th local basis node
+	 * of the (ilocl)th boundary element */
+	void getDisp(int ielem, int ilocl, double &ux, double &ur){
+		if ((ielem + 1)*ilocl >= nglob){
+			printf("Error: index out of bounds in ux, ur.\n");
+			return;
+		}
+
+		int iglob;
+		
+		// get index of the global basis node
+		iglob = ielem*(nlocl - 1) + ilocl;
+
+		ux = dispx[iglob];
+		ur = dispr[iglob];
+	}
+
+	// get displacement at the (iglob)th global basis node
+	void getDisp(int iglob, double &ux, double &ur){
+		if (iglob >= nglob){
+			printf("Error: index out of bounds in ux, ur.\n");
+			return;
+		}
+		
+		ux = dispx[iglob];
+		ur = dispr[iglob];
+	}
+
+	// get displacement at all global basis nodes
+	void getDisp(double *ux, double *ur){
+		int iglob;
+
+		if (ux == NULL || ur == NULL){
+			printf("Error: no memory allocated for ux, ur.\n");
+		}
+
+		for (iglob = 0; iglob < nglob; iglob++){
+			ux[iglob] = dispx[iglob];
+			ur[iglob] = dispr[iglob];
+		}
+	}
+	
+	/* get velocity at the (ielem)th local basis node
 	 * of the (ilocl)th boundary element */
 	void getVel(int ielem, int ilocl, double &vx, double &vr){
 		if ((ielem + 1)*ilocl >= nglob){
@@ -352,7 +404,7 @@ public:
 		}
 	}
 
-	/* get traction of the (ielem)th local basis node
+	/* get traction at the (ielem)th local basis node
 	 * of the (ilocl)th boundary element */
 	void getTrct(int ielem, int ilocl, double &fx, double &fr){
 		if ((ielem + 1)*ilocl >= nglob){
@@ -394,6 +446,45 @@ public:
 		}
 	}
 
+	/* get concentration at the (ielem)th local basis node
+	 * of the (ilocl)th boundary element */
+	void getConc(int ielem, int ilocl, double &c){
+		if ((ielem + 1)*ilocl >= nglob){
+			printf("Error: index out of bounds in c.\n");
+			return;
+		}
+
+		int iglob;
+		
+		// get index of the global basis node
+		iglob = ielem*(nlocl - 1) + ilocl;
+
+		c = conc[iglob];
+	}
+
+	// get concentration at the (iglob)th global basis node
+	void getTrct(int iglob, double &c){
+		if (iglob >= nglob){
+			printf("Error: index out of bounds in c.\n");
+			return;
+		}
+		
+		c = conc[iglob];
+	}
+
+	// get concentration at all global basis nodes
+	void getConc(double *c){
+		int iglob;
+
+		if (c == NULL){
+			printf("Error: no memory allocated for fx, fr.\n");
+		}
+
+		for (iglob = 0; iglob < nglob; iglob++){
+			c[iglob] = conc[iglob];
+		}
+	}
+
 	// get viscosity ratio
 	double getVisc(){
 		double lamb;
@@ -404,8 +495,6 @@ public:
 	void getVisc(double &lamb){
 		lamb = visc;
 	}
-
-
 };
 
 #endif

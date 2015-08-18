@@ -28,4 +28,4 @@ run : $(OBJS) $(LIBRARIES)
 #==============================================================================
 # rule to clean up all output files
 clean :
-	rm -f *.o main
+	rm -f *.o run

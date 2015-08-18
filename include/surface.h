@@ -54,7 +54,7 @@ private:
   void resizeContainers(int n, int m){
     int k = n*m + 1;
 
-    stokes::resizeContainers(n,m);
+ //   stokes::resizeContainers(n,m);
         
     // reserve memroy
 		if (k > tenss.size()){
@@ -141,8 +141,8 @@ public:
     // declare variables
     int i;
 
-//		// reserve memory
-//		resizeContainers(n, m);
+		// reserve memory
+		resizeContainers(n, m);
 		
 		// set elastic constants
 		shear = ES;

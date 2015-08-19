@@ -89,9 +89,6 @@ void gf_axR(double x, double r, double x0, double r0,
 		            +(  2 -    k2        ) * E) / k2;
 		I32 = fc3 * ((- 8 + 12*k2 - 4*k4 ) * K  
 		            +(  8 -  8*k2 +   k4 ) * E) / k4; 
-		
-		if (r < 0.001)
-			printf("%.16f\n", I31);
 	
 	  // calculate components of the Stokeslet M
 	  Mxx =  fcM*  (     I10 + X2        *I30);

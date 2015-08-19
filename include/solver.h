@@ -108,17 +108,10 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		vlme = Surface.getVlme();
 		
 		cout << "ts = " << istep << ", V = " << vlme << endl;
+		// NOTE: NEED TO CHECK VOLUME
 		
 		/*-- Step 1: Solve the boundary integral equation. --*/
 		singleLayer(IGF, nquad, Surface, v.data(), Df.data());
-
-	//	// update kinematic and dynamic parameters
-	//	for (i = 0; i < nglob; i++){
-	//		Surface.setVel (i, v [2*i], v [2*i+1]);
-	//		Surface.setTrct(i, Df[2*i], Df[2*i+1]);
-
-	//		// SHOULD ALSO SET DISPLACEMENT AND CONCENTRATION FIELDS
-	//	}
 
 		// write to file before evolving system
 		writeNode(istep, ngeom, x.data(), r.data(), opath);
@@ -126,9 +119,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		// NOTE: FOR SINGLE LAYER POTENTIAL, THERE IS NO NEED
 		// TO CALCULATE A MATRIX INVERSE
 		
-		// NOTE: NEED TO CHECK VOLUME
-
-
 		/*-- Step 2: Update surface velocity and boundary ---*
 		 *---------- shape using the kinematic condition. ---*/
 		
@@ -150,7 +140,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 			
 			// NOTE: SHOULD ALSO USE BACKWARD EULER SCHEME TO CHECK
 			// ERROR.
-
 		}
 
 		/*-- Step 3: Update surface fields. -----------------*/
@@ -487,9 +476,7 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 		/*--------- CHECK MINIMUM SEPARATION ---------*/
 		/*--------------------------------------------*/
 
-		// START HERE
-
-		if (Ds < smin && Ds == 0){						 /* if segment length falls
+		if (Ds < smin){						 /* if segment length falls
                     					  * below minimum separation,
                     						* remove both endpoints and
 																* replace with the midpoint */

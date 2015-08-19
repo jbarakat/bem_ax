@@ -476,33 +476,27 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 		/*--------- CHECK MINIMUM SEPARATION ---------*/
 		/*--------------------------------------------*/
 
-		if (Ds < smin){						 /* if segment length falls
-                    					  * below minimum separation,
-                    						* remove both endpoints and
-																* replace with the midpoint */
+		if (Ds < smin && i > 0){						 /* if segment length falls
+                    					  * below minimum separation */
 
 			/* NOTE: A short segment is eliminated ONLY if this
 			 * action does not violate the pre-established
 			 * requirements (maximum angle, maximum separation). */
-		
-			if (i > 0 && i < nelem-1){
-
-			counter--;
-
-		//	if (i == 0){
-		//		i0 = i1;
-		//		im = i2;
-		//	}
+			
+			if (i == 0){
+				i0 = i1;
+				im = i2;
+			}
 			if (i == 1){
 				im = i ;
 			}
 			if (i == nelem-2){
 				i3 = i1;
 			}
-		//	if (i == nelem-1){
-		//		i2 = i ;
-		//		i3 = i0;
-		//	}
+			if (i == nelem-1){
+				i2 = i ;
+				i3 = i0;
+			}
 			
 			// get additional geometric parameters
 			Surface.getCurv(i , ks , kp );
@@ -513,64 +507,111 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 			Surface.getArcl(i0, si0);
 			Surface.getArcl(i2, si2);
 			Surface.getArcl(i3, si3);
-
-		//	if (i == 0){
-		//		si0 = -si0;
-		//		sim = -sim;
-		//	}
-			if (i == 1){
-				sim = -sim;
-			}
-			if (i == nelem-2){
-				si3 = 2*si1 - si3;
-			}
-		//	if (i == nelem-1){
-		//		si2 = 2*si1 - si2;
-		//		si3 = 2*si1 - si3;
-		//	}
 			
 			sM  = 0.5*(si + si1);
 			ksM = 0.5*(ks + ks1);
 			
-			// get new separations
-			sep1 = sM  - si0;
-			sep2 = si2 - sM ;
-			
-			// get new angles
-			totang0 = ks0*(sM  - sim);
-			totang1 = ksM*(si2 - si0);
-			totang2 = ks2*(si3 - sM );
+			// calculate new separations and subtended angles
+			if (i == 0){
+				si0 = -si1;
+				sim = -si2;
 
+				sep1 = 0;
+				sep2 = si2 - si;
+
+				totang0 = 0; 
+				totang1 = ks *(si2 - sim);
+				totang2 = ks2*(si3 - si );
+			}
+			if (i == nelem-1){
+				si2 = 2*si1 - si ;
+				si3 = 2*si1 - si0;
+
+				sep1 = si1 - si0;
+				sep2 = 0;
+
+				totang0 = ks0*(si1 - sim);
+				totang1 = 0; 
+				totang2 = ks1*(si3 - si0);
+
+			}
+			if (i > 0 && i < nelem-1){
+				if (i == 1){
+					sim = -si ;
+				}
+
+				if (i == nelem-2){
+					si3 = 2*si2 - si1;
+				}
+
+				sep1 = sM  - si0;
+				sep2 = si2 - sM ;
+
+				totang0 = ks0*(sM  - sim);
+				totang1 = ksM*(si2 - si0);
+				totang2 = ks2*(si3 - sM );
+			}
+			
 			if (totang0 < thetmax &&
 			    totang1 < thetmax &&
 					totang2 < thetmax &&
 					sep1    < smax    &&
 					sep2    < smax    ){
-				// get midpoint
-				Surface.getSpln(i, axM, bxM, cxM,
-				                   arM, brM, crM);
-				Surface.getPoly(i , li );
-				Surface.getPoly(i1, li1);
-				lM = 0.5*(li1 + li);
-				dlM = lM - li;
-				xM = ((axM*dlM + bxM)*dlM + cxM)*dlM + x[i];
-				rM = ((arM*dlM + brM)*dlM + crM)*dlM + r[i];
-				
-				Surface.getPoly(i0, li0);
-				Surface.getPoly(i2, li2);
-				dl0 = lM  - li0;
-				dl1 = li1 - lM ;
+				counter--;
 
-				/* remove geometric nodes and 
-				 * replace with midpoint */
-				for (j = i1; j < nelem; j++){
-					j1 = j + 1;
+				if (i == 0){						   /* remove (i+1)st point */
+				cout << "YES" << endl;
+					for (j = i1; j < nelem; j++){
+						j1 = j + 1;
+
+						x[j] = x[j1];
+						r[j] = r[j1];
+					}
 					
-					x[j] = x[j1];
-					r[j] = r[j1];
+					x.pop_back();
+					r.pop_back();
 				}
-				x[i] = xM;
-				r[i] = rM;
+				
+				if (i == nelem-1){				 /* remove ith point */
+					x[nelem-1] = x[nelem];
+					r[nelem-1] = r[nelem];
+					
+					x.pop_back();
+					r.pop_back();
+				}
+			
+				if (i > 0 && i < nelem-1){ /* remove ith and (i+1)st point and
+                                  	* replace with the midpoint */
+
+					// get midpoint
+					Surface.getSpln(i, axM, bxM, cxM,
+					                   arM, brM, crM);
+					Surface.getPoly(i , li );
+					Surface.getPoly(i1, li1);
+					lM = 0.5*(li1 + li);
+					dlM = lM - li;
+					xM = ((axM*dlM + bxM)*dlM + cxM)*dlM + x[i];
+					rM = ((arM*dlM + brM)*dlM + crM)*dlM + r[i];
+					
+					Surface.getPoly(i0, li0);
+					Surface.getPoly(i2, li2);
+					dl0 = lM  - li0;
+					dl1 = li1 - lM ;
+
+					/* remove geometric nodes and 
+					 * replace with midpoint */
+					for (j = i1; j < nelem; j++){
+						j1 = j + 1;
+						
+						x[j] = x[j1];
+						r[j] = r[j1];
+					}
+					x[i] = xM;
+					r[i] = rM;
+
+					x.pop_back();
+					r.pop_back();
+				}
 
 				// update geometric nodes
 				nelem--;
@@ -587,7 +628,6 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 
 				return;
 			} // if (totang and sep meet criteria)
-			} // if (i > 0 && i < nelem-1)
 		} // if (Ds < smin)
 	} // end of boundary elements
 

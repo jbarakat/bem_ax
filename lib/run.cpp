@@ -58,7 +58,7 @@ int main(){
 	// WILL BE PART OF AN INPUT FILE.
 
 	// choose number of timesteps and size of timestep
-	nstep = 500;
+	nstep = 5000000;
 	dt    = 0.01;
 
 	// choose number of quadrature points

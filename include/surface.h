@@ -396,7 +396,7 @@ public:
 				if (model == 0){
 					// surface tension force
 					fs[n] = 0;
-					fn[n] = -(ks[n]*tenss[n] + kp[n]*tensp[n]);
+					fn[n] = -(ks[n]*tensM + kp[n]*tensM);
 
 					// add buoyance force (assume drho = 1, acceleration due to gravity = 1)
 					double rhod = 1.;

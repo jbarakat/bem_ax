@@ -70,12 +70,6 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
   nlocl = Surface.getNLocl();
   nglob = Surface.getNGlob();
 
-	// initialize vectors
-	vector<double> x  (ngeom), r  (ngeom);
-	vector<double> v  (2*nglob);
-	vector<double> Df (2*nglob);
-
-
   /*-----------------------------------------------------*/
   /*-------------------- INITIALIZE ---------------------*/
   /*-----------------------------------------------------*/
@@ -91,27 +85,11 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	if (ISURF == 0){
 		gamm = Surface.getMeanTens();
 	}
-
-	// set surface velocity
-	for (i = 0; i < nglob; i++){
-    Surface.setVel (i, 0.0, 0.0);
-		v [2*i  ] = 0.;
-		v [2*i+1] = 0.;
-    
-		Surface.setTrct(i, 0.0, 0.0);
-		Df[2*i  ] = 0.;
-		Df[2*i+1] = 0.;
-	}
 	
-	// get initial geometry
-	Surface.getNode(x .data(), r .data());
-	area = Surface.getArea();
-	vlme = Surface.getVlme();
-
 	// extrema for node redistribution
 	thetmax = M_PI/8;
 	smax = 2.0*M_PI/nelem;
-	smin = smax/5.0;
+	smin = smax/4.0;
 	
 	
   /*-----------------------------------------------------*/
@@ -119,18 +97,28 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
   /*-----------------------------------------------------*/
 	
 	for (istep = 0; istep < nstep; istep++){
+		/*-- Step 0: Initialize -----------------------------*/
+		vector<double> x (ngeom), r (ngeom);
+		vector<double> v (2*nglob, 0.0);
+		vector<double> Df(2*nglob, 0.0);
+	
+		// get geometry
+		Surface.getNode(x.data(), r.data());
+		area = Surface.getArea();
+		vlme = Surface.getVlme();
+		
 		cout << "ts = " << istep << ", V = " << vlme << endl;
 		
 		/*-- Step 1: Solve the boundary integral equation. --*/
 		singleLayer(IGF, nquad, Surface, v.data(), Df.data());
 
-		// update kinematic and dynamic parameters
-		for (i = 0; i < nglob; i++){
-			Surface.setVel (i, v [2*i], v [2*i+1]);
-			Surface.setTrct(i, Df[2*i], Df[2*i+1]);
+	//	// update kinematic and dynamic parameters
+	//	for (i = 0; i < nglob; i++){
+	//		Surface.setVel (i, v [2*i], v [2*i+1]);
+	//		Surface.setTrct(i, Df[2*i], Df[2*i+1]);
 
-			// SHOULD ALSO SET DISPLACEMENT AND CONCENTRATION FIELDS
-		}
+	//		// SHOULD ALSO SET DISPLACEMENT AND CONCENTRATION FIELDS
+	//	}
 
 		// write to file before evolving system
 		writeNode(istep, ngeom, x.data(), r.data(), opath);
@@ -167,20 +155,17 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 
 		/*-- Step 3: Update surface fields. -----------------*/
 		Surface.setGeomParams(nelem, x.data(), r.data());
-
-		// NOTE: WOULD HAVE TO UPDATE STOKES.H DISPLACEMENT,
-		// VELOCITY, TRACTION, AND SURFACTANT CONCENTRATION FIELDS HERE
-		Surface.setSurfParams(nelem, nlocl-1, gamm);
+	//	Surface.setSurfParams(nelem, nlocl-1, gamm);
 
 		/*-- Step 4: Check node separation and subtended angle
 		 *---------- and redistribute nodes accordingly -----*/
 		checkAngle  (Surface, thetmax, istop);
-		checkSpacing(Surface, smin, smax, thetmax);
 		
 		// check to break loop
 		if (istop == 1)
 			return;
 		
+		checkSpacing(Surface, smin, smax, thetmax);
 		
 		/*-- Step 5: Get parameters for next timestep  ------*/
  		nelem = Surface.getNElem();
@@ -195,17 +180,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
     r.resize(ngeom);
 		Surface.getNode(x.data(), r.data());
 		
-		if (2*nglob > v.size()){
-			v .resize(2*nglob);
-			Df.resize(2*nglob);
-		}
-
-		// didn't resize tensions/moments... so do that now
-		Surface.setSurfParams(nelem, nlocl-1);
-
-		// SHOULD WRITE VELOCITIES AND TRACTIONS AND SEE HOW THESE LOOK
-		
-
+		//Surface.setSurfParams(nelem, nlocl-1);
 	}
 }
 
@@ -221,8 +196,6 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 	// declare variables
   int     i, i0, i1;
 	int     j, j0, j1;
-	int     k, k0, k1;
-	int     m;
   int     nelem, ngeom;
 	int     nlocl, nglob;
 	int     counter;
@@ -241,12 +214,7 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 	double  x0, r0, s0, l0, dl0;
 	double  x1, r1, s1, l1, dl1;
 
-	double  li, li0, li1, lj;
-	
-	double  uxp, urp, vxp, vrp, fxp, frp, cp;
-
-	double  cf, *zlocl;
-	double  zp, *L;
+	double  li, li0, li1;
 
 	// constants
 	const double PIH = 0.5*M_PI;
@@ -261,36 +229,11 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
   nlocl = Surface.getNLocl();
   nglob = Surface.getNGlob();
 
-	// allocate memory
-	zlocl = (double*) malloc (nlocl * sizeof(double));
-	L     = (double*) malloc (nlocl * sizeof(double));
-
-  // calculate Gauss-Lobatto points on the interval [-1,1]
-  cf = M_PI/(nlocl-1);
-  for (i = 0; i < nlocl; i++){
-    zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
-  }
-
 	// initialize containers (may be resized)
 	vector<double>  x  (ngeom),  r  (ngeom);
-	vector<double> ux  (nglob), ur  (nglob);
-	vector<double> vx  (nglob), vr  (nglob);
-	vector<double> fx  (nglob), fr  (nglob);
-	vector<double>  c  (nglob)             ;
 
-//	vector<double> taus(nglob), taup(nglob);
-//	vector<double> q   (nglob)             ;
-//	vector<double> ms  (nglob), mp  (nglob);
-
-	// get node coordinates and basis functions
+	// get node coordinates
   Surface.getNode( x.data(),  r.data());
-	Surface.getDisp(ux.data(), ur.data());
-	Surface.getVel (vx.data(), vr.data());
-	Surface.getTrct(fx.data(), fr.data());
-	Surface.getConc( c.data()           );
-
-	// NOTE: AND WHAT ABOUT CONSTITUTIVE FIELDS? (TENSIONS, MOMENTS, etc.)
-	// (WORRY ABOUT THIS LATER)
 
   for (i = 0; i < nelem; i++){ // loop over boundary elements
 		i0 = i - 1;
@@ -320,9 +263,6 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 			
 			istop = 1;
 
-			free(L    );
-			free(zlocl);
-
 			return;
 		}
 		
@@ -334,12 +274,6 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 			counter++;
 			
 			if (i == 0){	// add a new node at the midpoint
-				// temporary containers for new basis functions
-				vector<double> uxnew(2*nlocl-3), urnew(2*nlocl-3);
-				vector<double> vxnew(2*nlocl-3), vrnew(2*nlocl-3);
-				vector<double> fxnew(2*nlocl-3), frnew(2*nlocl-3);
-				vector<double>  cnew(2*nlocl-3)                  ;
-
 				// get spline coefficients
 				Surface.getSpln(i, axM, bxM, cxM,
 				                   arM, brM, crM);
@@ -364,123 +298,9 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 				}
 				x[1] = xM;
 				r[1] = rM;
-
-				// NOTE: MAYBE HAVE if (nlocl > 2) statement? (might not be necessary...)
-				//
-				/* interpolate stokes fields to new basis nodes
-				 * to the left of and including the midpoint */
-				for (j = 1; j < nlocl; j++){   /* loop over new basis nodes to
-				                                * the left of the midpoint 
-																				* (including the midpoint) */
-					j0 = j-1;
-
-					// initialize
-					zp = 0.5*(zlocl[j] + 1) - 1;
-					lagrange(nlocl-1, zlocl, zp, L);
-					uxp = 0; urp = 0;
-					vxp = 0; vrp = 0;
-					fxp = 0; frp = 0;
-					 cp = 0;
-
-					// interpolate functions to zp
-					for (m = 0; m < nlocl; m++){
-					//	k = i*(nlocl-1) + m;
-						k = m;
-
-						uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-						vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-						fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-						 cp +=  c[k]*L[m];
-					}
-
-					// add new basis node
-					uxnew[j0] = uxp; urnew[j0] = urp;
-					vxnew[j0] = vxp; vrnew[j0] = vrp;
-					fxnew[j0] = fxp; frnew[j0] = frp;
-					 cnew[j0] =  cp;
-				}
-				
-				/* interpolate stokes fields to new basis nodes
-				 * to the right of the midpoint */
-				for (j = 1; j < nlocl-1; j++){ /* loop over new basis nodes to
-				                                * the right of the midpoint
-																				* (excluding the midpoint) */
-					j0 = nlocl + j - 2;
-
-					// initialize
-					zp = 0.5*(zlocl[j] + 1);
-					lagrange(nlocl-1, zlocl, zp, L);
-					uxp = 0; urp = 0;
-					vxp = 0; vrp = 0;
-					fxp = 0; frp = 0;
-					 cp = 0;
-
-					// interpolate functions to zp
-					for (m = 0; m < nlocl; m++){
-					//	k = i*(nlocl-1) + m;
-						k = m;
-
-						uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-						vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-						fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-						 cp +=  c[k]*L[m];
-					}
-
-					// add new basis node
-					uxnew[j0] = uxp; urnew[j0] = urp;
-					vxnew[j0] = vxp; vrnew[j0] = vrp;
-					fxnew[j0] = fxp; frnew[j0] = frp;
-					 cnew[j0] =  cp;
-				}
-
-				/* delete original basis functions between the
-				 * ith and (i+1)st geometric nodes and replace
-				 * with the new interpolants */
-				for (j = 1; j < nlocl-1; j++){ /* left of midpoint:
-				                                * replace old functions */
-					j0 = j - 1;
-					
-					ux[j] = uxnew[j0]; ur[j] = urnew[j0];
-					vx[j] = vxnew[j0]; vr[j] = vrnew[j0];
-					fx[j] = fxnew[j0]; fr[j] = frnew[j0];
-					 c[j] =  cnew[j0];
-				}
-
-				for (j = 0; j < nlocl-1; j++){ /* right of midpoint
-				                                * (including midpoint):
-				                                * increase vector size,
-																				* shift vector elements,
-				                                * and add new functions */
-					j0 = j + nlocl - 2;
-					j1 = j + nlocl - 1;
-
-					ux.push_back(0.0); ur.push_back(0.0);
-					vx.push_back(0.0); vr.push_back(0.0);
-					fx.push_back(0.0); fr.push_back(0.0);
-					c .push_back(0.0);
-
-					for (k = nglob+j; k > j0; k--){
-						k1 = k+1;
-
-						ux[k1] = ux[k]; ur[k1] = ur[k];
-						vx[k1] = vx[k]; vr[k1] = vr[k];
-						fx[k1] = fx[k]; fr[k1] = fr[k];
-						 c[k1] =  c[k];
-					}
-					ux[j1] = uxnew[j0]; ur[j1] = urnew[j0];
-					vx[j1] = vxnew[j0]; vr[j1] = vrnew[j0];
-					fx[j1] = fxnew[j0]; fr[j1] = frnew[j0];
-					 c[j1] =  cnew[j0];
-				}
 			}
 			else {				/* remove the middle node and add
 			               * two evenly spaced nodes */
-				// temporary containers for new basis functions
-				vector<double> uxnew(3*nlocl-4), urnew(3*nlocl-4);
-				vector<double> vxnew(3*nlocl-4), vrnew(3*nlocl-4);
-				vector<double> fxnew(3*nlocl-4), frnew(3*nlocl-4);
-				vector<double>  cnew(3*nlocl-4)                  ;
-
 				// get spline coefficients
 				Surface.getSpln(i0, ax0, bx0, cx0,
 				                    ar0, br0, cr0);
@@ -506,250 +326,30 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 				x.push_back(0.0);
 				r.push_back(0.0);
 
-				for(j = ngeom; j > i-1; j--){
+				for(j = ngeom; j > i; j--){
 					j1    = j+1;
 					x[j1] = x[j];
 					r[j1] = r[j];
 				}
-				x[i]   = x1;
-				r[i]   = r1;
+				x[i1] = x1;
+				r[i1] = r1;
 
-				x[i-1] = x0;
-				r[i-1] = r0;
-			
-				/* interpolate stokes fields to new basis nodes
-				 * in the first element */
-				for (j = 1; j < nlocl; j++){
-					j0 = j-1;
-
-					// calculate polygonal line segment
-					lj = 0.5*dl0*(zlocl[j] + 1) + li0;
-
-					// initialize
-					uxp = 0; urp = 0;
-					vxp = 0; vrp = 0;
-					fxp = 0; frp = 0;
-					 cp = 0;
-
-					if (lj < li){
-						// compute Lagrange polynomials
-						zp = 2*(lj - li0)/(li - li0) - 1;
-						lagrange(nlocl-1, zlocl, zp, L);
-	
-						// interpolate functions to zp
-						for (m = 0; m < nlocl; m++){
-							k = i0*(nlocl-1) + m;
-	
-							uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-							vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-							fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-							 cp +=  c[k]*L[m];
-						}
-					}
-					else {
-						// compute Lagrange polynomials
-						zp = 2*(lj - li)/(li - li) - 1;
-						lagrange(nlocl-1, zlocl, zp, L);
-	
-						// interpolate functions to zp
-						for (m = 0; m < nlocl; m++){
-							k = i*(nlocl-1) + m;
-	
-							uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-							vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-							fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-							 cp +=  c[k]*L[m];
-						}
-					}
-
-					// add new basis node
-					uxnew[j0] = uxp; urnew[j0] = urp;
-					vxnew[j0] = vxp; vrnew[j0] = vrp;
-					fxnew[j0] = fxp; frnew[j0] = frp;
-					 cnew[j0] =  cp;
-				}
-
-				/* interpolate stokes fields to new basis nodes
-				 * in the second element */
-				dlM = l1 - l0;
-				for (j = 1; j < nlocl; j++){
-					j0 = nlocl + j - 2;
-					
-					// calculate polygonal line segment
-					lj = 0.5*dlM*(zlocl[j] + 1) + l0;
-					
-					// initialize
-					uxp = 0; urp = 0;
-					vxp = 0; vrp = 0;
-					fxp = 0; frp = 0;
-					 cp = 0;
-
-					if (lj < li){
-						// compute Lagrange polynomials
-						zp = 2*(lj - li0)/(li - li0) - 1;
-						lagrange(nlocl-1, zlocl, zp, L);
-	
-						// interpolate functions to zp
-						for (m = 0; m < nlocl; m++){
-							k = i0*(nlocl-1) + m;
-	
-							uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-							vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-							fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-							 cp +=  c[k]*L[m];
-						}
-					}
-					else {
-						// compute Lagrange polynomials
-						zp = 2*(lj - li)/(li - li) - 1;
-						lagrange(nlocl-1, zlocl, zp, L);
-	
-						// interpolate functions to zp
-						for (m = 0; m < nlocl; m++){
-							k = i*(nlocl-1) + m;
-	
-							uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-							vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-							fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-							 cp +=  c[k]*L[m];
-						}
-					}
-
-					// add new basis node
-					uxnew[j0] = uxp; urnew[j0] = urp;
-					vxnew[j0] = vxp; vrnew[j0] = vrp;
-					fxnew[j0] = fxp; frnew[j0] = frp;
-					 cnew[j0] =  cp;
-				}
-				
-				/* interpolate stokes fields to new basis nodes
-				 * in the third element (exclude z = 1) */
-				for (j = 1; j < nlocl-1; j++){
-					j0 = 2*nlocl + j - 3;
-					
-					// calculate polygonal line segment
-					lj = 0.5*dl1*(zlocl[j] + 1) + li1;
-					
-					// initialize
-					uxp = 0; urp = 0;
-					vxp = 0; vrp = 0;
-					fxp = 0; frp = 0;
-					 cp = 0;
-
-					if (lj < li){
-						// compute Lagrange polynomials
-						zp = 2*(lj - li0)/(li - li0) - 1;
-						lagrange(nlocl-1, zlocl, zp, L);
-	
-						// interpolate functions to zp
-						for (m = 0; m < nlocl; m++){
-							k = i0*(nlocl-1) + m;
-	
-							uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-							vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-							fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-							 cp +=  c[k]*L[m];
-						}
-					}
-					else {
-						// compute Lagrange polynomials
-						zp = 2*(lj - li)/(li - li) - 1;
-						lagrange(nlocl-1, zlocl, zp, L);
-	
-						// interpolate functions to zp
-						for (m = 0; m < nlocl; m++){
-							k = i*(nlocl-1) + m;
-	
-							uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-							vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-							fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-							 cp +=  c[k]*L[m];
-						}
-					}
-
-					// add new basis node
-					uxnew[j0] = uxp; urnew[j0] = urp;
-					vxnew[j0] = vxp; vrnew[j0] = vrp;
-					fxnew[j0] = fxp; frnew[j0] = frp;
-					 cnew[j0] =  cp;
-				}
-
-				/* delete original basis functions between the
-				 * (i-1)st and ith geometric nodes and replace
-				 * with interpolants in the first new element */
-				for (j = 1; j < nlocl; j++){
-					j0 = j-1;
-					k  = i0*(nlocl-1) + j;
-					
-					ux[k] = uxnew[j0]; ur[k] = urnew[j0];
-					vx[k] = vxnew[j0]; vr[k] = vrnew[j0];
-					fx[k] = fxnew[j0]; fr[k] = frnew[j0];
-					 c[k] =  cnew[j0];
-				}
-
-				/* delete original basis functions between the
-				 * ith and (i+1)st geometric nodes and replace
-				 * with interpolants in the second new element */
-				for (j = 1; j < nlocl-1; j++){
-					j0 = nlocl + j - 2;
-					k  = i*(nlocl-1) + j;
-					
-					ux[k] = uxnew[j0]; ur[k] = urnew[j0];
-					vx[k] = vxnew[j0]; vr[k] = vrnew[j0];
-					fx[k] = fxnew[j0]; fr[k] = frnew[j0];
-					 c[k] =  cnew[j0];
-				}
-
-				/* add interpolants in the third element */
-				for (j = 0; j < nlocl-1; j++){
-					j0 = 2*nlocl + j - 3;
-					k0 = i1*(nlocl-1) + j - 1;
-					
-					ux.push_back(0.0); ur.push_back(0.0);
-					vx.push_back(0.0); vr.push_back(0.0);
-					fx.push_back(0.0); fr.push_back(0.0);
-					c .push_back(0.0);
-
-					for (k = nglob + j; k > k0; k--){
-						k1 = k+1;
-
-						ux[k1] = ux[k]; ur[k1] = ur[k];
-						vx[k1] = vx[k]; vr[k1] = vr[k];
-						fx[k1] = fx[k]; fr[k1] = fr[k];
-						 c[k1] =  c[k];
-					}
-					ux[k0+1] = uxnew[j0]; ur[k0+1] = urnew[j0];
-					vx[k0+1] = vxnew[j0]; vr[k0+1] = vrnew[j0];
-					fx[k0+1] = fxnew[j0]; fr[k0+1] = frnew[j0];
-					 c[k0+1] =  cnew[j0];
-				}
+				x[i ] = x0;
+				r[i ] = r0;
 			}
 
-			// update geometric nodes
+			// update geometry
 			nelem++;
 			ngeom++;
+			nglob = nelem*(nlocl-1) + 1;
 			Surface.geomPushBack();
 			Surface.setNNode(ngeom);
 			Surface.setNElem(nelem);
+			Surface.setNGlob(nglob);
 			Surface.setGeomParams(nelem, x.data(), r.data());
 	
-			// update stokes fields
-			nglob = nelem*(nlocl-1) + 1;
-			Surface.setNGlob(nglob);
-			for (j = 0; j < nlocl-1; j++){
-				Surface.stksPushBack();
-			}
-			Surface.setStksParams(nelem, nlocl-1,
-			                      ux.data(), ur.data(),
-			                      vx.data(), vr.data(),
-			                      fx.data(), fr.data(),
-			                      c .data());
-
-			cout << "1 node added. Total of "
+			cout << "checkAngle: 1 node added. Total of "
 				<< nelem << " boundary elements." << endl;
-		
-			free(zlocl);
-			free(L    );
 		
 			return;
 		}
@@ -759,9 +359,6 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 //		cout << counter << " node(s) added. Total of "
 //			<< nelem << " boundary elements." << endl;
 //	}
-
-	free(zlocl);
-	free(L    );
 }
 
 /* Redistribute nodes on the contour if two nodes 
@@ -800,11 +397,9 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 
 	double  li, li0, li1, li2, lj;
 	double  sim, si, si0, si1, si2, si3;
-	
-	double  uxp, urp, vxp, vrp, fxp, frp, cp;
-
-	double  cf, *zlocl;
-	double  zp, *L;
+			
+	double sep1, sep2;
+	double totang0, totang1, totang2;
 
 	// constants
 	const double PIH = 0.5*M_PI;
@@ -818,29 +413,11 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
   nlocl = Surface.getNLocl();
   nglob = Surface.getNGlob();
 
-	// allocate memory
-	zlocl = (double*) malloc (nlocl * sizeof(double));
-	L     = (double*) malloc (nlocl * sizeof(double));
-
-  // calculate Gauss-Lobatto points on the interval [-1,1]
-  cf = M_PI/(nlocl-1);
-  for (i = 0; i < nlocl; i++){
-    zlocl[nlocl - i - 1] = gsl_sf_cos(cf*i);
-  }
-
 	// initialize containers (may be resized)
 	vector<double>  x  (ngeom),  r  (ngeom);
-	vector<double> ux  (nglob), ur  (nglob);
-	vector<double> vx  (nglob), vr  (nglob);
-	vector<double> fx  (nglob), fr  (nglob);
-	vector<double>  c  (nglob)             ;
 
-	// get node coordinates and basis functions
+	// get node coordinates
   Surface.getNode( x.data(),  r.data());
-	Surface.getDisp(ux.data(), ur.data());
-	Surface.getVel (vx.data(), vr.data());
-	Surface.getTrct(fx.data(), fr.data());
-	Surface.getConc( c.data()           );
 
 	// NOTE: AND WHAT ABOUT CONSTITUTIVE FIELDS? (TENSIONS, MOMENTS, etc.)
 	// (WORRY ABOUT THIS LATER)
@@ -867,12 +444,6 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 																* a point in the middle */
 			counter++;
 
-			// temporary containers for new basis functions
-			vector<double> uxnew(2*nlocl-3), urnew(2*nlocl-3);
-			vector<double> vxnew(2*nlocl-3), vrnew(2*nlocl-3);
-			vector<double> fxnew(2*nlocl-3), frnew(2*nlocl-3);
-			vector<double>  cnew(2*nlocl-3)                  ;
-
 			// get midpoint
 			Surface.getSpln(i, axM, bxM, cxM,
 			                   arM, brM, crM);
@@ -887,146 +458,27 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 			x.push_back(0.0);
 			r.push_back(0.0);
 
-			for (j = ngeom; j >i-1; j--){
+			for (j = ngeom; j > i; j--){
 				j1 = j+1;
 
 				x[j1] = x[j];
 				r[j1] = r[j];
 			}
-			x[i] = xM;
-			r[i] = rM;
-
-			/* interpolate stokes fields to new basis nodes
-		   * to the left of and including the midpoint */
-			for (j = 1; j < nlocl; j++){	/* loop over new basis nodes to
-			                               * the left of the midpoint 
-																		 * (including the midpoint */
-				j0 = j-1;
-
-				// initialize
-				zp = 0.5*(zlocl[j] + 1) - 1;
-				lagrange(nlocl-1, zlocl, zp, L);
-				uxp = 0; urp = 0;
-				vxp = 0; vrp = 0;
-				fxp = 0; frp = 0;
-				 cp = 0;
-
-				// interpolate functions to zp
-				for (m = 0; m < nlocl; m++){
-					k = i*(nlocl - 1) + m;
-
-					uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-					vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-					fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-					 cp +=  c[k]*L[m];
-				}
-
-				// add new basis node
-				uxnew[j0] = uxp; urnew[j0] = urp;
-				vxnew[j0] = vxp; vrnew[j0] = vrp;
-				fxnew[j0] = fxp; frnew[j0] = frp;
-				 cnew[j0] =  cp;
-			}
-
-			/* interpolate stokes fields to new basis nodes
-			 * to the right of the midpoint */
-			for (j = 1; j < nlocl-1; j++){ /* loop over new basis nodes to
-			                                * the right of the midpoint
-																			* (excluding the midpoint */
-				j0 = nlocl + j - 2;
-
-				// initialize
-				zp = 0.5*(zlocl[j] + 1);
-				lagrange(nlocl-1, zlocl, zp, L);
-				uxp = 0; urp = 0;
-				vxp = 0; vrp = 0;
-				fxp = 0; frp = 0;
-				 cp = 0;
-
-				// interpolate functions to zp
-				for (m = 0; m < nlocl; m++){
-					k = i*(nlocl - 1) + m;
-
-					uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-					vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-					fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-					 cp +=  c[k]*L[m];
-				}
-
-				// add new basis node
-				uxnew[j0] = uxp; urnew[j0] = urp;
-				vxnew[j0] = vxp; vrnew[j0] = vrp;
-				fxnew[j0] = fxp; frnew[j0] = frp;
-				 cnew[j0] =  cp;
-			}
-
-			/* delete original basis functions between the
-			 * ith and (i+1)st geometric nodes and replace
-			 * with the new interpolants */
-			for (j = 1; j < nlocl-1; j++){ /* left of midpoint:
-			                                * replace old functions */
-				j0 = j - 1;
-				k  = i*(nlocl-1) + j;
-
-				ux[k] = uxnew[j0]; ur[k] = urnew[j0];
-				vx[k] = vxnew[j0]; vr[k] = vrnew[j0];
-				fx[k] = fxnew[j0]; fr[k] = frnew[j0];
-				 c[k] =  cnew[j0];
-			}
-
-			for (j = 0; j < nlocl-1; j++){ /* right of midpoint
-																			* (including midpoint):
-			                                * increase vector size,
-																			* shift vector elements,
-																			* and add new functions */
-				j0 = j + nlocl - 2;
-				j1 = j + nlocl - 1;
-				k0 = i1*(nlocl-1) + j - 1;
-
-				ux.push_back(0.0); ur.push_back(0.0);
-				vx.push_back(0.0); vr.push_back(0.0);
-				fx.push_back(0.0); fr.push_back(0.0);
-				 c.push_back(0.0);
-
-				for (k = j+nglob; k > k0; k--){
-					k1 = k + 1;
-
-					ux[k1] = ux[k]; ur[k1] = ur[k];
-					vx[k1] = vx[k]; vr[k1] = vr[k];
-					fx[k1] = fx[k]; fr[k1] = fr[k];
-					 c[k1] =  c[k];
-				}
-				ux[k0+1] = uxnew[j0]; ur[k0+1] = ur[j0];
-				vx[k0+1] = vxnew[j0]; vr[k0+1] = vr[j0];
-				fx[k0+1] = fxnew[j0]; fr[k0+1] = fr[j0];
-				 c[k0+1] =  cnew[j0];
-			}
+			x[i1] = xM;
+			r[i1] = rM;
 
 			// update geometric nodes
 			nelem++;
 			ngeom++;
+			nglob = nelem*(nlocl-1) + 1;
 			Surface.geomPushBack();
 			Surface.setNNode(ngeom);
 			Surface.setNElem(nelem);
-			Surface.setGeomParams(nelem, x.data(), r.data());
-	
-			// update stokes fields
-			nglob = nelem*(nlocl-1) + 1;
 			Surface.setNGlob(nglob);
-			for (j = 0; j < nlocl-1; j++){
-				Surface.stksPushBack();
-			}
-			Surface.setStksParams(nelem, nlocl-1,
-			                      ux.data(), ur.data(),
-			                      vx.data(), vr.data(),
-			                      fx.data(), fr.data(),
-			                      c .data());
+			Surface.setGeomParams(nelem, x.data(), r.data());
 
-			cout << "1 node added. Total of "
+			cout << "checkSpacing: 1 node added. Total of "
 				<< nelem << " boundary elements." << endl;
-		
-			free(zlocl);
-			free(L    );
 		
 			return;
 		} // if (Ds > smax)
@@ -1035,10 +487,13 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 		/*--------- CHECK MINIMUM SEPARATION ---------*/
 		/*--------------------------------------------*/
 
-		if (Ds < smin){						 /* if segment length falls
+		// START HERE
+
+		if (Ds < smin && Ds == 0){						 /* if segment length falls
                     					  * below minimum separation,
                     						* remove both endpoints and
 																* replace with the midpoint */
+
 			/* NOTE: A short segment is eliminated ONLY if this
 			 * action does not violate the pre-established
 			 * requirements (maximum angle, maximum separation). */
@@ -1046,9 +501,6 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 			if (i > 0 && i < nelem-1){
 
 			counter--;
-			
-			double sep1, sep2;
-			double totang0, totang1, totang2;
 
 		//	if (i == 0){
 		//		i0 = i1;
@@ -1107,12 +559,6 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 					totang2 < thetmax &&
 					sep1    < smax    &&
 					sep2    < smax    ){
-				// temporary containers for new basis functions
-				vector<double> uxnew(2*nlocl-3), urnew(2*nlocl-3);
-				vector<double> vxnew(2*nlocl-3), vrnew(2*nlocl-3);
-				vector<double> fxnew(2*nlocl-3), frnew(2*nlocl-3);
-				vector<double>  cnew(2*nlocl-3)                  ;
-				
 				// get midpoint
 				Surface.getSpln(i, axM, bxM, cxM,
 				                   arM, brM, crM);
@@ -1139,184 +585,18 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 				x[i] = xM;
 				r[i] = rM;
 
-	//			/* interpolate stokes fields to new basis nodes
-	//		   * to the left of and including the midpoint */
-	//			for (j = 1; j < nlocl; j++){	/* loop over new basis nodes to
-	//			                               * the left of the midpoint 
-	//																		 * (including the midpoint */
-	//				j0 = j-1;
-
-	//				// get polygonal arclength
-	//				lj = 0.5*dl0*(zlocl[j] + 1) + li0;
-
-	//				// interpolate in the appropriate element
-	//				if (lj < li){
-	//					zp = 2*(lj - li0)/(li  - li0) - 1;
-	//					lagrange(nlocl-1, zlocl, zp, L);
-	//					uxp = 0; urp = 0;
-	//					vxp = 0; vrp = 0;
-	//					fxp = 0; frp = 0;
-	//					 cp = 0;
-
-	//					for (m = 0; m < nlocl; m++){
-	//						k = i0*(nlocl - 1) + m;
-
-	//						uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-	//						vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-	//						fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-	//						 cp +=  c[k]*L[m];
-	//					}
-	//				}
-	//				else {
-	//					zp = 2*(lj - li )/(li1 - li ) - 1;
-	//					lagrange(nlocl-1, zlocl, zp, L);
-	//					uxp = 0; urp = 0;
-	//					vxp = 0; vrp = 0;
-	//					fxp = 0; frp = 0;
-	//					 cp = 0;
-	//					
-	//					for (m = 0; m < nlocl; m++){
-	//						k = i *(nlocl - 1) + m;
-
-	//						uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-	//						vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-	//						fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-	//						 cp +=  c[k]*L[m];
-	//					}
-	//				}
-
-	//				// add new basis node
-	//				uxnew[j0] = uxp; urnew[j0] = urp;
-	//				vxnew[j0] = vxp; vrnew[j0] = vrp;
-	//				fxnew[j0] = fxp; frnew[j0] = frp;
-	//				 cnew[j0] =  cp;
-	//			}
-
-	//			/* interpolate stokes fields to new basis nodes
-	//			 * to the right of the midpoint */
-	//			for (j = 1; j < nlocl; j++){	/* loop over new basis nodes to
-	//			                               * the right of the midpoint 
-	//																		 * (excluding the midpoint */
-	//				j0 = nlocl + j - 2;
-
-	//				// get polygonal arclength
-	//				lj = 0.5*dl1*(zlocl[j] + 1) + li0;
-
-	//				// interpolate in the appropriate element
-	//				if (lj < li1){
-	//					zp = 2*(lj - li )/(li1 - li ) - 1;
-	//					lagrange(nlocl-1, zlocl, zp, L);
-	//					uxp = 0; urp = 0;
-	//					vxp = 0; vrp = 0;
-	//					fxp = 0; frp = 0;
-	//					 cp = 0;
-	//					
-	//					for (m = 0; m < nlocl; m++){
-	//						k = i *(nlocl - 1) + m;
-
-	//						uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-	//						vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-	//						fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-	//						 cp +=  c[k]*L[m];
-	//					}
-	//				}
-	//				else {
-	//					zp = 2*(lj - li1)/(li2 - li1) - 1;
-	//					lagrange(nlocl-1, zlocl, zp, L);
-	//					uxp = 0; urp = 0;
-	//					vxp = 0; vrp = 0;
-	//					fxp = 0; frp = 0;
-	//					 cp = 0;
-	//					
-	//					for (m = 0; m < nlocl; m++){
-	//						k = i1*(nlocl - 1) + m;
-
-	//						uxp += ux[k]*L[m]; urp += ur[k]*L[m];
-	//						vxp += vx[k]*L[m]; vrp += vr[k]*L[m];
-	//						fxp += fx[k]*L[m]; frp += fr[k]*L[m];
-	//						 cp +=  c[k]*L[m];
-	//					}
-	//				}
-
-	//				// add new basis node
-	//				uxnew[j0] = uxp; urnew[j0] = urp;
-	//				vxnew[j0] = vxp; vrnew[j0] = vrp;
-	//				fxnew[j0] = fxp; frnew[j0] = frp;
-	//				 cnew[j0] =  cp;
-	//			}
-
-	//			/* delete original basis functions between the
-	//			 * (i-1)st and (i+2)nd geometric nodes and replace
-	//			 * with the new interpolants */
-	//			for (j = 1; j < nlocl-1; j++){ /* left of midpoint:
-	//			                                * replace old functions */
-	//				j0 = j - 1;
-	//				k  = i0*(nlocl-1) + j;
-
-	//				ux[k] = uxnew[j0]; ur[k] = urnew[j0];
-	//				vx[k] = vxnew[j0]; vr[k] = vrnew[j0];
-	//				fx[k] = fxnew[j0]; fr[k] = frnew[j0];
-	//				 c[k] =  cnew[j0];
-	//			}
-
-	//			for (j = 0; j < nlocl-1; j++){ /* right of midpoint
-	//																			* (including midpoint):
-	//			                                * replace old functions */
-	//				j0 = j + nlocl - 2;
-	//				k  = i *(nlocl-1) + j;
-
-	//				ux[k] = uxnew[j0]; ur[k] = ur[j0];
-	//				vx[k] = vxnew[j0]; vr[k] = vr[j0];
-	//				fx[k] = fxnew[j0]; fr[k] = fr[j0];
-	//				 c[k] =  cnew[j0];
-	//			}
-
-	//			for (j = 0; j < nlocl-1; j++){ /* delete local basis nodes 
-	//																			* between (i+1)st and (i+2)nd
-	//			                                * geometric nodes */
-	//				j0 = j + nlocl - 2;
-	//				k0 = i1*(nlocl-1);
-
-	//				for (k = k0; k < nglob-j; k++) {
-	//					k1 = k + 1;
-
-	//					ux[k] = ux[k1]; ur[k] = ur[k1];
-	//					vx[k] = vx[k1]; vr[k] = vr[k1];
-	//					fx[k] = fx[k1]; fr[k] = fr[k1];
-	//					 c[k] =  c[k1];
-	//				}
-
-	//				ux.pop_back(); ur.pop_back();
-	//				vx.pop_back(); vr.pop_back();
-	//				fx.pop_back(); fr.pop_back();
-	//				 c.pop_back();
-	//			}
-
 				// update geometric nodes
 				nelem--;
 				ngeom--;
+				nglob = nelem*(nlocl-1) + 1;
 				Surface.geomPopBack();
 				Surface.setNNode(ngeom);
 				Surface.setNElem(nelem);
+				Surface.setNGlob(nglob);
 				Surface.setGeomParams(nelem, x.data(), r.data());
 				
-				// update stokes fields
-				nglob = nelem*(nlocl-1) + 1;
-				Surface.setNGlob(nglob);
-				for (j = 0; j < nlocl-1; j++){
-					Surface.stksPopBack();
-				}
-				Surface.setStksParams(nelem, nlocl-1,
-				                      ux.data(), ur.data(),
-				                      vx.data(), vr.data(),
-				                      fx.data(), fr.data(),
-				                      c .data());
-
-				cout << "1 node removed. Total of "
+				cout << "checkSpacing: 1 node removed. Total of "
 					<< nelem << " boundary elements." << endl;
-				
-				free(zlocl);
-				free(L    );
 
 				return;
 			} // if (totang and sep meet criteria)
@@ -1329,9 +609,6 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 //		cout << counter << " node(s) added/removed. Total of "
 //			<< nelem << " boundary elements." << endl;
 //	}
-
-	free(zlocl);
-	free(L    );
 }
 
 

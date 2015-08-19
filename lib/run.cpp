@@ -85,7 +85,7 @@ int main(){
 	// choose constitutive model and assign parameters
 	model = 0;
 	lamb  = 1.0;
-	gamm  = 0.2;
+	gamm  = 1.0;
 	ES    = 0.0;
 	ED    = 0.0;
 	EB    = 0.0;

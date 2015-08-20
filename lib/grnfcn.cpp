@@ -61,7 +61,7 @@ void gf_axR(double x, double r, double x0, double r0,
 	k   = pow(k2, 0.5);
 	k4  = k2*k2;
 	kp2 = 1 - k2;
-	
+
 	if (r < 1e-8){
 		Mxx =  2*M_PI*(r0/R)*(1 + X2/R2);
 		Mxr = -2*M_PI*(X*r02)/(R*R2); 
@@ -75,7 +75,7 @@ void gf_axR(double x, double r, double x0, double r0,
 		
 		fc  *= 4;
 		fc3 *= (4/kp2);
-	
+		
 		// evaluate complete elliptic integrals
 		K = ellintK(k);
 		E = ellintE(k);
@@ -89,7 +89,7 @@ void gf_axR(double x, double r, double x0, double r0,
 		            +(  2 -    k2        ) * E) / k2;
 		I32 = fc3 * ((- 8 + 12*k2 - 4*k4 ) * K  
 		            +(  8 -  8*k2 +   k4 ) * E) / k4; 
-	
+
 	  // calculate components of the Stokeslet M
 	  Mxx =  fcM*  (     I10 + X2        *I30);
 	  Mxr = -fcM*X*(r0  *I30 - r         *I31);

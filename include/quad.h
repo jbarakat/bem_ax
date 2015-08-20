@@ -163,8 +163,8 @@ void singleLayer(const int IGF, int nquad, surface Surface,
 	nglob = Surface.getNGlob();
 
 	/* choose number of points for singular quadrature
-	 * (maximum is 6 points) */
-	nsing = 6;
+	 * (refer to GAULOG.H) */
+	nsing = 5;
 
 	// allocate memory
 	A       = (double*) calloc( 4*nglob*nglob , sizeof(double));
@@ -200,14 +200,16 @@ void singleLayer(const int IGF, int nquad, surface Surface,
 	lR1     = (double*) malloc(   nquad       * sizeof(double));
 	lS0     = (double*) malloc(   nsing       * sizeof(double));
 	lS1     = (double*) malloc(   nsing       * sizeof(double));
-
+	
 	// get area and volume
 	area  = Surface.getArea();
 	vlme  = Surface.getVlme();
 
 	// get viscosity ratio
 	lamb  = Surface.getVisc();
-
+	
+	
+	
 	/*-----------------------------------------------*/
 	// NOTE: THIS STUFF CAN BE MOVED OUTSIDE THE FUNCTION...
 	// SHOULDN'T HAVE TO RECALCULATE THE FUNCTION INTERPOLATION
@@ -256,7 +258,7 @@ void singleLayer(const int IGF, int nquad, surface Surface,
 		Surface.getPoly(i,   l0); 
 		Surface.getPoly(i+1, l1); 
 	
-		Surface.getSpln(i,   ax , bx , cx ,
+		Surface.getSpln(i,  ax , bx , cx ,
 		                    ar , br , cr );
 		
 		lM = 0.5*(l1 + l0);
@@ -523,6 +525,24 @@ void singleLayer(const int IGF, int nquad, surface Surface,
 						// get singular kernel
 						z    = zqsng[k];
 						logz = gsl_sf_log(z);
+						logz = -1;
+
+
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+						// NOTE: GET RID OF LOGZ AND REPLACE WITH -1
+
 
 						/*--------- third integral, IS0 ----------*/
 						// get Lagrange interpolating polynomial

@@ -89,7 +89,7 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 	// extrema for node redistribution
 	thetmax = M_PI/8;
 	smax = 2.0*M_PI/nelem;
-	smin = smax/4.0;
+	smin = smax/3.0;
 	
 	
   /*-----------------------------------------------------*/
@@ -106,6 +106,12 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 		Surface.getNode(x.data(), r.data());
 		area = Surface.getArea();
 		vlme = Surface.getVlme();
+
+		if (istep > 3885){
+			for (i = 0; i < ngeom; i++){
+				cout << x[i] << " " << r[i] << endl;
+			}
+		}
 		
 		cout << "ts = " << istep << ", V = " << vlme << endl;
 		// NOTE: NEED TO CHECK VOLUME
@@ -247,8 +253,8 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 		/*--------------------------------------------*/
 
 		if (Dthet > PIH){
-			cout << "checkAngle: an arc is excessive at the " <<
-				i1 << "th index" << endl;
+			cout << "checkAngle: an arc is excessive at index" <<
+				i1 << "." << endl;
 			
 			istop = 1;
 
@@ -337,7 +343,7 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 			Surface.setNGlob(nglob);
 			Surface.setGeomParams(nelem, x.data(), r.data());
 	
-			cout << "checkAngle: 1 node added. Total of "
+			cout << "Arc too large. 1 node added at index " << i << ". Total of "
 				<< nelem << " boundary elements." << endl;
 		
 			return;
@@ -466,7 +472,7 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 			Surface.setNGlob(nglob);
 			Surface.setGeomParams(nelem, x.data(), r.data());
 
-			cout << "checkSpacing: 1 node added. Total of "
+			cout << "Segment too long. 1 node added at index " << i << ". Total of "
 				<< nelem << " boundary elements." << endl;
 		
 			return;
@@ -623,7 +629,7 @@ void checkSpacing(surface &Surface, double smin, double smax, double thetmax){
 				Surface.setNGlob(nglob);
 				Surface.setGeomParams(nelem, x.data(), r.data());
 				
-				cout << "checkSpacing: 1 node removed. Total of "
+				cout << "Segment too short. 1 node removed at index " << i << ". Total of "
 					<< nelem << " boundary elements." << endl;
 
 				return;

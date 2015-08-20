@@ -21,9 +21,8 @@ for f in fsteps :
 
 plt.xlabel('x')
 plt.ylabel('r')
-#plt.xlim((-0.5,-0.25))
-#plt.xlim((1.1,1.3))
-#plt.ylim((0.0, 0.3))
+#plt.xlim((0,0.5))
+#plt.ylim((0.4, 0.6))
 plt.legend(loc='upper right')
 #plt.savefig('plot.png')
 plt.show()

@@ -396,7 +396,7 @@ public:
 				if (model == 0){
 					// surface tension force
 					fs[n] = 0;
-					fn[n] = -(ks[n]*tensM + kp[n]*tensM);
+					fn[n] = -(ks[n] + kp[n])*tensM;
 
 					// add buoyance force (assume drho = 1, acceleration due to gravity = 1)
 					double rhod = 1.;
@@ -407,7 +407,6 @@ public:
 					// calculate x and r components
 					fx[n] = fs[n]*tx[n] + fn[n]*nx[n];
 					fr[n] = fs[n]*tr[n] + fn[n]*nr[n];
-
 				}
 				
 				// ...AND THEN LATER, THE VESICLE

@@ -59,13 +59,13 @@ int main(){
 
 	// choose number of timesteps and size of timestep
 	nstep = 5000000;
-	dt    = 0.01;
+	dt    = 0.1;
 
 	// choose number of quadrature points
-	nquad = 12;
+	nquad = 6;
 
 	// get number of boundary elements
-	nelem = 40;
+	nelem = 20;
 	nnode = nelem + 1;
 
 	// get number of native elements
@@ -85,7 +85,7 @@ int main(){
 	// choose constitutive model and assign parameters
 	model = 0;
 	lamb  = 1.0;
-	gamm  = 1.0;
+	gamm  = 0.001;
 	ES    = 0.0;
 	ED    = 0.0;
 	EB    = 0.0;

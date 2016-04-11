@@ -251,7 +251,6 @@ void gf_axC(double x, double r, double x0, double r0, double rc,
 			// evaluate kernels at midpoint of the domain
 			gf_axC_ker(x, r, x0, r0, rc, s, mCxx, mCxr, mCrx, mCrr);
 
-			
 			// calculate change in kernels
 			dmCxx -= mCxx*ds; dmCxx = fabs(dmCxx);
 			dmCxr -= mCxr*ds; dmCxr = fabs(dmCxr);

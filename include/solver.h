@@ -253,8 +253,8 @@ void checkAngle(surface &Surface, double thetmax, int &istop){
 		/*--------------------------------------------*/
 
 		if (Dthet > PIH){
-			cout << "checkAngle: an arc is excessive at index" <<
-				i1 << "." << endl;
+			cout << "Arc too large at index " <<
+				i1 << ". Sequence aborted." << endl;
 			
 			istop = 1;
 
@@ -667,7 +667,7 @@ void writeNode(int istep, int ngeom, double *x, double *r, string path){
 	else if (istep < 10000)
 		id = "0"    + num.str();
 	
-	// define filename
+	// set filename
 	fn = path + "nodexr" + id + ".txt";
 	
 	// write to file

@@ -3,8 +3,8 @@
  */
 
 #include <iostream>
-//#include <cstdlib>
-//#include <cstdio>
+#include <cstdlib>
+#include <cstdio>
 #include <complex.h>
 //#include <boost/math/special_functions/bernoulli.hpp>
 #include "solver.h"
@@ -59,7 +59,7 @@ int main(){
 
 	// choose number of timesteps and size of timestep
 	nstep = 5000000;
-	dt    = 0.1;
+	dt    = 0.01;
 
 	// choose number of quadrature points
 	nquad = 6;

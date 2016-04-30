@@ -138,6 +138,8 @@ void timeInt(int nstep, int nquad, double dt, surface Surface, string opath){
 			// calculate surface velocity
 			vx  = v[2*n  ];
 			vr  = v[2*n+1];
+			//cout << "vx = " << vx << endl;
+			//cout << "vr = " << vr << endl;
 			vn  = vx*nx + vr*nr;
 			
 			// advect geometric nodes using forward Euler scheme

@@ -58,10 +58,10 @@ int main(){
 	// WILL BE PART OF AN INPUT FILE.
 
 	// choose number of timesteps and size of timestep
-	nstep = 5000000;
+	nstep = 100;
 	dt    = 0.01;
 
-	// choose number of quadrature points
+	// choose number of quadrature points (typically choose 6)
 	nquad = 6;
 
 	// get number of boundary elements
@@ -85,7 +85,7 @@ int main(){
 	// choose constitutive model and assign parameters
 	model = 0;
 	lamb  = 1.0;
-	gamm  = 0.001;
+	gamm  = 1.0;
 	ES    = 0.0;
 	ED    = 0.0;
 	EB    = 0.0;

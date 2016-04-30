@@ -13,7 +13,7 @@ for f in fsteps :
 	data = np.loadtxt(f,unpack=True)
 	x = []
 	y = []
-	x.append(data[0,:])
+	x.append(data[0,:]-data[0,0])
 	y.append(data[1,:])
 	x = np.column_stack(x)
 	y = np.column_stack(y)
